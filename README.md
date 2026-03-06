@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Reclaimed Marketplace
 
-## Getting Started
+A simple Etsy/Vinted-style marketplace for reclaimed materials and architectural salvage. Sellers can be **reclamation yards** or **individuals**. Buyers can browse by location, category and condition, and pay on-platform with Stripe Connect.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Next.js 16** (App Router), TypeScript, Tailwind CSS
+- **Prisma** + PostgreSQL
+- **NextAuth v5** (credentials)
+- **Stripe Connect** (seller payouts, platform fee)
+- **Vercel Blob** (listing images)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Clone and install**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   ```bash
+   cd reclaimed-marketplace
+   npm install
+   ```
 
-## Learn More
+2. **Database**
 
-To learn more about Next.js, take a look at the following resources:
+   - Create a PostgreSQL database (local or e.g. Vercel Postgres, Supabase).
+   - Copy `.env.example` to `.env` and set `DATABASE_URL` (required at runtime; Prisma 7 uses `@prisma/adapter-pg` with this URL).
+   - Run migrations (when DB is available):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```bash
+   npm run db:migrate
+   npm run db:seed
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Environment variables**
 
-## Deploy on Vercel
+   - `DATABASE_URL` – PostgreSQL connection string
+   - `NEXTAUTH_SECRET` – e.g. `openssl rand -base64 32`
+   - `NEXTAUTH_URL` – e.g. `http://localhost:3000`
+   - `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` – from Stripe Dashboard (enable Connect)
+   - `BLOB_READ_WRITE_TOKEN` – from Vercel project → Storage → Blob
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. **Stripe webhook**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   - In Stripe Dashboard → Developers → Webhooks, add endpoint:  
+     `https://your-domain.com/api/stripe/webhooks`
+   - Event: `checkout.session.completed`
+   - Copy the signing secret into `STRIPE_WEBHOOK_SECRET`
+
+5. **Run**
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000).
+
+## Features
+
+- **Auth**: Sign up, sign in (email/password), seller type onboarding (individual / reclamation yard)
+- **Stripe Connect**: Sellers complete Express onboarding; platform fee on each sale
+- **Listings**: Multi-step flow (photos, title, price, condition, category, location), draft/publish
+- **Discovery**: Home, search with filters (category, condition, postcode, seller type), listing and seller pages
+- **Checkout**: Stripe Checkout; webhook creates Order and marks listing sold
+
+## Scripts
+
+- `npm run dev` – development server
+- `npm run build` – Prisma generate + Next build
+- `npm run db:generate` – generate Prisma client
+- `npm run db:migrate` – run migrations
+- `npm run db:seed` – seed categories
