@@ -27,6 +27,17 @@ export async function placeBid(listingId: string, bidPounds: number) {
     return { ok: false as const, error: "You cannot bid on your own auction." };
   }
 
+  const bidder = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { bidPaymentMethodId: true },
+  });
+  if (!bidder?.bidPaymentMethodId) {
+    return {
+      ok: false as const,
+      error: "Save a card for bidding first — it will be charged automatically if you win.",
+    };
+  }
+
   const amountPence = Math.round(bidPounds * 100);
   if (Number.isNaN(amountPence) || amountPence < STRIPE_MIN_AMOUNT_PENCE) {
     return {

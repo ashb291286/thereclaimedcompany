@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createListing } from "@/lib/actions/listings";
 import { Condition, type ListingKind } from "@/generated/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
 import { ListingImageCropModal } from "./ListingImageCropModal";
+import { ListingLivePreview } from "./ListingLivePreview";
 import { PostcodeLookupField } from "@/components/PostcodeLookupField";
+import {
+  DELIVERY_CARRIER_PRESETS,
+  formatDeliveryOptionLine,
+  hydrateCarrierForm,
+  serializeCarrierForm,
+  type DeliveryCarrierId,
+  type CarrierFormRow,
+} from "@/lib/delivery-carriers";
 
 type Category = Prisma.CategoryGetPayload<object>;
 type ListingWithCategory = Prisma.ListingGetPayload<{ include: { category: true } }>;
@@ -20,6 +29,28 @@ const CONDITION_LABELS: Record<Condition, string> = {
   collectable: "Collectable",
 };
 
+const AUCTION_DAY_CHOICES = [3, 5, 7] as const;
+type AuctionDayPreset = (typeof AUCTION_DAY_CHOICES)[number];
+type AuctionDurationMode = AuctionDayPreset | "custom";
+
+function toDatetimeLocalValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function defaultDatetimeLocalDaysFromNow(days: number): string {
+  return toDatetimeLocalValue(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+}
+
+function auctionPreviewEndAt(mode: AuctionDurationMode, customStr: string): Date | null {
+  if (mode === "custom") {
+    if (!customStr.trim()) return null;
+    const d = new Date(customStr);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return new Date(Date.now() + mode * 24 * 60 * 60 * 1000);
+}
+
 const LISTING_KIND_OPTIONS: {
   kind: ListingKind;
   title: string;
@@ -33,7 +64,7 @@ const LISTING_KIND_OPTIONS: {
   {
     kind: "auction",
     title: "Auction",
-    description: "Set a start price and end time. Highest bid wins.",
+    description: "Set a start price and how long it runs (3–7 days or a custom end). Highest bid wins.",
   },
 ];
 
@@ -68,10 +99,12 @@ export function ListingForm({
   categories,
   defaultPostcode,
   listing,
+  sellerDisplayName,
 }: {
   categories: Category[];
   defaultPostcode: string;
   listing?: ListingWithCategory;
+  sellerDisplayName?: string;
 }) {
   const [imageUrls, setImageUrls] = useState<string[]>(listing?.images ?? []);
   const [uploading, setUploading] = useState(false);
@@ -81,21 +114,56 @@ export function ListingForm({
   const [fulfillmentMode, setFulfillmentMode] = useState<"collection_only" | "collect_or_deliver">(
     listing?.offersDelivery ? "collect_or_deliver" : "collection_only"
   );
-  const [deliveryPricing, setDeliveryPricing] = useState<"quote" | "fixed">(
-    listing?.deliveryCostPence != null ? "fixed" : "quote"
+  const [carrierForm, setCarrierForm] = useState<Record<DeliveryCarrierId, CarrierFormRow>>(() =>
+    hydrateCarrierForm(listing?.deliveryOptions)
   );
   const [cropState, setCropState] = useState<{ src: string; fileName: string } | null>(null);
   const cropBlobUrlRef = useRef<string | null>(null);
   const isEdit = !!listing;
 
-  const auctionEndsDefault =
-    listing?.auctionEndsAt != null
-      ? new Date(listing.auctionEndsAt).toISOString().slice(0, 16)
-      : "";
+  const [title, setTitle] = useState(listing?.title ?? "");
+  const [description, setDescription] = useState(listing?.description ?? "");
+  const [categoryId, setCategoryId] = useState(
+    () => listing?.categoryId ?? categories[0]?.id ?? ""
+  );
+  const [condition, setCondition] = useState<Condition>(listing?.condition ?? "like_new");
+  const [priceStr, setPriceStr] = useState(() => {
+    if (!listing) return "";
+    if (listing.freeToCollector) return "0";
+    return (listing.price / 100).toFixed(2);
+  });
+  const [auctionDuration, setAuctionDuration] = useState<AuctionDurationMode>(() => {
+    if (listing?.listingKind === "auction" && listing.auctionEndsAt) return "custom";
+    return 7;
+  });
+  const [auctionCustomEndsStr, setAuctionCustomEndsStr] = useState(() =>
+    listing?.auctionEndsAt != null ? toDatetimeLocalValue(new Date(listing.auctionEndsAt)) : ""
+  );
+  const [auctionReserveStr, setAuctionReserveStr] = useState(() =>
+    listing?.auctionReservePence != null ? (listing.auctionReservePence / 100).toFixed(2) : ""
+  );
+  const [deliveryNotes, setDeliveryNotes] = useState(listing?.deliveryNotes ?? "");
+  const [postcodePreview, setPostcodePreview] = useState(
+    () => listing?.postcode?.trim() || defaultPostcode.trim() || ""
+  );
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (freeToCollector) setFulfillmentMode("collection_only");
   }, [freeToCollector]);
+
+  useEffect(() => {
+    if (listingKind === "sell" && freeToCollector) setPriceStr("0");
+  }, [listingKind, freeToCollector]);
+
+  useEffect(() => {
+    if (!previewOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [previewOpen]);
 
   useEffect(() => {
     return () => {
@@ -163,22 +231,129 @@ export function ListingForm({
   const priceRequired = listingKind === "auction" || (listingKind === "sell" && !freeToCollector);
   const showDeliverySection = !freeToCollector;
 
+  function setCarrierRow(id: DeliveryCarrierId, patch: Partial<CarrierFormRow>) {
+    setCarrierForm((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], ...patch },
+    }));
+  }
+
+  const deliveryOptionsJson =
+    showDeliverySection && fulfillmentMode === "collect_or_deliver"
+      ? JSON.stringify(serializeCarrierForm(carrierForm))
+      : "[]";
+
+  const previewProps = useMemo(() => {
+    const categoryName = categories.find((c) => c.id === categoryId)?.name ?? "";
+    const conditionLabel = CONDITION_LABELS[condition];
+
+    let priceLine: string;
+    if (listingKind === "sell" && freeToCollector) {
+      priceLine = "Free to collect";
+    } else if (listingKind === "auction") {
+      const p = parseFloat(priceStr);
+      if (priceStr.trim() !== "" && !Number.isNaN(p)) {
+        priceLine = `Starting bid £${p.toFixed(2)}`;
+      } else {
+        priceLine = "Set a starting bid";
+      }
+    } else {
+      const p = parseFloat(priceStr);
+      if (priceStr.trim() !== "" && !Number.isNaN(p)) {
+        priceLine = `£${p.toFixed(2)}`;
+      } else {
+        priceLine = "Set a price";
+      }
+    }
+
+    let auctionEndsLine: string | null = null;
+    if (listingKind === "auction") {
+      const endAt = auctionPreviewEndAt(auctionDuration, auctionCustomEndsStr);
+      if (endAt) {
+        auctionEndsLine = `Ends ${endAt.toLocaleString(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })}`;
+      }
+    }
+
+    const locationLine = postcodePreview.trim() || "Add a postcode";
+
+    let collectionLine: string;
+    if (listingKind === "sell" && freeToCollector) {
+      collectionLine =
+        "Free listing — buyer arranges collection from your area. No paid checkout for the item.";
+    } else if (!showDeliverySection || fulfillmentMode === "collection_only") {
+      collectionLine = "Buyer collects from the item location (or you agree a handover).";
+    } else {
+      collectionLine = "Buyer can collect or arrange delivery using the options below.";
+    }
+
+    const deliveryLines =
+      showDeliverySection && fulfillmentMode === "collect_or_deliver"
+        ? serializeCarrierForm(carrierForm).map(formatDeliveryOptionLine)
+        : [];
+
+    return {
+      images: imageUrls,
+      title,
+      description,
+      categoryName,
+      conditionLabel,
+      listingKind,
+      freeToCollector,
+      priceLine,
+      locationLine,
+      auctionEndsLine,
+      collectionLine,
+      deliveryLines,
+      extraDeliveryNotes: deliveryNotes,
+    };
+  }, [
+    categories,
+    categoryId,
+    condition,
+    listingKind,
+    freeToCollector,
+    priceStr,
+    auctionDuration,
+    auctionCustomEndsStr,
+    postcodePreview,
+    showDeliverySection,
+    fulfillmentMode,
+    carrierForm,
+    imageUrls,
+    title,
+    description,
+    deliveryNotes,
+  ]);
+
   return (
-    <form
-      action={createListing}
-      className="mt-8 space-y-8"
-      onSubmit={(e) => {
-        const form = e.currentTarget;
-        if (listingKind === "sell" && freeToCollector) {
-          const p = form.querySelector('[name="price"]') as HTMLInputElement;
-          if (p) p.value = "0";
-        }
-      }}
-    >
+    <>
+      <div className="mt-8 flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-8 xl:gap-10">
+        <div className="min-w-0 w-full max-w-2xl pb-24 lg:max-w-xl lg:shrink-0 lg:pb-0 xl:-translate-x-1">
+          <form
+            action={createListing}
+            className="space-y-8"
+            onSubmit={(e) => {
+              const form = e.currentTarget;
+              if (listingKind === "sell" && freeToCollector) {
+                const p = form.querySelector('[name="price"]') as HTMLInputElement;
+                if (p) p.value = "0";
+              }
+            }}
+          >
       <input type="hidden" name="listingKind" value={listingKind} />
+      {listingKind === "auction" ? (
+        <input
+          type="hidden"
+          name="auctionDuration"
+          value={auctionDuration === "custom" ? "custom" : String(auctionDuration)}
+        />
+      ) : null}
       <input type="hidden" name="images" value={imageUrls.join(",")} />
       <input type="hidden" name="fulfillmentMode" value={fulfillmentMode} />
-      <input type="hidden" name="deliveryPricing" value={deliveryPricing} />
+      <input type="hidden" name="deliveryOptionsJson" value={deliveryOptionsJson} />
       {isEdit && <input type="hidden" name="listingId" value={listing.id} />}
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
@@ -230,18 +405,65 @@ export function ListingForm({
           </label>
         )}
         {listingKind === "auction" && (
-          <div>
-            <label htmlFor="auctionEndsAt" className="mb-1 block text-sm font-medium text-zinc-700">
-              Auction ends (local time)
-            </label>
-            <input
-              id="auctionEndsAt"
-              name="auctionEndsAt"
-              type="datetime-local"
-              required
-              defaultValue={auctionEndsDefault}
-              className="w-full max-w-xs rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
-            />
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium text-zinc-700">Auction length</p>
+              <p className="mt-1 text-xs text-zinc-600">
+                3, 5, or 7 full days from when you save or publish. Custom lets you pick an exact end
+                time.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {AUCTION_DAY_CHOICES.map((days) => {
+                const selected = auctionDuration === days;
+                return (
+                  <button
+                    key={days}
+                    type="button"
+                    onClick={() => setAuctionDuration(days)}
+                    className={`rounded-xl border-2 px-4 py-2.5 text-sm font-semibold transition ${
+                      selected
+                        ? "border-brand bg-brand-soft/60 shadow-sm ring-1 ring-brand/20"
+                        : "border-zinc-200 bg-white hover:border-zinc-300"
+                    }`}
+                  >
+                    {days} days
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuctionDuration("custom");
+                  setAuctionCustomEndsStr((prev) =>
+                    prev.trim() ? prev : defaultDatetimeLocalDaysFromNow(7)
+                  );
+                }}
+                className={`rounded-xl border-2 px-4 py-2.5 text-sm font-semibold transition ${
+                  auctionDuration === "custom"
+                    ? "border-brand bg-brand-soft/60 shadow-sm ring-1 ring-brand/20"
+                    : "border-zinc-200 bg-white hover:border-zinc-300"
+                }`}
+              >
+                Custom…
+              </button>
+            </div>
+            {auctionDuration === "custom" ? (
+              <div>
+                <label htmlFor="auctionEndsAt" className="mb-1 block text-sm font-medium text-zinc-700">
+                  Ends (your local time)
+                </label>
+                <input
+                  id="auctionEndsAt"
+                  name="auctionEndsAt"
+                  type="datetime-local"
+                  required
+                  value={auctionCustomEndsStr}
+                  onChange={(e) => setAuctionCustomEndsStr(e.target.value)}
+                  className="w-full max-w-xs rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                />
+              </div>
+            ) : null}
           </div>
         )}
       </FormSection>
@@ -249,7 +471,7 @@ export function ListingForm({
       <FormSection
         step={2}
         title="Photos"
-        description="Clear shots sell faster. Each image is cropped to 4:3 before upload."
+        description="Clear shots sell faster. Choose 1:1, 4:3, or 2:1 when you crop each image."
       >
         <div className="flex flex-wrap gap-3">
           {imageUrls.map((url) => (
@@ -257,7 +479,7 @@ export function ListingForm({
               <img
                 src={url}
                 alt=""
-                className="h-24 w-32 rounded-lg border border-zinc-200 object-cover"
+                className="h-24 w-24 rounded-lg border border-zinc-200 object-cover"
               />
               <button
                 type="button"
@@ -268,7 +490,7 @@ export function ListingForm({
               </button>
             </div>
           ))}
-          <label className="flex h-24 w-32 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 hover:border-brand hover:bg-brand-soft/50">
+          <label className="flex h-24 w-24 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 hover:border-brand hover:bg-brand-soft/50">
             <input
               type="file"
               accept="image/*"
@@ -296,7 +518,8 @@ export function ListingForm({
             name="title"
             type="text"
             required
-            defaultValue={listing?.title}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Victorian fireplace surround"
             className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
@@ -310,7 +533,8 @@ export function ListingForm({
             name="description"
             rows={5}
             required
-            defaultValue={listing?.description}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Dimensions, condition, provenance, what’s included…"
             className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
@@ -324,7 +548,8 @@ export function ListingForm({
               id="categoryId"
               name="categoryId"
               required
-              defaultValue={listing?.categoryId}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             >
               {categories.map((c) => (
@@ -342,7 +567,8 @@ export function ListingForm({
               id="condition"
               name="condition"
               required
-              defaultValue={listing?.condition}
+              value={condition}
+              onChange={(e) => setCondition(e.target.value as Condition)}
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             >
               {(Object.entries(CONDITION_LABELS) as [Condition, string][]).map(([value, label]) => (
@@ -365,13 +591,8 @@ export function ListingForm({
             min="0"
             required={priceRequired}
             disabled={listingKind === "sell" && freeToCollector}
-            defaultValue={
-              listing && !(listingKind === "sell" && freeToCollector)
-                ? (listing.price / 100).toFixed(2)
-                : listingKind === "sell" && freeToCollector
-                  ? "0"
-                  : undefined
-            }
+            value={priceStr}
+            onChange={(e) => setPriceStr(e.target.value)}
             placeholder={listingKind === "auction" ? "Starting bid" : "0.00"}
             className="max-w-xs rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-zinc-100 disabled:text-zinc-500"
           />
@@ -379,6 +600,28 @@ export function ListingForm({
             <p className="mt-1 text-xs text-zinc-500">£0 — no checkout; buyer confirms collection only.</p>
           )}
         </div>
+        {listingKind === "auction" && (
+          <div>
+            <label htmlFor="auctionReserve" className="mb-1 block text-sm font-medium text-zinc-700">
+              Reserve price (£) — optional
+            </label>
+            <input
+              id="auctionReserve"
+              name="auctionReserve"
+              type="number"
+              step="0.01"
+              min="0"
+              value={auctionReserveStr}
+              onChange={(e) => setAuctionReserveStr(e.target.value)}
+              placeholder="No reserve"
+              className="max-w-xs rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              If set, it must be at least the starting bid. The item will not sell unless the winning bid
+              meets this minimum. Buyers see that a reserve exists, not the amount.
+            </p>
+          </div>
+        )}
       </FormSection>
 
       <FormSection
@@ -391,6 +634,7 @@ export function ListingForm({
           name="postcode"
           defaultValue={listing?.postcode ?? defaultPostcode}
           placeholder="e.g. SW1A 1AA"
+          onValueChange={setPostcodePreview}
         />
       </FormSection>
 
@@ -444,75 +688,81 @@ export function ListingForm({
             {fulfillmentMode === "collect_or_deliver" && (
               <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50/50 p-4">
                 <div>
+                  <p className="text-sm font-medium text-zinc-800">Carriers &amp; prices</p>
+                  <p className="mt-1 text-xs text-zinc-600">
+                    Tick the services you offer. Leave price empty for &ldquo;quote on request&rdquo;. Live
+                    carrier APIs need parcel size/weight and merchant accounts — we don&apos;t pull live rates
+                    yet.
+                  </p>
+                  <ul className="mt-3 space-y-3">
+                    {DELIVERY_CARRIER_PRESETS.map((p) => {
+                      const row = carrierForm[p.id];
+                      return (
+                        <li
+                          key={p.id}
+                          className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 sm:flex-row sm:items-center sm:gap-4"
+                        >
+                          <label className="flex min-w-[200px] cursor-pointer items-center gap-2 text-sm font-medium text-zinc-900">
+                            <input
+                              type="checkbox"
+                              checked={row.enabled}
+                              onChange={() =>
+                                setCarrierRow(p.id, { enabled: !row.enabled })
+                              }
+                              className="rounded border-zinc-300 text-brand"
+                            />
+                            {p.label}
+                          </label>
+                          {p.id === "other" && row.enabled ? (
+                            <input
+                              type="text"
+                              value={row.customLabel}
+                              onChange={(e) =>
+                                setCarrierRow(p.id, { customLabel: e.target.value })
+                              }
+                              placeholder="e.g. Palletline, local van…"
+                              className="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                            />
+                          ) : null}
+                          {row.enabled ? (
+                            <div className="flex flex-1 flex-wrap items-center gap-2 sm:justify-end">
+                              <label className="flex items-center gap-1 text-xs text-zinc-600">
+                                <span className="whitespace-nowrap">From £</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={row.priceStr}
+                                  onChange={(e) =>
+                                    setCarrierRow(p.id, { priceStr: e.target.value })
+                                  }
+                                  placeholder="Quote"
+                                  className="w-28 rounded-lg border border-zinc-300 px-2 py-1.5 text-sm text-zinc-900"
+                                />
+                              </label>
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+                <div>
                   <label htmlFor="deliveryNotes" className="mb-1 block text-sm font-medium text-zinc-800">
-                    Delivery options
+                    Extra details (optional)
                   </label>
                   <textarea
                     id="deliveryNotes"
                     name="deliveryNotes"
-                    rows={4}
-                    defaultValue={listing?.deliveryNotes ?? ""}
-                    placeholder="e.g. Pallet delivery UK mainland, 5–7 working days; buyer can book their own courier from our yard; I can wrap for £X…"
+                    rows={3}
+                    value={deliveryNotes}
+                    onChange={(e) => setDeliveryNotes(e.target.value)}
+                    placeholder="Cut-off times, packaging, areas you won’t ship to, insurance…"
                     className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                   />
                 </div>
-                <div>
-                  <p className="mb-2 text-sm font-medium text-zinc-800">Delivery cost</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => setDeliveryPricing("quote")}
-                      className={`rounded-lg border-2 px-3 py-2.5 text-left text-sm transition ${
-                        deliveryPricing === "quote"
-                          ? "border-brand bg-white shadow-sm"
-                          : "border-zinc-200 bg-white hover:border-zinc-300"
-                      }`}
-                    >
-                      <span className="font-medium text-zinc-900">Quote on request</span>
-                      <span className="mt-0.5 block text-xs text-zinc-600">
-                        Price depends on address — you agree after purchase.
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeliveryPricing("fixed")}
-                      className={`rounded-lg border-2 px-3 py-2.5 text-left text-sm transition ${
-                        deliveryPricing === "fixed"
-                          ? "border-brand bg-white shadow-sm"
-                          : "border-zinc-200 bg-white hover:border-zinc-300"
-                      }`}
-                    >
-                      <span className="font-medium text-zinc-900">Fixed from (£)</span>
-                      <span className="mt-0.5 block text-xs text-zinc-600">
-                        Starting price you commit to (e.g. pallet rate). Use 0 for free delivery.
-                      </span>
-                    </button>
-                  </div>
-                </div>
-                {deliveryPricing === "fixed" && (
-                  <div>
-                    <label htmlFor="deliveryCost" className="mb-1 block text-sm font-medium text-zinc-700">
-                      Delivery from (£)
-                    </label>
-                    <input
-                      id="deliveryCost"
-                      name="deliveryCost"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      defaultValue={
-                        listing?.deliveryCostPence != null
-                          ? (listing.deliveryCostPence / 100).toFixed(2)
-                          : ""
-                      }
-                      placeholder="0.00"
-                      className="max-w-[200px] rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                    />
-                  </div>
-                )}
                 <p className="text-xs text-zinc-500">
-                  Checkout still covers the item price only; delivery is arranged and paid as you describe
-                  (e.g. invoice separately or cash on delivery).
+                  Checkout covers the item only; delivery is agreed and paid as you arrange with the buyer.
                 </p>
               </div>
             )}
@@ -538,15 +788,69 @@ export function ListingForm({
           {isEdit ? "Update & publish" : "Publish listing"}
         </button>
       </div>
+    </form>
+        </div>
 
-      {cropState && (
+        <aside className="hidden w-full min-w-[280px] max-w-sm shrink-0 pt-1 lg:block xl:min-w-[300px]">
+          <div className="sticky top-24">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              Live preview
+            </p>
+            <ListingLivePreview {...previewProps} sellerDisplayName={sellerDisplayName} />
+          </div>
+        </aside>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setPreviewOpen(true)}
+        className="fixed bottom-6 right-6 z-40 rounded-full bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-white/40 hover:bg-brand-hover lg:hidden"
+      >
+        Preview
+      </button>
+
+      {previewOpen ? (
+        <div
+          className="fixed inset-0 z-50 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="listing-preview-drawer-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-zinc-900/50"
+            aria-label="Close preview"
+            onClick={() => setPreviewOpen(false)}
+          />
+          <div className="absolute right-0 top-0 flex h-full w-[min(100%,380px)] max-w-full flex-col border-l border-zinc-200 bg-white shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-4 py-3">
+              <h2 id="listing-preview-drawer-title" className="text-sm font-semibold text-zinc-900">
+                Buyer preview
+              </h2>
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                aria-label="Close"
+              >
+                <span className="text-xl leading-none">×</span>
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              <ListingLivePreview {...previewProps} sellerDisplayName={sellerDisplayName} />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {cropState ? (
         <ListingImageCropModal
           imageSrc={cropState.src}
           fileName={cropState.fileName}
           onCancel={closeCrop}
           onComplete={uploadCroppedFile}
         />
-      )}
-    </form>
+      ) : null}
+    </>
   );
 }

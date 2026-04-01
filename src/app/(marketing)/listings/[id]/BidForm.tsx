@@ -1,20 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { placeBid } from "@/lib/actions/bids";
 import { useRouter } from "next/navigation";
+import { BidPaymentSetup } from "./BidPaymentSetup";
 
 export function BidForm({
   listingId,
   minimumPounds,
+  hasBidPaymentMethod,
 }: {
   listingId: string;
   minimumPounds: number;
+  hasBidPaymentMethod: boolean;
 }) {
   const router = useRouter();
   const [pounds, setPounds] = useState(minimumPounds.toFixed(2));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [cardSaved, setCardSaved] = useState(hasBidPaymentMethod);
+
+  useEffect(() => {
+    setCardSaved(hasBidPaymentMethod);
+  }, [hasBidPaymentMethod]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,11 +38,32 @@ export function BidForm({
     router.refresh();
   }
 
+  if (!cardSaved) {
+    return (
+      <div className="rounded-xl border border-brand/20 bg-brand-soft/60 p-4">
+        <h3 className="text-sm font-semibold text-zinc-900">Card required to bid</h3>
+        <p className="mt-1 text-xs text-zinc-600">
+          Save a card on file first. If you win, we charge it automatically when the auction ends (or
+          you can complete payment on the listing if the automatic charge fails).
+        </p>
+        <div className="mt-4">
+          <BidPaymentSetup
+            onSaved={() => {
+              setCardSaved(true);
+              router.refresh();
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={onSubmit} className="rounded-xl border border-brand/20 bg-brand-soft/60 p-4">
       <h3 className="text-sm font-semibold text-zinc-900">Place a bid</h3>
       <p className="mt-1 text-xs text-zinc-600">
-        Minimum next bid from £{minimumPounds.toFixed(2)} (includes increment rules).
+        Minimum next bid from £{minimumPounds.toFixed(2)} (includes increment rules). Your saved card
+        will be charged if you win.
       </p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
         <input

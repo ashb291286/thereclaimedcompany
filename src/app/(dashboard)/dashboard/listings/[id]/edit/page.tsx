@@ -21,6 +21,10 @@ export default async function EditListingPage({
   });
   if (!listing) notFound();
 
+  const sellerProfile = await prisma.sellerProfile.findUnique({
+    where: { userId: session.user.id },
+  });
+
   const categories = await prisma.category.findMany({
     where: { parentId: null },
     orderBy: { name: "asc" },
@@ -37,6 +41,7 @@ export default async function EditListingPage({
         categories={categories}
         defaultPostcode={listing.postcode ?? ""}
         listing={listing}
+        sellerDisplayName={sellerProfile?.displayName}
       />
     </div>
   );

@@ -35,25 +35,65 @@ export async function POST(req: Request) {
     const bidIdMeta = session.metadata?.bidId?.trim();
 
     if (listingId && buyerId && sellerId && paymentIntentId) {
-      await prisma.$transaction([
-        prisma.order.create({
-          data: {
-            listingId,
-            buyerId,
-            sellerId,
-            amount,
-            platformFee,
-            stripePaymentIntentId: paymentIntentId,
-            status: "paid",
-            ...(offerIdMeta ? { offerId: offerIdMeta } : {}),
-            ...(bidIdMeta ? { bidId: bidIdMeta } : {}),
-          },
-        }),
-        prisma.listing.update({
-          where: { id: listingId },
-          data: { status: "sold" },
-        }),
-      ]);
+      const existingBidOrder = bidIdMeta
+        ? await prisma.order.findUnique({ where: { bidId: bidIdMeta } })
+        : null;
+      if (!existingBidOrder) {
+        await prisma.$transaction([
+          prisma.order.create({
+            data: {
+              listingId,
+              buyerId,
+              sellerId,
+              amount,
+              platformFee,
+              stripePaymentIntentId: paymentIntentId,
+              status: "paid",
+              ...(offerIdMeta ? { offerId: offerIdMeta } : {}),
+              ...(bidIdMeta ? { bidId: bidIdMeta } : {}),
+            },
+          }),
+          prisma.listing.update({
+            where: { id: listingId },
+            data: { status: "sold" },
+          }),
+        ]);
+      }
+    }
+  }
+
+  if (event.type === "payment_intent.succeeded") {
+    const pi = event.data.object as Stripe.PaymentIntent;
+    if (pi.metadata?.kind === "auction_win") {
+      const listingId = pi.metadata.listingId;
+      const buyerId = pi.metadata.buyerId;
+      const sellerId = pi.metadata.sellerId;
+      const bidIdMeta = pi.metadata.bidId?.trim();
+      const amount = parseInt(pi.metadata.amount ?? "0", 10);
+      const platformFee = parseInt(pi.metadata.platformFee ?? "0", 10);
+      if (listingId && buyerId && sellerId && bidIdMeta && pi.id) {
+        const existing = await prisma.order.findUnique({ where: { bidId: bidIdMeta } });
+        if (!existing) {
+          await prisma.$transaction([
+            prisma.order.create({
+              data: {
+                listingId,
+                buyerId,
+                sellerId,
+                amount,
+                platformFee,
+                stripePaymentIntentId: pi.id,
+                status: "paid",
+                bidId: bidIdMeta,
+              },
+            }),
+            prisma.listing.update({
+              where: { id: listingId },
+              data: { status: "sold" },
+            }),
+          ]);
+        }
+      }
     }
   }
 

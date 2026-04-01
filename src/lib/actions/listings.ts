@@ -3,16 +3,26 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
-import type { Condition, ListingKind } from "@/generated/prisma/client";
-import { ListingStatus } from "@/generated/prisma/client";
+import {
+  ListingStatus,
+  Prisma,
+  type Condition,
+  type ListingKind,
+} from "@/generated/prisma/client";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
+import {
+  minDeliveryPricePence,
+  parseDeliveryOptionsJson,
+  type DeliveryOptionStored,
+} from "@/lib/delivery-carriers";
 
 type ParsedListing = {
   listingKind: ListingKind;
   freeToCollector: boolean;
   price: number;
   auctionEndsAt: Date | null;
+  auctionReservePence: number | null;
 };
 
 function parseListingCommerce(
@@ -34,9 +44,20 @@ function parseListingCommerce(
 
   let auctionEndsAt: Date | null = null;
   if (listingKind === "auction") {
-    const endsRaw = (formData.get("auctionEndsAt") as string)?.trim();
-    if (!endsRaw) return { ok: false, message: "Auction end date and time required" };
-    auctionEndsAt = new Date(endsRaw);
+    const duration = (formData.get("auctionDuration") as string)?.trim();
+    if (duration === "3" || duration === "5" || duration === "7") {
+      const days = parseInt(duration, 10);
+      auctionEndsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    } else if (duration === "custom") {
+      const endsRaw = (formData.get("auctionEndsAt") as string)?.trim();
+      if (!endsRaw) return { ok: false, message: "Choose when the auction ends" };
+      auctionEndsAt = new Date(endsRaw);
+      if (Number.isNaN(auctionEndsAt.getTime())) {
+        return { ok: false, message: "Invalid auction end time" };
+      }
+    } else {
+      return { ok: false, message: "Choose how long the auction runs (3, 5, 7 days or custom)" };
+    }
     if (Number.isNaN(auctionEndsAt.getTime())) {
       return { ok: false, message: "Invalid auction end time" };
     }
@@ -48,6 +69,24 @@ function parseListingCommerce(
         ok: false,
         message: `Starting bid must be at least £${(STRIPE_MIN_AMOUNT_PENCE / 100).toFixed(2)}`,
       };
+    }
+  }
+
+  let auctionReservePence: number | null = null;
+  if (listingKind === "auction") {
+    const reserveRaw = (formData.get("auctionReserve") as string)?.trim();
+    if (reserveRaw) {
+      const rp = Math.round(parseFloat(reserveRaw) * 100);
+      if (Number.isNaN(rp)) {
+        return { ok: false, message: "Invalid reserve price" };
+      }
+      if (rp < price) {
+        return {
+          ok: false,
+          message: "Reserve must be at least the starting bid",
+        };
+      }
+      auctionReservePence = rp;
     }
   }
 
@@ -71,6 +110,7 @@ function parseListingCommerce(
       freeToCollector,
       price,
       auctionEndsAt: listingKind === "auction" ? auctionEndsAt : null,
+      auctionReservePence: listingKind === "auction" ? auctionReservePence : null,
     },
   };
 }
@@ -79,6 +119,7 @@ type DeliveryParsed = {
   offersDelivery: boolean;
   deliveryNotes: string | null;
   deliveryCostPence: number | null;
+  deliveryOptions: Prisma.InputJsonValue | null;
 };
 
 function parseDeliveryFields(
@@ -88,49 +129,44 @@ function parseDeliveryFields(
   if (opts.freeToCollector) {
     return {
       ok: true,
-      data: { offersDelivery: false, deliveryNotes: null, deliveryCostPence: null },
+      data: {
+        offersDelivery: false,
+        deliveryNotes: null,
+        deliveryCostPence: null,
+        deliveryOptions: null,
+      },
     };
   }
   const mode = formData.get("fulfillmentMode") as string;
   if (mode !== "collect_or_deliver") {
     return {
       ok: true,
-      data: { offersDelivery: false, deliveryNotes: null, deliveryCostPence: null },
-    };
-  }
-  const notes = ((formData.get("deliveryNotes") as string) ?? "").trim();
-  if (!notes) {
-    return {
-      ok: false,
-      message: "Describe your delivery options (areas, couriers, packing, lead times).",
-    };
-  }
-  const pricing = formData.get("deliveryPricing") as string;
-  if (pricing === "fixed") {
-    const raw = (formData.get("deliveryCost") as string)?.trim();
-    const pounds = parseFloat(raw ?? "");
-    if (Number.isNaN(pounds) || pounds < 0) {
-      return {
-        ok: false,
-        message: "Enter a valid delivery cost in £, or choose “Quote on request”.",
-      };
-    }
-    return {
-      ok: true,
       data: {
-        offersDelivery: true,
-        deliveryNotes: notes,
-        deliveryCostPence: Math.round(pounds * 100),
+        offersDelivery: false,
+        deliveryNotes: null,
+        deliveryCostPence: null,
+        deliveryOptions: null,
       },
     };
   }
-  if (pricing === "quote") {
-    return {
-      ok: true,
-      data: { offersDelivery: true, deliveryNotes: notes, deliveryCostPence: null },
-    };
-  }
-  return { ok: false, message: "Choose delivery pricing: fixed price or quote on request." };
+
+  const rawJson = (formData.get("deliveryOptionsJson") as string) ?? "";
+  const parsedOpts = parseDeliveryOptionsJson(rawJson, { requireAtLeastOne: true });
+  if (!parsedOpts.ok) return parsedOpts;
+
+  const notes = ((formData.get("deliveryNotes") as string) ?? "").trim() || null;
+  const options: DeliveryOptionStored[] = parsedOpts.data;
+  const deliveryCostPence = minDeliveryPricePence(options);
+
+  return {
+    ok: true,
+    data: {
+      offersDelivery: true,
+      deliveryNotes: notes,
+      deliveryCostPence,
+      deliveryOptions: options as unknown as Prisma.InputJsonValue,
+    },
+  };
 }
 
 export async function createListing(formData: FormData) {
@@ -173,13 +209,13 @@ export async function createListing(formData: FormData) {
   if (!parsed.ok) {
     redirect("/dashboard/sell?error=" + encodeURIComponent(parsed.message));
   }
-  const { listingKind, freeToCollector, price, auctionEndsAt } = parsed.data;
+  const { listingKind, freeToCollector, price, auctionEndsAt, auctionReservePence } = parsed.data;
 
   const deliveryParsed = parseDeliveryFields(formData, { freeToCollector });
   if (!deliveryParsed.ok) {
     redirect("/dashboard/sell?error=" + encodeURIComponent(deliveryParsed.message));
   }
-  const { offersDelivery, deliveryNotes, deliveryCostPence } = deliveryParsed.data;
+  const { offersDelivery, deliveryNotes, deliveryCostPence, deliveryOptions } = deliveryParsed.data;
 
   const validConditions: Condition[] = [
     "like_new",
@@ -221,7 +257,10 @@ export async function createListing(formData: FormData) {
       offersDelivery,
       deliveryNotes,
       deliveryCostPence,
+      deliveryOptions:
+        deliveryOptions === null ? Prisma.DbNull : (deliveryOptions as Prisma.InputJsonValue),
       auctionEndsAt,
+      auctionReservePence,
       status: publish ? ListingStatus.active : ListingStatus.draft,
     },
   });
@@ -263,13 +302,13 @@ export async function updateListing(id: string, formData: FormData) {
   if (!parsed.ok) {
     redirect(editUrl + "?error=" + encodeURIComponent(parsed.message));
   }
-  const { listingKind, freeToCollector, price, auctionEndsAt } = parsed.data;
+  const { listingKind, freeToCollector, price, auctionEndsAt, auctionReservePence } = parsed.data;
 
   const deliveryParsed = parseDeliveryFields(formData, { freeToCollector });
   if (!deliveryParsed.ok) {
     redirect(editUrl + "?error=" + encodeURIComponent(deliveryParsed.message));
   }
-  const { offersDelivery, deliveryNotes, deliveryCostPence } = deliveryParsed.data;
+  const { offersDelivery, deliveryNotes, deliveryCostPence, deliveryOptions } = deliveryParsed.data;
 
   const validConditions: Condition[] = [
     "like_new",
@@ -311,7 +350,10 @@ export async function updateListing(id: string, formData: FormData) {
       offersDelivery,
       deliveryNotes,
       deliveryCostPence,
+      deliveryOptions:
+        deliveryOptions === null ? Prisma.DbNull : (deliveryOptions as Prisma.InputJsonValue),
       auctionEndsAt,
+      auctionReservePence,
       status: publish ? ListingStatus.active : ListingStatus.draft,
     },
   });

@@ -9,7 +9,12 @@ import { HaggleForm } from "./HaggleForm";
 import { BidForm } from "./BidForm";
 import { OfferRespond } from "./OfferRespond";
 import { CONDITION_LABELS, LISTING_KIND_LABELS } from "@/lib/constants";
+import {
+  formatDeliveryOptionLine,
+  type DeliveryOptionStored,
+} from "@/lib/delivery-carriers";
 import { minimumNextBidPence } from "@/lib/auction";
+import { finalizeAuctionListing } from "@/lib/auction-settlement";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -41,6 +46,8 @@ export default async function ListingPage({
   const { id } = await params;
   const session = await auth();
 
+  await finalizeAuctionListing(id);
+
   const listing = await prisma.listing.findUnique({
     where: { id },
     include: {
@@ -48,17 +55,42 @@ export default async function ListingPage({
       seller: { include: { sellerProfile: true } },
     },
   });
-  if (!listing || listing.status !== "active") notFound();
+  if (!listing) notFound();
 
   const isOwner = session?.user?.id === listing.sellerId;
+
+  const topBid = await prisma.bid.findFirst({
+    where: { listingId: id },
+    orderBy: { amountPence: "desc" },
+    include: { bidder: { select: { name: true, email: true } } },
+  });
+
+  if (listing.status === "draft") notFound();
+  if (listing.status === "sold") notFound();
+  if (listing.status === "ended" && !isOwner) notFound();
+  if (listing.status === "payment_pending") {
+    const winnerId = topBid?.bidderId;
+    if (!isOwner && session?.user?.id !== winnerId) notFound();
+  }
+  if (
+    listing.status !== "active" &&
+    listing.status !== "payment_pending" &&
+    listing.status !== "ended"
+  ) {
+    notFound();
+  }
+
   const sellerProfile = listing.seller?.sellerProfile;
 
-  const [topBid, recentBids, incomingOffers, myOffers, acceptedMine] = await Promise.all([
-    prisma.bid.findFirst({
-      where: { listingId: id },
-      orderBy: { amountPence: "desc" },
-      include: { bidder: { select: { name: true, email: true } } },
-    }),
+  const buyerBidPay =
+    session?.user?.id && !isOwner
+      ? await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { bidPaymentMethodId: true },
+        })
+      : null;
+
+  const [recentBids, incomingOffers, myOffers, acceptedMine] = await Promise.all([
     prisma.bid.findMany({
       where: { listingId: id },
       orderBy: { createdAt: "desc" },
@@ -100,9 +132,14 @@ export default async function ListingPage({
   const minNextPounds = minNextPence / 100;
 
   const userWonAuction =
-    auctionEnded &&
-    topBid &&
-    session?.user?.id === topBid.bidderId;
+    !!topBid &&
+    session?.user?.id === topBid.bidderId &&
+    listing.status === "payment_pending";
+
+  const structuredDelivery: DeliveryOptionStored[] | null =
+    Array.isArray(listing.deliveryOptions) && listing.deliveryOptions.length > 0
+      ? (listing.deliveryOptions as DeliveryOptionStored[])
+      : null;
 
   return (
     <div className="flex flex-col gap-8 lg:flex-row">
@@ -172,6 +209,11 @@ export default async function ListingPage({
                 {auctionEnded ? "Auction ended" : `Ends ${listing.auctionEndsAt.toLocaleString()}`}
               </p>
             )}
+            {auctionLive && listing.auctionReservePence != null && (
+              <p className="text-xs font-medium text-amber-900">
+                Reserve applies — the item will not sell unless bidding reaches the seller’s minimum.
+              </p>
+            )}
           </div>
         )}
         <p className="mt-1 text-sm text-zinc-500">
@@ -195,22 +237,46 @@ export default async function ListingPage({
                 Buyers can <strong>collect</strong> from the location above, or the seller may{" "}
                 <strong>arrange delivery</strong> as described below.
               </p>
-              {listing.deliveryNotes ? (
+              {structuredDelivery ? (
+                <ul className="space-y-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-800">
+                  {structuredDelivery.map((o, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="text-zinc-400">·</span>
+                      <span>{formatDeliveryOptionLine(o)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <>
+                  {listing.deliveryNotes ? (
+                    <p className="whitespace-pre-wrap rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-800">
+                      {listing.deliveryNotes}
+                    </p>
+                  ) : null}
+                  <p className="text-zinc-600">
+                    {listing.deliveryCostPence != null ? (
+                      <>
+                        Indicative delivery from{" "}
+                        <strong>£{(listing.deliveryCostPence / 100).toFixed(2)}</strong> — confirm with the
+                        seller after purchase.
+                      </>
+                    ) : (
+                      <>
+                        Delivery: <strong>quote on request</strong> — agree cost and timing with the seller.
+                      </>
+                    )}
+                  </p>
+                </>
+              )}
+              {listing.deliveryNotes && structuredDelivery ? (
                 <p className="whitespace-pre-wrap rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-800">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    More detail
+                  </span>
+                  <br />
                   {listing.deliveryNotes}
                 </p>
               ) : null}
-              <p className="text-zinc-600">
-                {listing.deliveryCostPence != null ? (
-                  <>
-                    Indicative delivery from{" "}
-                    <strong>£{(listing.deliveryCostPence / 100).toFixed(2)}</strong> — confirm details with the
-                    seller after purchase.
-                  </>
-                ) : (
-                  <>Delivery: <strong>quote on request</strong> — agree cost and timing with the seller.</>
-                )}
-              </p>
             </div>
           ) : (
             <p className="mt-1 text-sm text-zinc-700">
@@ -220,13 +286,13 @@ export default async function ListingPage({
         </div>
         <p className="mt-4 whitespace-pre-wrap text-zinc-700">{listing.description}</p>
 
-        {!isOwner && listing.status === "active" && session?.user?.id && (
+        {!isOwner && session?.user?.id && (
           <div className="mt-6 space-y-4">
-            {listing.listingKind === "sell" && listing.freeToCollector && (
+            {listing.status === "active" && listing.listingKind === "sell" && listing.freeToCollector && (
               <FreeCollectButton listingId={listing.id} />
             )}
 
-            {listing.listingKind === "sell" && !listing.freeToCollector && (
+            {listing.status === "active" && listing.listingKind === "sell" && !listing.freeToCollector && (
               <>
                 {acceptedMine ? (
                   <BuyButton
@@ -241,19 +307,58 @@ export default async function ListingPage({
               </>
             )}
 
-            {isAuction && auctionLive && <BidForm listingId={listing.id} minimumPounds={minNextPounds} />}
-
-            {isAuction && auctionEnded && userWonAuction && topBid && (
-              <BuyButton
+            {listing.status === "active" && isAuction && auctionLive && (
+              <BidForm
                 listingId={listing.id}
-                bidId={topBid.id}
-                label={`Pay winning bid £${(topBid.amountPence / 100).toFixed(2)}`}
+                minimumPounds={minNextPounds}
+                hasBidPaymentMethod={!!buyerBidPay?.bidPaymentMethodId}
               />
             )}
 
-            {isAuction && auctionEnded && !userWonAuction && session?.user?.id && (
+            {isAuction && userWonAuction && topBid && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-4">
+                <p className="text-sm font-semibold text-amber-950">You won this auction</p>
+                <p className="mt-1 text-xs text-amber-900/90">
+                  We tried to charge your saved card automatically. If that didn’t go through, complete
+                  payment here — same amount, secure Stripe checkout.
+                </p>
+                <div className="mt-3">
+                  <BuyButton
+                    listingId={listing.id}
+                    bidId={topBid.id}
+                    label={`Pay winning bid £${(topBid.amountPence / 100).toFixed(2)}`}
+                  />
+                </div>
+              </div>
+            )}
+
+            {listing.status === "active" && isAuction && auctionEnded && !userWonAuction && (
               <p className="text-sm text-zinc-600">This auction has ended.</p>
             )}
+          </div>
+        )}
+
+        {isOwner && listing.listingKind === "auction" && listing.status === "ended" && (
+          <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+            <p className="font-semibold text-zinc-900">Auction ended</p>
+            <p className="mt-1">
+              {!topBid
+                ? "There were no bids on this listing."
+                : listing.auctionReservePence != null &&
+                    topBid.amountPence < listing.auctionReservePence
+                  ? "The highest bid was below your reserve — there was no sale."
+                  : "There was no sale. Check your dashboard for next steps."}
+            </p>
+          </div>
+        )}
+
+        {isOwner && listing.status === "payment_pending" && (
+          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-950">
+            <p className="font-semibold">Awaiting payment</p>
+            <p className="mt-1 text-amber-900/90">
+              The winning bidder is completing payment (we tried their saved card first). You’ll see the
+              sale in your dashboard when it succeeds.
+            </p>
           </div>
         )}
 

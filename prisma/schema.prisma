@@ -20,6 +20,8 @@ enum ListingStatus {
   draft
   active
   sold
+  ended // auction closed without sale (no bids or reserve not met)
+  payment_pending // auction won; automatic charge failed or pending — winner must pay
 }
 
 enum OrderStatus {
@@ -79,6 +81,9 @@ model User {
   bids          Bid[]
   wantedAds     WantedAd[]
   notifications Notification[]
+
+  stripeCustomerId     String? @unique // platform Customer for saved auction payment method
+  bidPaymentMethodId   String? // default PaymentMethod id (card on file for bids)
 }
 
 model Account {
@@ -166,10 +171,13 @@ model Listing {
   listingKind       ListingKind   @default(sell)
   freeToCollector   Boolean       @default(false) // sell only: free pickup, no payment
   offersDelivery    Boolean       @default(false) // seller may arrange delivery (as well as collection)
-  deliveryNotes     String? // couriers, areas, lead times — shown to buyers
-  deliveryCostPence Int? // null = quote on request; set = fixed UK delivery from £x
-  auctionEndsAt     DateTime? // auction only: bidding closes at this time (UTC)
-  createdAt         DateTime      @default(now())
+  deliveryNotes     String? // extra context: packing, cut-offs, areas
+  deliveryCostPence Int? // lowest fixed option in pence; null if all quote-only (legacy + summary)
+  deliveryOptions   Json? // [{ carrier, customLabel?, pricePence | null }] preset carriers + prices
+  auctionEndsAt        DateTime? // auction only: bidding closes at this time (UTC)
+  auctionReservePence  Int? // optional minimum winning amount (pence); null = no reserve
+  auctionFinalizedAt   DateTime? // set after end-of-auction settlement (reserve check / charge)
+  createdAt            DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
   seller   User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)

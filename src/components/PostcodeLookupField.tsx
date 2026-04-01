@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type Suggestion = {
   postcode: string;
@@ -17,6 +17,8 @@ type Props = {
   placeholder?: string;
   className?: string;
   "aria-describedby"?: string;
+  /** Fired when the postcode value changes (typing, pick, or successful lookup). */
+  onValueChange?: (value: string) => void;
 };
 
 export function PostcodeLookupField({
@@ -28,7 +30,13 @@ export function PostcodeLookupField({
   placeholder = "e.g. SW1A 1AA",
   className = "",
   "aria-describedby": ariaDescribedBy,
+  onValueChange,
 }: Props) {
+  const onValueChangeRef = useRef(onValueChange);
+  useEffect(() => {
+    onValueChangeRef.current = onValueChange;
+  }, [onValueChange]);
+
   const genId = useId();
   const inputId = idProp ?? genId;
   const [value, setValue] = useState(defaultValue);
@@ -79,6 +87,7 @@ export function PostcodeLookupField({
       };
       if (res.ok && data.ok && data.postcode) {
         setValue(data.postcode);
+        onValueChangeRef.current?.(data.postcode);
         setHint(data.areaLine ? `${data.postcode} — ${data.areaLine}` : data.postcode);
         setHintOk(true);
       } else {
@@ -98,6 +107,7 @@ export function PostcodeLookupField({
   function pickSuggestion(s: Suggestion) {
     const line = [s.adminDistrict, s.region].filter(Boolean).join(", ");
     setValue(s.postcode);
+    onValueChangeRef.current?.(s.postcode);
     setSuggestions([]);
     setOpen(false);
     setHint(line ? `${s.postcode} — ${line}` : s.postcode);
@@ -113,10 +123,12 @@ export function PostcodeLookupField({
         autoComplete="postal-code"
         value={value}
         onChange={(e) => {
-          setValue(e.target.value);
+          const v = e.target.value;
+          setValue(v);
+          onValueChangeRef.current?.(v);
           setHint(null);
           setHintOk(null);
-          runSuggest(e.target.value);
+          runSuggest(v);
           setOpen(true);
         }}
         onFocus={() => {

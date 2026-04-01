@@ -21,8 +21,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "listingId required" }, { status: 400 });
   }
 
-  const listing = await prisma.listing.findUnique({
-    where: { id: listingId, status: "active" },
+  const listing = await prisma.listing.findFirst({
+    where: {
+      id: listingId,
+      OR: [{ status: "active" }, { status: "payment_pending" }],
+    },
     include: {
       seller: { include: { sellerProfile: true } },
     },
@@ -71,7 +74,9 @@ export async function POST(req: Request) {
   let metadataBidId = "";
 
   if (listing.listingKind === "auction") {
-    const ended = listing.auctionEndsAt && new Date() > listing.auctionEndsAt;
+    const ended =
+      listing.status === "payment_pending" ||
+      Boolean(listing.auctionEndsAt && new Date() > listing.auctionEndsAt);
     if (!ended) {
       return NextResponse.json(
         { error: "This auction is still open — place a bid instead." },
