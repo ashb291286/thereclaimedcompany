@@ -55,7 +55,7 @@ export function BuyButton({
       }}
       disabled={loading || disabled}
       title={disabled ? disabledReason : undefined}
-      className="w-full rounded-lg bg-amber-600 px-4 py-3 font-medium text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+      className="w-full rounded-lg bg-brand px-4 py-3 font-medium text-white hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
     >
       {loading ? "Redirecting…" : label}
     </button>

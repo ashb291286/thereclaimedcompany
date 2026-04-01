@@ -1,3 +1,4 @@
+@import url("https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -8,8 +9,13 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Satoshi", var(--font-plus-jakarta), ui-sans-serif, sans-serif;
   --font-mono: var(--font-geist-mono);
+  /* Primary UI (buttons, links, focus) */
+  --color-brand: #014e6d;
+  --color-brand-hover: #01354a;
+  --color-brand-soft: #e5f1f5;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,8 +25,19 @@
   }
 }
 
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-sans);
 }

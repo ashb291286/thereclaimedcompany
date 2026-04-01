@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useActionState } from "react";
 
@@ -29,7 +29,7 @@ export function RegisterForm({ register }: { register: RegisterAction }) {
           name="name"
           type="text"
           autoComplete="name"
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
       </div>
       <div>
@@ -42,7 +42,7 @@ export function RegisterForm({ register }: { register: RegisterAction }) {
           type="email"
           autoComplete="email"
           required
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
       </div>
       <div>
@@ -56,13 +56,13 @@ export function RegisterForm({ register }: { register: RegisterAction }) {
           autoComplete="new-password"
           required
           minLength={8}
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <p className="text-xs text-zinc-500 mt-1">At least 8 characters</p>
       </div>
       <button
         type="submit"
-        className="w-full rounded-lg bg-amber-600 px-4 py-2.5 font-medium text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+        className="w-full rounded-lg bg-brand px-4 py-2.5 font-medium text-white hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
       >
         Sign up
       </button>

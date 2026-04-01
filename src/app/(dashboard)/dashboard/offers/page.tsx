@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -50,7 +50,7 @@ export default async function OffersPage() {
                 {o.message && <p className="mt-2 text-sm text-zinc-600">{o.message}</p>}
                 <Link
                   href={`/listings/${o.listingId}`}
-                  className="mt-2 inline-block text-sm text-amber-700 hover:underline"
+                  className="mt-2 inline-block text-sm text-brand hover:underline"
                 >
                   View listing
                 </Link>
@@ -69,7 +69,7 @@ export default async function OffersPage() {
           <ul className="mt-4 space-y-3">
             {outgoing.map((o) => (
               <li key={o.id} className="rounded-lg border border-zinc-200 bg-white p-3 text-sm">
-                <Link href={`/listings/${o.listingId}`} className="font-medium text-amber-700 hover:underline">
+                <Link href={`/listings/${o.listingId}`} className="font-medium text-brand hover:underline">
                   {o.listing.title}
                 </Link>
                 <p className="text-zinc-600">

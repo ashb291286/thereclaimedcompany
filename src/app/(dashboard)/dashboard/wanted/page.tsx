@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -24,7 +24,7 @@ export default async function DashboardWantedPage({
         <h1 className="text-2xl font-semibold text-zinc-900">Your wanted ads</h1>
         <Link
           href="/dashboard/wanted/new"
-          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
         >
           New wanted ad
         </Link>
@@ -35,7 +35,7 @@ export default async function DashboardWantedPage({
         </p>
       )}
       <p className="mt-2 text-sm text-zinc-600">
-        <Link href="/wanted" className="text-amber-700 hover:underline">
+        <Link href="/wanted" className="text-brand hover:underline">
           Browse all public wanted ads
         </Link>
       </p>

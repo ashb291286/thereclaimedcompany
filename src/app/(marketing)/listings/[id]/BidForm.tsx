@@ -31,7 +31,7 @@ export function BidForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+    <form onSubmit={onSubmit} className="rounded-xl border border-brand/20 bg-brand-soft/60 p-4">
       <h3 className="text-sm font-semibold text-zinc-900">Place a bid</h3>
       <p className="mt-1 text-xs text-zinc-600">
         Minimum next bid from £{minimumPounds.toFixed(2)} (includes increment rules).
@@ -48,7 +48,7 @@ export function BidForm({
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50"
         >
           {busy ? "Placing…" : "Place bid"}
         </button>

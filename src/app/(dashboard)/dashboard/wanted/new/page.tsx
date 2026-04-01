@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -20,7 +20,7 @@ export default async function NewWantedPage({
 
   return (
     <div>
-      <Link href="/dashboard/wanted" className="text-sm text-amber-700 hover:underline">
+      <Link href="/dashboard/wanted" className="text-sm text-brand hover:underline">
         ← Wanted ads
       </Link>
       <h1 className="mt-4 text-2xl font-semibold text-zinc-900">Post a wanted ad</h1>
@@ -100,7 +100,7 @@ export default async function NewWantedPage({
         </div>
         <button
           type="submit"
-          className="rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-700"
+          className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover"
         >
           Publish wanted ad
         </button>

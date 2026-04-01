@@ -34,7 +34,7 @@ export default async function SellerPage({
           {profile.businessName && ` · ${profile.businessName}`}
         </h1>
         {isYard && (
-          <span className="mt-2 inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+          <span className="mt-2 inline-block rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-medium text-brand">
             Reclamation yard
           </span>
         )}
@@ -52,7 +52,7 @@ export default async function SellerPage({
             <li key={l.id}>
               <Link
                 href={`/listings/${l.id}`}
-                className="block rounded-xl border border-zinc-200 bg-white overflow-hidden hover:border-amber-300 transition-colors"
+                className="block rounded-xl border border-zinc-200 bg-white overflow-hidden hover:border-brand/40 transition-colors"
               >
                 <div className="aspect-square relative bg-zinc-200">
                   {l.images[0] ? (

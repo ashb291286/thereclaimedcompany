@@ -213,7 +213,7 @@ export default async function ListingPage({
 
         {!isOwner && !session?.user?.id && (
           <p className="mt-6 text-sm text-zinc-600">
-            <Link href="/auth/signin" className="font-medium text-amber-700 hover:underline">
+            <Link href="/auth/signin" className="font-medium text-brand hover:underline">
               Sign in
             </Link>{" "}
             to buy, bid, or make an offer.
@@ -221,7 +221,7 @@ export default async function ListingPage({
         )}
 
         {isOwner && incomingOffers.length > 0 && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/80 p-4">
+          <div className="mt-6 rounded-xl border border-brand/20 bg-brand-soft/80 p-4">
             <h2 className="text-sm font-semibold text-zinc-900">Offers on this listing</h2>
             <ul className="mt-3 space-y-3">
               {incomingOffers.map((o) => (
@@ -269,7 +269,7 @@ export default async function ListingPage({
             <h2 className="font-medium text-zinc-900">Seller</h2>
             <Link
               href={`/sellers/${listing.sellerId}`}
-              className="mt-1 block text-amber-600 hover:underline"
+              className="mt-1 block text-brand hover:underline"
             >
               {sellerProfile.displayName}
               {sellerProfile.businessName && ` · ${sellerProfile.businessName}`}

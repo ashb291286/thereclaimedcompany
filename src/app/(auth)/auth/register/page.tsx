@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { register } from "@/lib/actions/auth";
 import { RegisterForm } from "./RegisterForm";
 
@@ -11,7 +11,7 @@ export default function RegisterPage() {
       <RegisterForm register={register} />
       <p className="mt-6 text-center text-sm text-zinc-600">
         Already have an account?{" "}
-        <Link href="/auth/signin" className="font-medium text-amber-600 hover:underline">
+        <Link href="/auth/signin" className="font-medium text-brand hover:underline">
           Sign in
         </Link>
       </p>

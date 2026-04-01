@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { prisma } from "@/lib/db";
 import Image from "next/image";
 import { HeroSearch } from "./HeroSearch";
@@ -17,7 +17,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1800&q=80')] bg-cover bg-center opacity-35" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-black/50" />
         <div className="relative mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
-          <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/90">
+          <p className="text-xs font-semibold uppercase tracking-widest text-sky-200/90">
             Find your next piece
           </p>
           <h1 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-5xl">
@@ -32,7 +32,7 @@ export default async function HomePage() {
           <div className="mt-10 flex flex-wrap gap-3">
             <Link
               href="/auth/register"
-              className="rounded-full bg-amber-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-black/25 hover:bg-amber-700"
+              className="rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-black/25 hover:bg-brand-hover"
             >
               Start selling
             </Link>
@@ -49,7 +49,7 @@ export default async function HomePage() {
       <section className="mx-auto mt-10 w-full max-w-7xl px-4 sm:px-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-zinc-900">Latest listings</h2>
-          <Link href="/search" className="text-sm font-medium text-amber-700 hover:underline">
+          <Link href="/search" className="text-sm font-medium text-brand hover:underline">
             View all
           </Link>
         </div>
@@ -69,7 +69,7 @@ export default async function HomePage() {
               <li key={l.id}>
                 <Link
                   href={`/listings/${l.id}`}
-                  className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-amber-300"
+                  className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
                 >
                   <div className="relative aspect-square bg-zinc-200">
                     {l.images[0] ? (
@@ -90,7 +90,7 @@ export default async function HomePage() {
                   <div className="p-3">
                     <div className="mb-1 flex flex-wrap gap-1">
                       {l.listingKind === "auction" && (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-900">
+                        <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
                           Auction
                         </span>
                       )}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { createListing } from "@/lib/actions/listings";
@@ -109,7 +109,7 @@ export function ListingForm({
               </button>
             </div>
           ))}
-          <label className="flex h-24 w-24 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 hover:border-amber-500 hover:bg-amber-50/50">
+          <label className="flex h-24 w-24 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 hover:border-brand hover:bg-brand-soft/50">
             <input
               type="file"
               accept="image/*"
@@ -134,7 +134,7 @@ export function ListingForm({
           required
           defaultValue={listing?.title}
           placeholder="e.g. Victorian fireplace surround"
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
       </div>
       <div>
@@ -148,7 +148,7 @@ export function ListingForm({
           required
           defaultValue={listing?.description}
           placeholder="Describe the item, dimensions, any damage..."
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
       </div>
 
@@ -163,7 +163,7 @@ export function ListingForm({
               onChange={() => {
                 setListingKind("sell");
               }}
-              className="text-amber-600"
+              className="text-brand"
             />
             Fixed price (buy now / offers)
           </label>
@@ -176,7 +176,7 @@ export function ListingForm({
                 setListingKind("auction");
                 setFreeToCollector(false);
               }}
-              className="text-amber-600"
+              className="text-brand"
             />
             Auction (timed bidding)
           </label>
@@ -188,7 +188,7 @@ export function ListingForm({
               name="freeToCollector"
               checked={freeToCollector}
               onChange={(e) => setFreeToCollector(e.target.checked)}
-              className="rounded border-zinc-300 text-amber-600"
+              className="rounded border-zinc-300 text-brand"
             />
             Free to collector (no payment — buyer arranges pickup)
           </label>
@@ -231,7 +231,7 @@ export function ListingForm({
                   : undefined
             }
             placeholder={listingKind === "auction" ? "Starting bid" : "0.00"}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600 disabled:bg-zinc-100 disabled:text-zinc-500"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-zinc-100 disabled:text-zinc-500"
           />
           {listingKind === "sell" && freeToCollector && (
             <p className="mt-1 text-xs text-zinc-500">Price is £0 — no checkout; buyer confirms collection.</p>
@@ -246,7 +246,7 @@ export function ListingForm({
             name="condition"
             required
             defaultValue={listing?.condition}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           >
             {(Object.entries(CONDITION_LABELS) as [Condition, string][]).map(([value, label]) => (
               <option key={value} value={value}>
@@ -265,7 +265,7 @@ export function ListingForm({
           name="categoryId"
           required
           defaultValue={listing?.categoryId}
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -284,7 +284,7 @@ export function ListingForm({
           type="text"
           defaultValue={listing?.postcode ?? defaultPostcode}
           placeholder="e.g. SW1A 1AA"
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
       </div>
       <div className="flex gap-3">
@@ -300,7 +300,7 @@ export function ListingForm({
           type="submit"
           name="publish"
           value="true"
-          className="rounded-lg bg-amber-600 px-4 py-2.5 font-medium text-white hover:bg-amber-700"
+          className="rounded-lg bg-brand px-4 py-2.5 font-medium text-white hover:bg-brand-hover"
         >
           {isEdit ? "Update & publish" : "Publish listing"}
         </button>

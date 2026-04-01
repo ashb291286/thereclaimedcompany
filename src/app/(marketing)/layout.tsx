@@ -42,7 +42,7 @@ export default async function MarketingLayout({
                 </Link>
                 <Link
                   href="/auth/register"
-                  className="rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+                  className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
                 >
                   Sell now
                 </Link>
@@ -57,7 +57,7 @@ export default async function MarketingLayout({
           <div className="flex justify-center">
             <Link
               href="/auth/register"
-              className="rounded-full border border-white/70 bg-[#063a56] px-6 py-2 text-xs font-semibold tracking-wide text-white transition hover:bg-[#0a5a82]"
+              className="rounded-full border border-white/70 bg-brand px-6 py-2 text-xs font-semibold tracking-wide text-white transition hover:bg-brand-hover"
             >
               Sell Your Item Today
             </Link>
@@ -134,7 +134,7 @@ export default async function MarketingLayout({
               </p>
               <Link
                 href="/auth/register"
-                className="mt-4 inline-flex rounded-full border border-white/60 bg-[#0a5a82] px-5 py-2 text-sm font-semibold text-white hover:bg-[#0e6998] sm:mt-0"
+                className="mt-4 inline-flex rounded-full border border-white/60 bg-brand px-5 py-2 text-sm font-semibold text-white hover:bg-brand-hover sm:mt-0"
               >
                 Add Your Business
               </Link>

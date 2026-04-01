@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useRef, useState } from "react";
@@ -94,11 +94,11 @@ export function HeroSearch() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search listings — e.g. Victorian tiles, oak beams, cast iron…"
           autoComplete="off"
-          className="min-h-12 w-full flex-1 rounded-xl border border-white/25 bg-white/95 px-4 py-3 text-base text-zinc-900 shadow-lg shadow-black/15 placeholder:text-zinc-500 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+          className="min-h-12 w-full flex-1 rounded-xl border border-white/25 bg-white/95 px-4 py-3 text-base text-zinc-900 shadow-lg shadow-black/15 placeholder:text-zinc-500 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40"
         />
         <button
           type="submit"
-          className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-amber-600 px-6 text-sm font-semibold text-white shadow-lg shadow-black/20 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-zinc-900"
+          className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-brand px-6 text-sm font-semibold text-white shadow-lg shadow-black/20 hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/50 focus:ring-offset-2 focus:ring-offset-zinc-900"
         >
           Search
         </button>
@@ -131,7 +131,7 @@ export function HeroSearch() {
       </div>
 
       {error ? (
-        <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-950/40 px-3 py-2 text-sm text-amber-50" role="status">
+        <p className="mt-3 rounded-lg border border-brand/40 bg-brand/85 px-3 py-2 text-sm text-white" role="status">
           {error}
         </p>
       ) : null}

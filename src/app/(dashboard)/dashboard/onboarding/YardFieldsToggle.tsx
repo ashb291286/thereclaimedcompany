@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
@@ -20,7 +20,7 @@ export function YardFieldsToggle() {
               value="individual"
               checked={sellerType === "individual"}
               onChange={() => setSellerType("individual")}
-              className="h-4 w-4 border-zinc-300 text-amber-600 focus:ring-amber-500"
+              className="h-4 w-4 border-zinc-300 text-brand focus:ring-brand"
             />
             <span className="text-zinc-900">Individual</span>
           </label>
@@ -31,7 +31,7 @@ export function YardFieldsToggle() {
               value="reclamation_yard"
               checked={sellerType === "reclamation_yard"}
               onChange={() => setSellerType("reclamation_yard")}
-              className="h-4 w-4 border-zinc-300 text-amber-600 focus:ring-amber-500"
+              className="h-4 w-4 border-zinc-300 text-brand focus:ring-brand"
             />
             <span className="text-zinc-900">Reclamation yard</span>
           </label>
@@ -48,7 +48,7 @@ export function YardFieldsToggle() {
               name="businessName"
               type="text"
               placeholder="Your reclamation yard name"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <div>
@@ -60,7 +60,7 @@ export function YardFieldsToggle() {
               name="openingHours"
               type="text"
               placeholder="e.g. Mon–Sat 9am–5pm"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -24,7 +24,7 @@ export default async function NotificationsPage() {
         <form action={markAllNotificationsRead}>
           <button
             type="submit"
-            className="text-sm font-medium text-amber-700 hover:underline"
+            className="text-sm font-medium text-brand hover:underline"
           >
             Mark all read
           </button>
@@ -41,14 +41,14 @@ export default async function NotificationsPage() {
             <li
               key={n.id}
               className={`rounded-xl border p-4 ${
-                n.readAt ? "border-zinc-200 bg-white" : "border-amber-200 bg-amber-50/50"
+                n.readAt ? "border-zinc-200 bg-white" : "border-brand/20 bg-brand-soft/50"
               }`}
             >
               <p className="font-medium text-zinc-900">{n.title}</p>
               <p className="mt-1 text-sm text-zinc-600">{n.body}</p>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
                 {n.linkUrl && (
-                  <Link href={n.linkUrl} className="font-medium text-amber-700 hover:underline">
+                  <Link href={n.linkUrl} className="font-medium text-brand hover:underline">
                     Open
                   </Link>
                 )}

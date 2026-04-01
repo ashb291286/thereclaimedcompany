@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/db";
 import Link from "next/link";
 import Image from "next/image";
 import { SearchForm } from "./SearchForm";
@@ -118,7 +118,7 @@ export default async function SearchPage({
     <div>
       <h1 className="text-2xl font-semibold text-zinc-900">Browse listings</h1>
       {fromImage ? (
-        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <p className="mt-3 rounded-lg border border-brand/20 bg-brand-soft px-4 py-3 text-sm text-zinc-900">
           Showing listings ranked by visual similarity to your photo. Add keywords or filters below to narrow results.
         </p>
       ) : null}
@@ -141,7 +141,7 @@ export default async function SearchPage({
             <li key={l.id}>
               <Link
                 href={`/listings/${l.id}`}
-                className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-amber-300"
+                className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
               >
                 <div className="relative aspect-square bg-zinc-200">
                   {l.images[0] ? (
@@ -162,7 +162,7 @@ export default async function SearchPage({
                 <div className="p-3">
                   <div className="mb-1 flex flex-wrap gap-1">
                     {l.listingKind === "auction" && (
-                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-900">
+                      <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
                         Auction
                       </span>
                     )}

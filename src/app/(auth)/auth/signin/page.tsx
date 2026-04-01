@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { signIn } from "@/auth";
 import { redirect } from "next/navigation";
 
@@ -41,7 +41,7 @@ export default async function SignInPage({
             type="email"
             autoComplete="email"
             required
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
         <div>
@@ -54,19 +54,19 @@ export default async function SignInPage({
             type="password"
             autoComplete="current-password"
             required
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
         <button
           type="submit"
-          className="w-full rounded-lg bg-amber-600 px-4 py-2.5 font-medium text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+          className="w-full rounded-lg bg-brand px-4 py-2.5 font-medium text-white hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
         >
           Sign in
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-zinc-600">
         Don&apos;t have an account?{" "}
-        <Link href="/auth/register" className="font-medium text-amber-600 hover:underline">
+        <Link href="/auth/register" className="font-medium text-brand hover:underline">
           Sign up
         </Link>
       </p>

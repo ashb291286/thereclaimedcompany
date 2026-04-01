@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import Link from "next/link";
 import { signOut } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -48,7 +48,7 @@ export default async function DashboardLayout({
             >
               Notifications
               {unreadCount > 0 && (
-                <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-600 px-1 text-[10px] font-bold text-white">
+                <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
@@ -60,7 +60,7 @@ export default async function DashboardLayout({
                 await signOut({ redirectTo: "/" });
               }}
             >
-              <button type="submit" className="text-sm text-amber-600 hover:underline">
+              <button type="submit" className="text-sm text-brand hover:underline">
                 Sign out
               </button>
             </form>

@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { StripeConnectButton } from "./StripeConnectButton";
@@ -24,14 +24,14 @@ export default async function DashboardPage({
 
   if (!sellerProfile) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
+      <div className="rounded-xl border border-brand/20 bg-brand-soft p-6 text-center">
         <h2 className="text-lg font-semibold text-zinc-900">Start selling</h2>
         <p className="mt-2 text-sm text-zinc-600">
           Set up your seller profile to list items.
         </p>
         <Link
           href="/dashboard/onboarding"
-          className="mt-4 inline-block rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+          className="mt-4 inline-block rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
         >
           Set up seller profile
         </Link>
@@ -50,7 +50,7 @@ export default async function DashboardPage({
         <p className="mt-4 text-sm text-green-700">Stripe account connected. You can receive payouts when you make a sale.</p>
       )}
       {!sellerProfile.stripeAccountId && (
-        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="mt-6 rounded-xl border border-brand/20 bg-brand-soft p-4">
           <h2 className="font-medium text-zinc-900">Complete setup to get paid</h2>
           <p className="mt-1 text-sm text-zinc-600">
             {stripeParam === "refresh"
@@ -65,7 +65,7 @@ export default async function DashboardPage({
           <h2 className="text-lg font-medium text-zinc-900">Your listings</h2>
           <Link
             href="/dashboard/sell"
-            className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700"
+            className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover"
           >
             New listing
           </Link>
@@ -85,7 +85,7 @@ export default async function DashboardPage({
                   </Link>
                   <p className="text-sm text-zinc-500">
                     {l.listingKind === "auction" && (
-                      <span className="mr-1 font-semibold text-amber-800">Auction · </span>
+                      <span className="mr-1 font-semibold text-brand">Auction · </span>
                     )}
                     {l.listingKind === "sell" && l.freeToCollector && (
                       <span className="mr-1 font-semibold text-emerald-800">Free · </span>
@@ -99,7 +99,7 @@ export default async function DashboardPage({
                 </div>
                 <Link
                   href={`/dashboard/listings/${l.id}/edit`}
-                  className="text-sm text-amber-600 hover:underline"
+                  className="text-sm text-brand hover:underline"
                 >
                   Edit
                 </Link>

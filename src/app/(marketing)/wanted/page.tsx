@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/db";
 import Link from "next/link";
 
 export default async function WantedListPage() {
@@ -16,7 +16,7 @@ export default async function WantedListPage() {
         Buyers post what they need. Sellers and yards get notified so they can list matching stock with a price.
       </p>
       <p className="mt-4 text-sm">
-        <Link href="/dashboard/wanted/new" className="font-medium text-amber-700 hover:underline">
+        <Link href="/dashboard/wanted/new" className="font-medium text-brand hover:underline">
           Post a wanted ad
         </Link>
         <span className="text-zinc-500"> (sign in)</span>
@@ -29,7 +29,7 @@ export default async function WantedListPage() {
             <li key={w.id}>
               <Link
                 href={`/wanted/${w.id}`}
-                className="block rounded-xl border border-zinc-200 bg-white p-4 transition-colors hover:border-amber-300"
+                className="block rounded-xl border border-zinc-200 bg-white p-4 transition-colors hover:border-brand/40"
               >
                 <p className="font-medium text-zinc-900">{w.title}</p>
                 <p className="mt-1 line-clamp-2 text-sm text-zinc-600">{w.description}</p>

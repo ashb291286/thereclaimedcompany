@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -21,7 +21,7 @@ export default async function OrdersPage({
       ) : (
         <p className="mt-4 text-zinc-600">You have no recent orders to show.</p>
       )}
-      <Link href="/" className="mt-6 inline-block text-amber-600 hover:underline">
+      <Link href="/" className="mt-6 inline-block text-brand hover:underline">
         Continue shopping
       </Link>
     </div>

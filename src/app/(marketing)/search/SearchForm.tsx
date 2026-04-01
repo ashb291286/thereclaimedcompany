@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
@@ -124,7 +124,7 @@ export function SearchForm({
             const postcode = (document.querySelector('input[placeholder*="Postcode"]') as HTMLInputElement)?.value;
             updateQuery({ q: q ?? "", postcode: postcode ?? "" });
           }}
-          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
         >
           Apply
         </button>
