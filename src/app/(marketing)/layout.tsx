@@ -49,16 +49,101 @@ export default async function MarketingLayout({
         </div>
       </header>
       <main>{children}</main>
-      <footer className="border-t border-zinc-200 bg-white">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-start justify-between gap-4 px-4 py-8 text-sm text-zinc-600 sm:flex-row sm:items-center sm:px-6">
-          <p>Reclaimed Marketplace by The Reclaimed Company</p>
-          <div className="flex gap-5">
-            <Link href="/search" className="hover:text-zinc-900">
-              Browse listings
+      <footer className="bg-[#06496b] text-white">
+        <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+          <div className="flex justify-center">
+            <Link
+              href="/auth/register"
+              className="rounded-full border border-white/70 bg-[#063a56] px-6 py-2 text-xs font-semibold tracking-wide text-white transition hover:bg-[#0a5a82]"
+            >
+              Sell Your Item Today
             </Link>
-            <Link href="/auth/register" className="hover:text-zinc-900">
-              Become a seller
-            </Link>
+          </div>
+
+          <div className="mt-6 text-center">
+            <h2 className="text-4xl font-semibold leading-tight sm:text-6xl">
+              Your next salvage is just one click away.
+            </h2>
+            <p className="mx-auto mt-3 max-w-3xl text-base font-semibold text-white/95 sm:text-xl">
+              Find local reclamation yards and treasures like usual only faster, smarter, and completely online.
+            </p>
+          </div>
+
+          <div className="mt-8 border-t border-b border-white/20 py-8">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-[1.7fr_1fr_1fr_1fr_1fr]">
+              <div className="space-y-4">
+                <img
+                  src="https://thereclaimedcompany.com/wp-content/uploads/2022/09/the-reclaimed-company-logo-1-1.webp"
+                  alt="Reclaimed"
+                  className="h-16 w-16 rounded-full border border-white/30 object-cover"
+                />
+                <p className="max-w-[210px] text-[36px] leading-none text-white/95">
+                  Make this official, join and access the future of reclamation.
+                </p>
+                <p className="text-sm font-semibold text-white/95">Join us</p>
+                <div className="flex gap-2">
+                  {["F", "X", "Y", "L", "I"].map((icon) => (
+                    <span
+                      key={icon}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-white/10 text-[10px] font-bold text-white"
+                    >
+                      {icon}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm text-white/95">
+                <p className="text-xs font-semibold tracking-widest text-white/80">SALVAGERS</p>
+                <p>Marketplace</p>
+                <p>Free To Collect</p>
+                <p>Wanted</p>
+              </div>
+
+              <div className="space-y-2 text-sm text-white/95">
+                <p className="text-xs font-semibold tracking-widest text-white/80">LOCAL RECLAMATION YARDS</p>
+                <p>Marketplace</p>
+                <p>Free To Collect</p>
+                <p>Wanted</p>
+              </div>
+
+              <div className="space-y-2 text-sm text-white/95">
+                <p className="text-xs font-semibold tracking-widest text-white/80">RESOURCES</p>
+                <p>Marketplace</p>
+                <p>Antiques Dealers</p>
+                <p>Reclamation Yards</p>
+                <p>Press &amp; Media</p>
+              </div>
+
+              <div className="space-y-2 text-sm text-white/95">
+                <p className="text-xs font-semibold tracking-widest text-white/80">COMPANY</p>
+                <p>Safety Tips</p>
+                <p>Terms</p>
+                <p>Privacy Policy</p>
+                <p>Intellectual Property</p>
+                <p>Help</p>
+              </div>
+            </div>
+
+            <div className="mt-8 rounded-xl border border-white/20 bg-white/10 px-5 py-4 sm:flex sm:items-center sm:justify-between">
+              <p className="max-w-2xl text-[35px] leading-none">
+                Get found fast. Connect with homeowners and salvagers who need reclaimed items all online.
+              </p>
+              <Link
+                href="/auth/register"
+                className="mt-4 inline-flex rounded-full border border-white/60 bg-[#0a5a82] px-5 py-2 text-sm font-semibold text-white hover:bg-[#0e6998] sm:mt-0"
+              >
+                Add Your Business
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3 text-xs text-white/70 sm:flex-row sm:items-center sm:justify-between">
+            <p>©2025 The Reclaimed Company 05769679 - All Rights Reserved.</p>
+            <div className="flex items-center gap-4">
+              <p>Privacy Policy</p>
+              <p>Terms of use</p>
+            </div>
           </div>
         </div>
       </footer>
