@@ -77,7 +77,7 @@ export default async function MarketingLayout({
                   alt="Reclaimed"
                   className="h-16 w-16 rounded-full border border-white/30 object-cover"
                 />
-                <p className="max-w-[230px] text-3xl leading-tight tracking-tight text-white/95 sm:text-4xl">
+                <p className="max-w-[230px] text-xl leading-snug tracking-tight text-white/95 sm:text-2xl">
                   Make this official, join and access the future of reclamation.
                 </p>
                 <p className="text-sm font-semibold text-white/95">Join us</p>
