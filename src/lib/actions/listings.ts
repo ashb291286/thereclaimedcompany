@@ -176,15 +176,12 @@ async function materialCarbonFromForm(formData: FormData) {
   const materialQuantity =
     qtyRaw !== "" && !Number.isNaN(parseFloat(qtyRaw)) ? parseFloat(qtyRaw) : null;
   const unitRaw = ((formData.get("materialUnit") as string) ?? "").trim().toLowerCase() || null;
-  const distRaw = ((formData.get("distanceSavedKm") as string) ?? "").trim();
-  const distanceSavedKm =
-    distRaw !== "" && !Number.isNaN(parseFloat(distRaw)) ? parseFloat(distRaw) : null;
 
   return computeListingCarbonSnapshot({
     materialType,
     materialQuantity,
     materialUnit: unitRaw,
-    distanceSavedKm,
+    distanceSavedKm: null,
   });
 }
 

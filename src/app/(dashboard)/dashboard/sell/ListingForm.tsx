@@ -15,6 +15,7 @@ import {
   type DeliveryCarrierId,
   type CarrierFormRow,
 } from "@/lib/delivery-carriers";
+import { MATERIAL_FORM_OPTIONS_FALLBACK } from "@/lib/carbon/material-defaults";
 
 type Category = Prisma.CategoryGetPayload<object>;
 type ListingWithCategory = Prisma.ListingGetPayload<{ include: { category: true } }>;
@@ -156,9 +157,9 @@ export function ListingForm({
     listing?.materialQuantity != null ? String(listing.materialQuantity) : ""
   );
   const [materialUnit, setMaterialUnit] = useState(listing?.materialUnit ?? "kg");
-  const [distanceKmStr, setDistanceKmStr] = useState(
-    listing?.distanceSavedKm != null ? String(listing.distanceSavedKm) : ""
-  );
+
+  const materialSelectOptions =
+    materialOptions.length > 0 ? materialOptions : MATERIAL_FORM_OPTIONS_FALLBACK;
 
   useEffect(() => {
     if (freeToCollector) setFulfillmentMode("collection_only");
@@ -654,7 +655,7 @@ export function ListingForm({
                 className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               >
                 <option value="">Not specified</option>
-                {materialOptions.map((m) => (
+                {materialSelectOptions.map((m) => (
                   <option key={m.materialType} value={m.materialType}>
                     {m.label}
                   </option>
@@ -692,22 +693,6 @@ export function ListingForm({
                 <option value="tonne">Tonnes</option>
                 <option value="m3">Cubic metres (m³)</option>
               </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="distanceSavedKm" className="mb-1 block text-sm font-medium text-zinc-700">
-                Approx. transport saved (km, optional)
-              </label>
-              <input
-                id="distanceSavedKm"
-                name="distanceSavedKm"
-                type="number"
-                step="any"
-                min="0"
-                value={distanceKmStr}
-                onChange={(e) => setDistanceKmStr(e.target.value)}
-                placeholder="For your records — not used in the CO₂e formula yet"
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              />
             </div>
           </div>
         </div>
@@ -880,12 +865,14 @@ export function ListingForm({
     </form>
         </div>
 
-        <aside className="hidden w-full min-w-[280px] max-w-sm shrink-0 pt-1 lg:block xl:min-w-[300px]">
-          <div className="sticky top-24">
+        <aside className="hidden w-full min-w-[280px] max-w-sm shrink-0 lg:block lg:self-start xl:min-w-[300px]">
+          <div className="lg:sticky lg:top-24">
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
               Live preview
             </p>
-            <ListingLivePreview {...previewProps} sellerDisplayName={sellerDisplayName} />
+            <div className="max-h-[min(80vh,calc(100dvh-8rem))] overflow-y-auto overscroll-y-contain pr-1 [scrollbar-gutter:stable]">
+              <ListingLivePreview {...previewProps} sellerDisplayName={sellerDisplayName} />
+            </div>
           </div>
         </aside>
       </div>
