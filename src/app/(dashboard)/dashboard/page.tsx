@@ -84,7 +84,17 @@ export default async function DashboardPage({
                     {l.title}
                   </Link>
                   <p className="text-sm text-zinc-500">
-                    {l.category.name} · £{(l.price / 100).toFixed(2)} · {l.status}
+                    {l.listingKind === "auction" && (
+                      <span className="mr-1 font-semibold text-amber-800">Auction · </span>
+                    )}
+                    {l.listingKind === "sell" && l.freeToCollector && (
+                      <span className="mr-1 font-semibold text-emerald-800">Free · </span>
+                    )}
+                    {l.category.name} ·{" "}
+                    {l.listingKind === "sell" && l.freeToCollector
+                      ? "£0 collect"
+                      : `£${(l.price / 100).toFixed(2)}`}{" "}
+                    · {l.status}
                   </p>
                 </div>
                 <Link

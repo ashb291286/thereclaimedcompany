@@ -25,6 +25,9 @@ export default async function MarketingLayout({
             <Link href="/search?sellerType=reclamation_yard" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
               Yards
             </Link>
+            <Link href="/wanted" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
+              Wanted
+            </Link>
             {session ? (
               <>
                 <Link href="/dashboard" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">

@@ -1,19 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
-export function BuyButton({ listingId }: { listingId: string }) {
+type Props = {
+  listingId: string;
+  offerId?: string;
+  bidId?: string;
+  label?: string;
+  disabled?: boolean;
+  disabledReason?: string;
+};
+
+export function BuyButton({
+  listingId,
+  offerId,
+  bidId,
+  label = "Buy now",
+  disabled,
+  disabledReason,
+}: Props) {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
-  async function handleBuy() {
+  async function handleClick() {
+    if (disabled) return;
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId }),
+        body: JSON.stringify({ listingId, offerId, bidId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -35,11 +50,14 @@ export function BuyButton({ listingId }: { listingId: string }) {
   return (
     <button
       type="button"
-      onClick={handleBuy}
-      disabled={loading}
-      className="w-full rounded-lg bg-amber-600 px-4 py-3 font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+      onClick={() => {
+        void handleClick();
+      }}
+      disabled={loading || disabled}
+      title={disabled ? disabledReason : undefined}
+      className="w-full rounded-lg bg-amber-600 px-4 py-3 font-medium text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {loading ? "Redirecting…" : "Buy now"}
+      {loading ? "Redirecting…" : label}
     </button>
   );
 }

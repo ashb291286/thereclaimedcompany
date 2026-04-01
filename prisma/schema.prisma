@@ -39,6 +39,24 @@ enum Condition {
   collectable
 }
 
+enum ListingKind {
+  sell
+  auction
+}
+
+enum OfferStatus {
+  pending
+  accepted
+  declined
+  withdrawn
+}
+
+enum WantedAdStatus {
+  active
+  fulfilled
+  closed
+}
+
 // ---- NextAuth (Auth.js v5) ----
 model User {
   id            String    @id @default(cuid())
@@ -57,6 +75,10 @@ model User {
   ordersAsBuyer Order[]     @relation("Buyer")
   ordersAsSeller Order[]    @relation("Seller")
   listings      Listing[]
+  offersMade    Offer[]     @relation("OffersMade")
+  bids          Bid[]
+  wantedAds     WantedAd[]
+  notifications Notification[]
 }
 
 model Account {
@@ -120,34 +142,113 @@ model Category {
   parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryHierarchy")
   listings  Listing[]
+  wantedAds WantedAd[]
 }
 
 // ---- Listings ----
 model Listing {
-  id          String        @id @default(cuid())
-  sellerId    String
-  title       String
-  description String
-  price       Int           // in pence/cents
-  condition   Condition
-  categoryId  String
-  postcode    String?
-  lat         Float?
-  lng         Float?
-  images      String[]      // blob URLs
-  status      ListingStatus @default(draft)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  sellerId          String
+  title             String
+  description       String
+  price             Int // asking (sell) or starting bid (auction), pence; 0 when freeToCollector
+  condition         Condition
+  categoryId        String
+  postcode          String?
+  lat               Float?
+  lng               Float?
+  images            String[] // blob URLs
+  status            ListingStatus @default(draft)
+  listingKind       ListingKind   @default(sell)
+  freeToCollector   Boolean       @default(false) // sell only: free pickup, no payment
+  auctionEndsAt     DateTime? // auction only: bidding closes at this time (UTC)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   seller   User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   category Category @relation(fields: [categoryId], references: [id])
   orders   Order[]
+  offers   Offer[]
+  bids     Bid[]
 
   @@index([sellerId])
   @@index([categoryId])
   @@index([status])
   @@index([lat, lng])
   @@index([createdAt])
+  @@index([listingKind])
+}
+
+model Bid {
+  id          String   @id @default(cuid())
+  listingId   String
+  bidderId    String
+  amountPence Int
+  createdAt   DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  bidder  User    @relation(fields: [bidderId], references: [id], onDelete: Cascade)
+  order   Order?
+
+  @@index([listingId])
+  @@index([bidderId])
+  @@index([listingId, amountPence])
+}
+
+model Offer {
+  id            String      @id @default(cuid())
+  listingId     String
+  buyerId       String
+  offeredPrice  Int // pence — agreed amount when accepted
+  message       String?
+  status        OfferStatus @default(pending)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  respondedAt   DateTime?
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer   User    @relation("OffersMade", fields: [buyerId], references: [id], onDelete: Cascade)
+  order   Order?
+
+  @@index([listingId])
+  @@index([buyerId])
+  @@index([listingId, status])
+}
+
+model WantedAd {
+  id             String         @id @default(cuid())
+  userId         String
+  title          String
+  description    String
+  categoryId     String?
+  budgetMaxPence Int?
+  postcode       String?
+  status         WantedAdStatus @default(active)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([categoryId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // wanted_ad_posted | offer_received | offer_accepted | offer_declined | auction_outbid | auction_won
+  title     String
+  body      String
+  linkUrl   String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
 }
 
 // ---- Orders (payments) ----
@@ -156,16 +257,20 @@ model Order {
   listingId             String
   buyerId               String
   sellerId              String
-  amount                Int         // total in pence
-  platformFee           Int         // in pence
+  amount                Int // total in pence (0 for free collection)
+  platformFee           Int // in pence
   stripePaymentIntentId String?     @unique
   status                OrderStatus @default(pending)
+  offerId               String?     @unique
+  bidId                 String?     @unique
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
   listing Listing @relation(fields: [listingId], references: [id])
   buyer   User    @relation("Buyer", fields: [buyerId], references: [id])
   seller  User    @relation("Seller", fields: [sellerId], references: [id])
+  offer   Offer?  @relation(fields: [offerId], references: [id])
+  bid     Bid?    @relation(fields: [bidId], references: [id])
 
   @@index([buyerId])
   @@index([sellerId])

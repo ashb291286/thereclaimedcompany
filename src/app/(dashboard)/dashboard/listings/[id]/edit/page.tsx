@@ -30,7 +30,6 @@ export default async function EditListingPage({
       <ListingForm
         categories={categories}
         defaultPostcode={listing.postcode ?? ""}
-        userId={session.user.id}
         listing={listing}
       />
     </div>

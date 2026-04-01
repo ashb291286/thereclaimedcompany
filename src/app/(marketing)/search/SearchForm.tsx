@@ -33,6 +33,10 @@ export function SearchForm({
         if (v) next.set(k, v);
         else next.delete(k);
       });
+      if ("q" in updates) {
+        next.delete("ids");
+        next.delete("fromImage");
+      }
       next.delete("page");
       router.push(`/search?${next.toString()}`);
     },

@@ -24,11 +24,7 @@ export default async function SellPage() {
       <p className="mt-1 text-zinc-600">
         Add photos, details and set your price.
       </p>
-      <ListingForm
-        categories={categories}
-        defaultPostcode={sellerProfile.postcode}
-        userId={session.user.id}
-      />
+      <ListingForm categories={categories} defaultPostcode={sellerProfile.postcode} />
     </div>
   );
 }

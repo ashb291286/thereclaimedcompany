@@ -14,6 +14,9 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const listingId = body.listingId as string | undefined;
+  const offerId = body.offerId as string | undefined;
+  const bidId = body.bidId as string | undefined;
+
   if (!listingId) {
     return NextResponse.json({ error: "listingId required" }, { status: 400 });
   }
@@ -31,6 +34,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Cannot buy your own listing" }, { status: 400 });
   }
 
+  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+
+  // Free to collector — no Stripe
+  if (listing.listingKind === "sell" && listing.freeToCollector && listing.price === 0) {
+    await prisma.$transaction([
+      prisma.order.create({
+        data: {
+          listingId,
+          buyerId: session.user.id,
+          sellerId: listing.sellerId,
+          amount: 0,
+          platformFee: 0,
+          status: "paid",
+        },
+      }),
+      prisma.listing.update({
+        where: { id: listingId },
+        data: { status: "sold" },
+      }),
+    ]);
+    return NextResponse.json({ url: `${baseUrl}/orders?collected=1` });
+  }
+
   const sellerProfile = listing.seller?.sellerProfile;
   const stripeAccountId = sellerProfile?.stripeAccountId;
   if (!stripeAccountId) {
@@ -40,12 +66,62 @@ export async function POST(req: Request) {
     );
   }
 
-  const amount = listing.price; // pence
+  let amount = listing.price;
+  let metadataOfferId = "";
+  let metadataBidId = "";
+
+  if (listing.listingKind === "auction") {
+    const ended = listing.auctionEndsAt && new Date() > listing.auctionEndsAt;
+    if (!ended) {
+      return NextResponse.json(
+        { error: "This auction is still open — place a bid instead." },
+        { status: 400 }
+      );
+    }
+    if (!bidId) {
+      return NextResponse.json(
+        { error: "Use the Pay winning bid button if you won the auction." },
+        { status: 400 }
+      );
+    }
+    const bid = await prisma.bid.findFirst({
+      where: { id: bidId, listingId, bidderId: session.user.id },
+    });
+    if (!bid) {
+      return NextResponse.json({ error: "Invalid bid" }, { status: 400 });
+    }
+    const top = await prisma.bid.findFirst({
+      where: { listingId },
+      orderBy: { amountPence: "desc" },
+    });
+    if (!top || top.id !== bid.id) {
+      return NextResponse.json({ error: "Only the winning bidder can pay" }, { status: 400 });
+    }
+    amount = bid.amountPence;
+    metadataBidId = bid.id;
+  } else if (offerId) {
+    const offer = await prisma.offer.findFirst({
+      where: {
+        id: offerId,
+        listingId,
+        buyerId: session.user.id,
+        status: "accepted",
+      },
+    });
+    if (!offer) {
+      return NextResponse.json({ error: "No accepted offer found for you on this listing" }, { status: 400 });
+    }
+    amount = offer.offeredPrice;
+    metadataOfferId = offer.id;
+  }
+
+  if (amount <= 0) {
+    return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+  }
+
   const applicationFeeAmount = Math.round(
     (amount * PLATFORM_FEE_PERCENT) / 100 + PLATFORM_FEE_FIXED
   );
-
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -79,6 +155,8 @@ export async function POST(req: Request) {
         sellerId: listing.sellerId,
         amount: String(amount),
         platformFee: String(applicationFeeAmount),
+        ...(metadataOfferId ? { offerId: metadataOfferId } : {}),
+        ...(metadataBidId ? { bidId: metadataBidId } : {}),
       },
     });
 

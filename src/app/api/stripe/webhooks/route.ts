@@ -31,6 +31,8 @@ export async function POST(req: Request) {
     const paymentIntentId = typeof session.payment_intent === "string"
       ? session.payment_intent
       : session.payment_intent?.id;
+    const offerIdMeta = session.metadata?.offerId?.trim();
+    const bidIdMeta = session.metadata?.bidId?.trim();
 
     if (listingId && buyerId && sellerId && paymentIntentId) {
       await prisma.$transaction([
@@ -43,6 +45,8 @@ export async function POST(req: Request) {
             platformFee,
             stripePaymentIntentId: paymentIntentId,
             status: "paid",
+            ...(offerIdMeta ? { offerId: offerIdMeta } : {}),
+            ...(bidIdMeta ? { bidId: bidIdMeta } : {}),
           },
         }),
         prisma.listing.update({

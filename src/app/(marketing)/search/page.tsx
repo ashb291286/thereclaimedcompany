@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { SearchForm } from "./SearchForm";
 import { CONDITION_LABELS } from "@/lib/constants";
-import type { Condition } from "@/generated/prisma/client";
+import type { Condition, Prisma } from "@/generated/prisma/client";
 
 export default async function SearchPage({
   searchParams,
@@ -15,6 +15,8 @@ export default async function SearchPage({
     postcode?: string;
     sellerType?: string;
     page?: string;
+    ids?: string;
+    fromImage?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -22,9 +24,16 @@ export default async function SearchPage({
   const pageSize = 12;
   const skip = (page - 1) * pageSize;
 
-  const where: { status: "active"; OR?: Array<{ title?: { contains: string; mode: "insensitive" }; description?: { contains: string; mode: "insensitive" } }>; categoryId?: string; condition?: Condition; seller?: { role: "individual" | "reclamation_yard" }; postcode?: { startsWith: string; mode: "insensitive" } } = {
+  const idList = params.ids
+    ?.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 48) ?? [];
+
+  const where: Prisma.ListingWhereInput = {
     status: "active",
   };
+
   if (params.q?.trim()) {
     where.OR = [
       { title: { contains: params.q.trim(), mode: "insensitive" } },
@@ -33,31 +42,86 @@ export default async function SearchPage({
   }
   if (params.categoryId) where.categoryId = params.categoryId;
   if (params.condition) where.condition = params.condition as Condition;
-  if (params.sellerType) where.seller = { role: params.sellerType as "individual" | "reclamation_yard" };
+  if (params.sellerType) {
+    where.seller = { role: params.sellerType as "individual" | "reclamation_yard" };
+  }
   if (params.postcode?.trim()) {
     const prefix = params.postcode.trim().toUpperCase().replace(/\s/g, "").slice(0, 4);
     if (prefix.length >= 2) {
       where.postcode = { startsWith: prefix, mode: "insensitive" };
     }
   }
+  if (idList.length > 0) {
+    where.id = { in: idList };
+  }
 
-  const [listings, total, categories] = await Promise.all([
-    prisma.listing.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: pageSize,
-      include: { category: true },
-    }),
-    prisma.listing.count({ where }),
-    prisma.category.findMany({ where: { parentId: null }, orderBy: { name: "asc" } }),
-  ]);
+  const categoriesPromise = prisma.category.findMany({
+    where: { parentId: null },
+    orderBy: { name: "asc" },
+  });
+
+  const [categories, listingsOrdered, total] = await (async () => {
+    if (idList.length > 0) {
+      const orderMap = new Map(idList.map((id, i) => [id, i]));
+      const [allMatching, count, cats] = await Promise.all([
+        prisma.listing.findMany({
+          where,
+          include: { category: true },
+        }),
+        prisma.listing.count({ where }),
+        categoriesPromise,
+      ]);
+      allMatching.sort(
+        (a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999)
+      );
+      const pageSlice = allMatching.slice(skip, skip + pageSize);
+      return [cats, pageSlice, count] as const;
+    }
+
+    const [pageList, count, cats] = await Promise.all([
+      prisma.listing.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+        include: { category: true },
+      }),
+      prisma.listing.count({ where }),
+      categoriesPromise,
+    ]);
+    return [cats, pageList, count] as const;
+  })();
 
   const totalPages = Math.ceil(total / pageSize);
+  const fromImage = params.fromImage === "1";
+
+  const paramRecord: Record<string, string | undefined> = {
+    q: params.q,
+    categoryId: params.categoryId,
+    condition: params.condition,
+    postcode: params.postcode,
+    sellerType: params.sellerType,
+    ids: params.ids,
+    fromImage: params.fromImage,
+  };
+
+  function paginationQuery(pageNum: number) {
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(paramRecord)) {
+      if (v != null && String(v) !== "") sp.set(k, String(v));
+    }
+    sp.set("page", String(pageNum));
+    return sp.toString();
+  }
 
   return (
     <div>
       <h1 className="text-2xl font-semibold text-zinc-900">Browse listings</h1>
+      {fromImage ? (
+        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          Showing listings ranked by visual similarity to your photo. Add keywords or filters below to narrow results.
+        </p>
+      ) : null}
       <SearchForm
         categories={categories}
         defaultQ={params.q}
@@ -69,17 +133,17 @@ export default async function SearchPage({
       <p className="mt-4 text-sm text-zinc-500">
         {total} listing{total !== 1 ? "s" : ""} found
       </p>
-      {listings.length === 0 ? (
+      {listingsOrdered.length === 0 ? (
         <p className="mt-8 text-zinc-500">No listings match your filters.</p>
       ) : (
-        <ul className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {listings.map((l) => (
+        <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {listingsOrdered.map((l) => (
             <li key={l.id}>
               <Link
                 href={`/listings/${l.id}`}
-                className="block rounded-xl border border-zinc-200 bg-white overflow-hidden hover:border-amber-300 transition-colors"
+                className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-amber-300"
               >
-                <div className="aspect-square relative bg-zinc-200">
+                <div className="relative aspect-square bg-zinc-200">
                   {l.images[0] ? (
                     <Image
                       src={l.images[0]}
@@ -90,15 +154,31 @@ export default async function SearchPage({
                       unoptimized
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-400">
+                    <div className="flex h-full w-full items-center justify-center text-zinc-400">
                       No image
                     </div>
                   )}
                 </div>
                 <div className="p-3">
-                  <p className="font-medium text-zinc-900 truncate">{l.title}</p>
+                  <div className="mb-1 flex flex-wrap gap-1">
+                    {l.listingKind === "auction" && (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-900">
+                        Auction
+                      </span>
+                    )}
+                    {l.listingKind === "sell" && l.freeToCollector && (
+                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
+                        Free
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate font-medium text-zinc-900">{l.title}</p>
                   <p className="text-sm text-zinc-500">
-                    £{(l.price / 100).toFixed(2)} · {l.category.name}
+                    {l.listingKind === "sell" && l.freeToCollector
+                      ? `Free to collect · ${l.category.name}`
+                      : l.listingKind === "auction"
+                        ? `From £${(l.price / 100).toFixed(2)} · ${l.category.name}`
+                        : `£${(l.price / 100).toFixed(2)} · ${l.category.name}`}
                     {l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
                   </p>
                 </div>
@@ -111,12 +191,7 @@ export default async function SearchPage({
         <div className="mt-8 flex justify-center gap-2">
           {page > 1 && (
             <Link
-              href={`/search?${new URLSearchParams({
-                ...Object.fromEntries(
-                  Object.entries(params).filter(([, v]) => v != null && v !== "")
-                ),
-                page: String(page - 1),
-              }).toString()}`}
+              href={`/search?${paginationQuery(page - 1)}`}
               className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
             >
               Previous
@@ -127,12 +202,7 @@ export default async function SearchPage({
           </span>
           {page < totalPages && (
             <Link
-              href={`/search?${new URLSearchParams({
-                ...Object.fromEntries(
-                  Object.entries(params).filter(([, v]) => v != null && v !== "")
-                ),
-                page: String(page + 1),
-              }).toString()}`}
+              href={`/search?${paginationQuery(page + 1)}`}
               className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
             >
               Next

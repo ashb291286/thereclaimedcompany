@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import Image from "next/image";
+import { HeroSearch } from "./HeroSearch";
 
 export default async function HomePage() {
   const listings = await prisma.listing.findMany({
@@ -15,25 +16,31 @@ export default async function HomePage() {
       <section className="relative overflow-hidden bg-zinc-900">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1800&q=80')] bg-cover bg-center opacity-35" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-black/50" />
-        <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
-          <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-white sm:text-5xl">
-            Discover reclaimed treasures for your home and project
-          </h1>
-          <p className="mt-4 max-w-2xl text-base text-zinc-200 sm:text-lg">
-            Shop architectural salvage, reclaimed materials, and one-off finds from trusted yards and local sellers.
+        <div className="relative mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+          <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/90">
+            Find your next piece
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/search"
-              className="rounded-full bg-amber-600 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-700"
-            >
-              Browse listings
-            </Link>
+          <h1 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-5xl">
+            Search every listing — or match a photo to similar stock
+          </h1>
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-200 sm:text-lg">
+            Hunt by keywords across all active listings, or upload a reference image to surface close visual matches — ideal for tiles, ironmongery, timber, and one-off salvage.
+          </p>
+
+          <HeroSearch />
+
+          <div className="mt-10 flex flex-wrap gap-3">
             <Link
               href="/auth/register"
-              className="rounded-full border border-white/70 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10"
+              className="rounded-full bg-amber-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-black/25 hover:bg-amber-700"
             >
               Start selling
+            </Link>
+            <Link
+              href="/search?sellerType=reclamation_yard"
+              className="rounded-full border border-white/70 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10"
+            >
+              Find a yard
             </Link>
           </div>
         </div>
@@ -81,9 +88,25 @@ export default async function HomePage() {
                     )}
                   </div>
                   <div className="p-3">
+                    <div className="mb-1 flex flex-wrap gap-1">
+                      {l.listingKind === "auction" && (
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-900">
+                          Auction
+                        </span>
+                      )}
+                      {l.listingKind === "sell" && l.freeToCollector && (
+                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
+                          Free
+                        </span>
+                      )}
+                    </div>
                     <p className="truncate font-medium text-zinc-900">{l.title}</p>
                     <p className="text-sm text-zinc-500">
-                      £{(l.price / 100).toFixed(2)} · {l.category.name}
+                      {l.listingKind === "sell" && l.freeToCollector
+                        ? `Free to collect · ${l.category.name}`
+                        : l.listingKind === "auction"
+                          ? `From £${(l.price / 100).toFixed(2)} · ${l.category.name}`
+                          : `£${(l.price / 100).toFixed(2)} · ${l.category.name}`}
                     </p>
                   </div>
                 </Link>
