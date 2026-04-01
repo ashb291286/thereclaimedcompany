@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import type { Condition, ListingKind } from "@/generated/prisma/client";
 import { ListingStatus } from "@/generated/prisma/client";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
+import { lookupUkPostcode } from "@/lib/postcode-uk";
 
 type ParsedListing = {
   listingKind: ListingKind;
@@ -92,7 +93,14 @@ export async function createListing(formData: FormData) {
   const description = formData.get("description") as string;
   const condition = formData.get("condition") as Condition;
   const categoryId = formData.get("categoryId") as string;
-  const postcode = (formData.get("postcode") as string)?.trim() || sellerProfile.postcode;
+  const postcodeRaw = (formData.get("postcode") as string)?.trim() || sellerProfile.postcode;
+  const resolvedPostcode = await lookupUkPostcode(postcodeRaw);
+  if (!resolvedPostcode) {
+    redirect(
+      "/dashboard/sell?error=" +
+        encodeURIComponent("Use a full valid UK postcode for the item location.")
+    );
+  }
   const imagesStr = formData.get("images") as string;
   const publish = formData.get("publish") === "true";
 
@@ -138,7 +146,11 @@ export async function createListing(formData: FormData) {
       price,
       condition,
       categoryId,
-      postcode,
+      postcode: resolvedPostcode.postcode,
+      lat: resolvedPostcode.lat,
+      lng: resolvedPostcode.lng,
+      adminDistrict: resolvedPostcode.adminDistrict,
+      region: resolvedPostcode.region,
       images,
       listingKind,
       freeToCollector,
@@ -159,15 +171,23 @@ export async function updateListing(id: string, formData: FormData) {
   });
   if (!listing) redirect("/dashboard?error=Listing+not+found");
 
+  const editUrl = `/dashboard/listings/${id}/edit`;
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
   const condition = formData.get("condition") as Condition;
   const categoryId = formData.get("categoryId") as string;
-  const postcode = (formData.get("postcode") as string)?.trim() || listing.postcode || "";
+  const postcodeRaw =
+    (formData.get("postcode") as string)?.trim() || listing.postcode || "";
+  const resolvedPostcode = await lookupUkPostcode(postcodeRaw);
+  if (!resolvedPostcode) {
+    redirect(
+      editUrl +
+        "?error=" +
+        encodeURIComponent("Use a full valid UK postcode for the item location.")
+    );
+  }
   const imagesStr = formData.get("images") as string;
   const publish = formData.get("publish") === "true";
-
-  const editUrl = `/dashboard/listings/${id}/edit`;
   if (!title?.trim() || !description?.trim() || !condition || !categoryId) {
     redirect(editUrl + "?error=" + encodeURIComponent("Title, description, condition and category are required"));
   }
@@ -207,7 +227,11 @@ export async function updateListing(id: string, formData: FormData) {
       price,
       condition,
       categoryId,
-      postcode,
+      postcode: resolvedPostcode.postcode,
+      lat: resolvedPostcode.lat,
+      lng: resolvedPostcode.lng,
+      adminDistrict: resolvedPostcode.adminDistrict,
+      region: resolvedPostcode.region,
       images,
       listingKind,
       freeToCollector,

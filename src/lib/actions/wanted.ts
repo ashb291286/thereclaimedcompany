@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { createNotification } from "@/lib/notifications";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { lookupUkPostcode } from "@/lib/postcode-uk";
 
 export async function createWantedAd(formData: FormData) {
   const session = await auth();
@@ -14,7 +15,7 @@ export async function createWantedAd(formData: FormData) {
   const description = (formData.get("description") as string)?.trim();
   const categoryIdRaw = (formData.get("categoryId") as string)?.trim();
   const categoryId = categoryIdRaw || null;
-  const postcode = (formData.get("postcode") as string)?.trim() || null;
+  const postcodeRaw = (formData.get("postcode") as string)?.trim() || "";
   const budgetStr = formData.get("budgetMax") as string;
   let budgetMaxPence: number | null = null;
   if (budgetStr?.trim()) {
@@ -33,6 +34,26 @@ export async function createWantedAd(formData: FormData) {
     }
   }
 
+  let postcode: string | null = null;
+  let lat: number | null = null;
+  let lng: number | null = null;
+  let adminDistrict: string | null = null;
+  let region: string | null = null;
+  if (postcodeRaw) {
+    const resolved = await lookupUkPostcode(postcodeRaw);
+    if (!resolved) {
+      redirect(
+        "/dashboard/wanted/new?error=" +
+          encodeURIComponent("Use a full valid UK postcode or leave the field empty.")
+      );
+    }
+    postcode = resolved.postcode;
+    lat = resolved.lat;
+    lng = resolved.lng;
+    adminDistrict = resolved.adminDistrict;
+    region = resolved.region;
+  }
+
   const wanted = await prisma.wantedAd.create({
     data: {
       userId: session.user.id,
@@ -40,6 +61,10 @@ export async function createWantedAd(formData: FormData) {
       description,
       categoryId,
       postcode,
+      lat,
+      lng,
+      adminDistrict,
+      region,
       budgetMaxPence,
       status: "active",
     },

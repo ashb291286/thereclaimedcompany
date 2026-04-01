@@ -15,7 +15,7 @@ export default auth((req) => {
     return Response.redirect(signIn);
   }
   if (isAuthPage && isAuth && path !== "/auth/signout") {
-    return Response.redirect(new URL("/", req.nextUrl.origin));
+    return Response.redirect(new URL("/dashboard", req.nextUrl.origin));
   }
   return undefined;
 });

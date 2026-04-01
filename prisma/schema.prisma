@@ -124,6 +124,8 @@ model SellerProfile {
   postcode          String
   lat               Float?
   lng               Float?
+  adminDistrict     String?   // town / borough (postcodes.io admin_district)
+  region            String?   // e.g. England region / London
   openingHours      String?   // free text or JSON string for yards
   verificationStatus String?  @default("none") // none | pending | verified
   stripeAccountId   String?   // Stripe Connect account id when onboarding complete
@@ -157,6 +159,8 @@ model Listing {
   postcode          String?
   lat               Float?
   lng               Float?
+  adminDistrict     String?
+  region            String?
   images            String[] // blob URLs
   status            ListingStatus @default(draft)
   listingKind       ListingKind   @default(sell)
@@ -223,6 +227,10 @@ model WantedAd {
   categoryId     String?
   budgetMaxPence Int?
   postcode       String?
+  lat            Float?
+  lng            Float?
+  adminDistrict  String?
+  region         String?
   status         WantedAdStatus @default(active)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt

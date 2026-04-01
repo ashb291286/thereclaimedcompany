@@ -31,5 +31,9 @@ export async function register(formData: FormData) {
     },
   });
 
-  await signIn("credentials", { email: email.trim(), password, redirectTo: "/" });
+  await signIn("credentials", {
+    email: email.trim(),
+    password,
+    redirectTo: "/dashboard/onboarding?welcome=1",
+  });
 }

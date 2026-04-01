@@ -1,9 +1,10 @@
-﻿import { prisma } from "@/lib/db";
 import Link from "next/link";
 import Image from "next/image";
+import { prisma } from "@/lib/db";
 import { SearchForm } from "./SearchForm";
 import { CONDITION_LABELS } from "@/lib/constants";
-import type { Condition, Prisma } from "@/generated/prisma/client";
+import { searchListings } from "@/lib/listing-search";
+import { formatMiles } from "@/lib/geo";
 
 export default async function SearchPage({
   searchParams,
@@ -13,6 +14,7 @@ export default async function SearchPage({
     categoryId?: string;
     condition?: string;
     postcode?: string;
+    radius?: string;
     sellerType?: string;
     page?: string;
     ids?: string;
@@ -24,73 +26,37 @@ export default async function SearchPage({
   const pageSize = 12;
   const skip = (page - 1) * pageSize;
 
-  const idList = params.ids
-    ?.split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 48) ?? [];
+  const idList =
+    params.ids
+      ?.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 48) ?? [];
 
-  const where: Prisma.ListingWhereInput = {
-    status: "active",
-  };
+  const radiusRaw = parseInt(params.radius ?? "50", 10);
+  const radiusMiles = Number.isFinite(radiusRaw)
+    ? Math.min(100, Math.max(5, radiusRaw))
+    : 50;
 
-  if (params.q?.trim()) {
-    where.OR = [
-      { title: { contains: params.q.trim(), mode: "insensitive" } },
-      { description: { contains: params.q.trim(), mode: "insensitive" } },
-    ];
-  }
-  if (params.categoryId) where.categoryId = params.categoryId;
-  if (params.condition) where.condition = params.condition as Condition;
-  if (params.sellerType) {
-    where.seller = { role: params.sellerType as "individual" | "reclamation_yard" };
-  }
-  if (params.postcode?.trim()) {
-    const prefix = params.postcode.trim().toUpperCase().replace(/\s/g, "").slice(0, 4);
-    if (prefix.length >= 2) {
-      where.postcode = { startsWith: prefix, mode: "insensitive" };
-    }
-  }
-  if (idList.length > 0) {
-    where.id = { in: idList };
-  }
+  const [searchResult, categories] = await Promise.all([
+    searchListings({
+      q: params.q,
+      categoryId: params.categoryId,
+      condition: params.condition,
+      sellerType: params.sellerType,
+      postcode: params.postcode,
+      radiusMiles,
+      idList: idList.length > 0 ? idList : undefined,
+      skip,
+      take: pageSize,
+    }),
+    prisma.category.findMany({
+      where: { parentId: null },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
-  const categoriesPromise = prisma.category.findMany({
-    where: { parentId: null },
-    orderBy: { name: "asc" },
-  });
-
-  const [categories, listingsOrdered, total] = await (async () => {
-    if (idList.length > 0) {
-      const orderMap = new Map(idList.map((id, i) => [id, i]));
-      const [allMatching, count, cats] = await Promise.all([
-        prisma.listing.findMany({
-          where,
-          include: { category: true },
-        }),
-        prisma.listing.count({ where }),
-        categoriesPromise,
-      ]);
-      allMatching.sort(
-        (a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999)
-      );
-      const pageSlice = allMatching.slice(skip, skip + pageSize);
-      return [cats, pageSlice, count] as const;
-    }
-
-    const [pageList, count, cats] = await Promise.all([
-      prisma.listing.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: pageSize,
-        include: { category: true },
-      }),
-      prisma.listing.count({ where }),
-      categoriesPromise,
-    ]);
-    return [cats, pageList, count] as const;
-  })();
+  const { listings: listingsOrdered, total, sortByDistance, searchOriginPostcode } = searchResult;
 
   const totalPages = Math.ceil(total / pageSize);
   const fromImage = params.fromImage === "1";
@@ -100,6 +66,7 @@ export default async function SearchPage({
     categoryId: params.categoryId,
     condition: params.condition,
     postcode: params.postcode,
+    radius: params.radius ?? (params.postcode?.trim() ? String(radiusMiles) : undefined),
     sellerType: params.sellerType,
     ids: params.ids,
     fromImage: params.fromImage,
@@ -112,6 +79,18 @@ export default async function SearchPage({
     }
     sp.set("page", String(pageNum));
     return sp.toString();
+  }
+
+  let locationNote: string | null = null;
+  if (params.postcode?.trim()) {
+    if (sortByDistance && searchOriginPostcode) {
+      locationNote = `Sorted by distance from ${searchOriginPostcode} (within ${radiusMiles} mi). Listings need coordinates — older ones may be missing until edited.`;
+    } else if (!searchOriginPostcode && !idList.length) {
+      locationNote =
+        "That postcode wasn’t recognised; showing listings whose postcode starts with your search instead.";
+    } else if (searchOriginPostcode && idList.length) {
+      locationNote = `Distances from ${searchOriginPostcode} (photo-matched order kept).`;
+    }
   }
 
   return (
@@ -128,8 +107,14 @@ export default async function SearchPage({
         defaultCategoryId={params.categoryId}
         defaultCondition={params.condition}
         defaultPostcode={params.postcode}
+        defaultRadius={String(radiusMiles)}
         defaultSellerType={params.sellerType}
       />
+      {locationNote ? (
+        <p className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+          {locationNote}
+        </p>
+      ) : null}
       <p className="mt-4 text-sm text-zinc-500">
         {total} listing{total !== 1 ? "s" : ""} found
       </p>
@@ -171,6 +156,11 @@ export default async function SearchPage({
                         Free
                       </span>
                     )}
+                    {l.distanceMiles != null && (
+                      <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
+                        {formatMiles(l.distanceMiles)}
+                      </span>
+                    )}
                   </div>
                   <p className="truncate font-medium text-zinc-900">{l.title}</p>
                   <p className="text-sm text-zinc-500">
@@ -181,6 +171,12 @@ export default async function SearchPage({
                         : `£${(l.price / 100).toFixed(2)} · ${l.category.name}`}
                     {l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
                   </p>
+                  {(l.adminDistrict || l.region || l.postcode) && (
+                    <p className="mt-1 truncate text-xs text-zinc-500">
+                      {[l.adminDistrict, l.region].filter(Boolean).join(" · ")}
+                      {l.postcode ? ` · ${l.postcode}` : ""}
+                    </p>
+                  )}
                 </div>
               </Link>
             </li>

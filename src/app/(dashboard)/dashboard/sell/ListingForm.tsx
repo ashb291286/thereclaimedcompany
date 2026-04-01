@@ -1,9 +1,11 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createListing } from "@/lib/actions/listings";
 import { Condition, type ListingKind } from "@/generated/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
+import { ListingImageCropModal } from "./ListingImageCropModal";
+import { PostcodeLookupField } from "@/components/PostcodeLookupField";
 
 type Category = Prisma.CategoryGetPayload<object>;
 type ListingWithCategory = Prisma.ListingGetPayload<{ include: { category: true } }>;
@@ -17,6 +19,23 @@ const CONDITION_LABELS: Record<Condition, string> = {
   upcycled: "Upcycled",
   collectable: "Collectable",
 };
+
+const LISTING_KIND_OPTIONS: {
+  kind: ListingKind;
+  title: string;
+  description: string;
+}[] = [
+  {
+    kind: "sell",
+    title: "Fixed price",
+    description: "Set a price. Buyers can pay now or send offers.",
+  },
+  {
+    kind: "auction",
+    title: "Auction",
+    description: "Set a start price and end time. Highest bid wins.",
+  },
+];
 
 export function ListingForm({
   categories,
@@ -32,6 +51,8 @@ export function ListingForm({
   const [error, setError] = useState<string | null>(null);
   const [listingKind, setListingKind] = useState<ListingKind>(listing?.listingKind ?? "sell");
   const [freeToCollector, setFreeToCollector] = useState(listing?.freeToCollector ?? false);
+  const [cropState, setCropState] = useState<{ src: string; fileName: string } | null>(null);
+  const cropBlobUrlRef = useRef<string | null>(null);
   const isEdit = !!listing;
 
   const auctionEndsDefault =
@@ -39,31 +60,63 @@ export function ListingForm({
       ? new Date(listing.auctionEndsAt).toISOString().slice(0, 16)
       : "";
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files?.length) return;
+  useEffect(() => {
+    return () => {
+      if (cropBlobUrlRef.current) {
+        URL.revokeObjectURL(cropBlobUrlRef.current);
+        cropBlobUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  function openCropForFile(file: File) {
+    if (cropBlobUrlRef.current) {
+      URL.revokeObjectURL(cropBlobUrlRef.current);
+    }
+    const src = URL.createObjectURL(file);
+    cropBlobUrlRef.current = src;
+    setCropState({ src, fileName: file.name });
+  }
+
+  function closeCrop() {
+    if (cropBlobUrlRef.current) {
+      URL.revokeObjectURL(cropBlobUrlRef.current);
+      cropBlobUrlRef.current = null;
+    }
+    setCropState(null);
+  }
+
+  async function uploadCroppedFile(file: File) {
     setUploading(true);
     setError(null);
     try {
-      const urls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const formData = new FormData();
-        formData.set("file", files[i]);
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error ?? "Upload failed");
-        }
-        const data = await res.json();
-        if (data.url) urls.push(data.url);
+      const formData = new FormData();
+      formData.set("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Upload failed");
       }
-      setImageUrls((prev) => [...prev, ...urls]);
+      const data = await res.json();
+      if (data.url) setImageUrls((prev) => [...prev, data.url]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
-      e.target.value = "";
+      closeCrop();
     }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    setError(null);
+    openCropForFile(file);
   }
 
   function removeImage(url: string) {
@@ -90,6 +143,62 @@ export function ListingForm({
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
+
+      <div>
+        <h2 className="mb-1 text-sm font-semibold text-zinc-900">How are you listing?</h2>
+        <p className="mb-3 text-sm text-zinc-600">Choose one — you can change details below.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {LISTING_KIND_OPTIONS.map((opt) => {
+            const selected = listingKind === opt.kind;
+            return (
+              <button
+                key={opt.kind}
+                type="button"
+                onClick={() => {
+                  setListingKind(opt.kind);
+                  if (opt.kind === "auction") setFreeToCollector(false);
+                }}
+                className={`rounded-xl border-2 p-4 text-left transition ${
+                  selected
+                    ? "border-brand bg-brand-soft/60 shadow-sm ring-1 ring-brand/20"
+                    : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50"
+                }`}
+              >
+                <span className="block text-base font-semibold text-zinc-900">{opt.title}</span>
+                <span className="mt-1 block text-sm text-zinc-600">{opt.description}</span>
+              </button>
+            );
+          })}
+        </div>
+        {listingKind === "sell" && (
+          <label className="mt-4 flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-sm text-zinc-700">
+            <input
+              type="checkbox"
+              name="freeToCollector"
+              checked={freeToCollector}
+              onChange={(e) => setFreeToCollector(e.target.checked)}
+              className="rounded border-zinc-300 text-brand"
+            />
+            Free to collector (no payment — buyer arranges pickup)
+          </label>
+        )}
+        {listingKind === "auction" && (
+          <div className="mt-4">
+            <label htmlFor="auctionEndsAt" className="mb-1 block text-sm font-medium text-zinc-700">
+              Auction ends (local time)
+            </label>
+            <input
+              id="auctionEndsAt"
+              name="auctionEndsAt"
+              type="datetime-local"
+              required
+              defaultValue={auctionEndsDefault}
+              className="w-full max-w-xs rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+            />
+          </div>
+        )}
+      </div>
+
       <div>
         <label className="mb-2 block text-sm font-medium text-zinc-700">Photos</label>
         <div className="flex flex-wrap gap-3">
@@ -98,7 +207,7 @@ export function ListingForm({
               <img
                 src={url}
                 alt=""
-                className="h-24 w-24 rounded-lg border border-zinc-200 object-cover"
+                className="h-24 w-32 rounded-lg border border-zinc-200 object-cover"
               />
               <button
                 type="button"
@@ -109,20 +218,22 @@ export function ListingForm({
               </button>
             </div>
           ))}
-          <label className="flex h-24 w-24 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 hover:border-brand hover:bg-brand-soft/50">
+          <label className="flex h-24 w-32 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 hover:border-brand hover:bg-brand-soft/50">
             <input
               type="file"
               accept="image/*"
-              multiple
               className="hidden"
               onChange={handleFileChange}
-              disabled={uploading}
+              disabled={uploading || !!cropState}
             />
             {uploading ? "…" : "+"}
           </label>
         </div>
-        <p className="mt-1 text-xs text-zinc-500">At least one photo required.</p>
+        <p className="mt-1 text-xs text-zinc-500">
+          Add one at a time. Each photo opens a crop step (4:3) before upload.
+        </p>
       </div>
+
       <div>
         <label htmlFor="title" className="mb-1 block text-sm font-medium text-zinc-700">
           Title
@@ -151,64 +262,6 @@ export function ListingForm({
           className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
       </div>
-
-      <fieldset className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
-        <legend className="px-1 text-sm font-semibold text-zinc-800">How are you selling?</legend>
-        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:gap-6">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="listingKindRadio"
-              checked={listingKind === "sell"}
-              onChange={() => {
-                setListingKind("sell");
-              }}
-              className="text-brand"
-            />
-            Fixed price (buy now / offers)
-          </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="listingKindRadio"
-              checked={listingKind === "auction"}
-              onChange={() => {
-                setListingKind("auction");
-                setFreeToCollector(false);
-              }}
-              className="text-brand"
-            />
-            Auction (timed bidding)
-          </label>
-        </div>
-        {listingKind === "sell" && (
-          <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
-            <input
-              type="checkbox"
-              name="freeToCollector"
-              checked={freeToCollector}
-              onChange={(e) => setFreeToCollector(e.target.checked)}
-              className="rounded border-zinc-300 text-brand"
-            />
-            Free to collector (no payment — buyer arranges pickup)
-          </label>
-        )}
-        {listingKind === "auction" && (
-          <div className="mt-3">
-            <label htmlFor="auctionEndsAt" className="mb-1 block text-xs font-medium text-zinc-600">
-              Auction ends (local time)
-            </label>
-            <input
-              id="auctionEndsAt"
-              name="auctionEndsAt"
-              type="datetime-local"
-              required
-              defaultValue={auctionEndsDefault}
-              className="w-full max-w-xs rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
-            />
-          </div>
-        )}
-      </fieldset>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
@@ -278,13 +331,11 @@ export function ListingForm({
         <label htmlFor="postcode" className="mb-1 block text-sm font-medium text-zinc-700">
           Postcode (item location)
         </label>
-        <input
+        <PostcodeLookupField
           id="postcode"
           name="postcode"
-          type="text"
           defaultValue={listing?.postcode ?? defaultPostcode}
           placeholder="e.g. SW1A 1AA"
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
       </div>
       <div className="flex gap-3">
@@ -305,6 +356,15 @@ export function ListingForm({
           {isEdit ? "Update & publish" : "Publish listing"}
         </button>
       </div>
+
+      {cropState && (
+        <ListingImageCropModal
+          imageSrc={cropState.src}
+          fileName={cropState.fileName}
+          onCancel={closeCrop}
+          onComplete={uploadCroppedFile}
+        />
+      )}
     </form>
   );
 }

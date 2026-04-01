@@ -172,6 +172,14 @@ export default async function ListingPage({
         <p className="mt-1 text-sm text-zinc-500">
           {listing.category.name} · {CONDITION_LABELS[listing.condition]}
         </p>
+        {(listing.postcode || listing.adminDistrict || listing.region) && (
+          <p className="mt-2 text-sm text-zinc-600">
+            <span className="font-medium text-zinc-700">Item location</span>
+            <br />
+            {[listing.adminDistrict, listing.region].filter(Boolean).join(" · ")}
+            {listing.postcode ? `${listing.adminDistrict || listing.region ? " · " : ""}${listing.postcode}` : ""}
+          </p>
+        )}
         <p className="mt-4 whitespace-pre-wrap text-zinc-700">{listing.description}</p>
 
         {!isOwner && listing.status === "active" && session?.user?.id && (
@@ -275,7 +283,10 @@ export default async function ListingPage({
               {sellerProfile.businessName && ` · ${sellerProfile.businessName}`}
             </Link>
             <p className="mt-1 text-sm text-zinc-500">
-              {sellerProfile.postcode}
+              {[sellerProfile.adminDistrict, sellerProfile.region].filter(Boolean).join(" · ")}
+              {sellerProfile.postcode
+                ? `${sellerProfile.adminDistrict || sellerProfile.region ? " · " : ""}${sellerProfile.postcode}`
+                : ""}
               {sellerProfile.openingHours && ` · ${sellerProfile.openingHours}`}
             </p>
           </div>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
@@ -14,6 +14,7 @@ export function SearchForm({
   defaultCategoryId,
   defaultCondition,
   defaultPostcode,
+  defaultRadius,
   defaultSellerType,
 }: {
   categories: Category[];
@@ -21,6 +22,7 @@ export function SearchForm({
   defaultCategoryId?: string;
   defaultCondition?: string;
   defaultPostcode?: string;
+  defaultRadius?: string;
   defaultSellerType?: string;
 }) {
   const router = useRouter();
@@ -36,6 +38,9 @@ export function SearchForm({
       if ("q" in updates) {
         next.delete("ids");
         next.delete("fromImage");
+      }
+      if ("postcode" in updates && !updates.postcode) {
+        next.delete("radius");
       }
       next.delete("page");
       router.push(`/search?${next.toString()}`);
@@ -104,31 +109,73 @@ export function SearchForm({
           </select>
         </div>
       </div>
-      <div className="mt-4 flex gap-2">
-        <input
-          type="text"
-          defaultValue={defaultPostcode}
-          placeholder="Postcode (e.g. SW1A)"
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm w-32"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              updateQuery({ postcode: (e.target as HTMLInputElement).value });
-            }
-          }}
-        />
+      <div className="mt-4 flex flex-wrap items-end gap-2">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">Near postcode</label>
+          <input
+            type="text"
+            defaultValue={defaultPostcode}
+            data-search-postcode
+            placeholder="e.g. SW1A 1AA"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm w-36"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const v = (e.target as HTMLInputElement).value.trim();
+                const radius =
+                  (document.querySelector("[data-search-radius]") as HTMLSelectElement)?.value ??
+                  defaultRadius ??
+                  "50";
+                updateQuery({
+                  postcode: v,
+                  ...(v ? { radius } : { radius: "" }),
+                });
+              }
+            }}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">Radius</label>
+          <select
+            defaultValue={defaultRadius ?? "50"}
+            data-search-radius
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+            onChange={(e) => {
+              const postcode = (
+                document.querySelector("[data-search-postcode]") as HTMLInputElement
+              )?.value?.trim();
+              if (postcode) updateQuery({ radius: e.target.value, postcode });
+            }}
+          >
+            <option value="10">10 mi</option>
+            <option value="25">25 mi</option>
+            <option value="50">50 mi</option>
+            <option value="100">100 mi</option>
+          </select>
+        </div>
         <button
           type="button"
           onClick={() => {
             const q = (document.querySelector('input[type="search"]') as HTMLInputElement)?.value;
-            const postcode = (document.querySelector('input[placeholder*="Postcode"]') as HTMLInputElement)?.value;
-            updateQuery({ q: q ?? "", postcode: postcode ?? "" });
+            const postcode = (
+              document.querySelector("[data-search-postcode]") as HTMLInputElement
+            )?.value?.trim();
+            const radius = (document.querySelector("[data-search-radius]") as HTMLSelectElement)
+              ?.value;
+            updateQuery({
+              q: q ?? "",
+              postcode: postcode ?? "",
+              ...(postcode ? { radius: radius ?? "50" } : { radius: "" }),
+            });
           }}
           className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
         >
           Apply
         </button>
       </div>
+      <p className="mt-2 text-xs text-zinc-500">
+        Full UK postcode finds town or city and sorts by road distance. Partial codes fall back to prefix matching.
+      </p>
     </div>
   );
 }

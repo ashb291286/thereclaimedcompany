@@ -1,8 +1,9 @@
-﻿import { auth } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createWantedAd } from "@/lib/actions/wanted";
+import { PostcodeLookupField } from "@/components/PostcodeLookupField";
 
 export default async function NewWantedPage({
   searchParams,
@@ -89,11 +90,11 @@ export default async function NewWantedPage({
             <label htmlFor="postcode" className="mb-1 block text-sm font-medium text-zinc-700">
               Postcode (optional)
             </label>
-            <input
+            <PostcodeLookupField
               id="postcode"
               name="postcode"
-              type="text"
-              placeholder="e.g. BS1"
+              optional
+              placeholder="e.g. BS1 5RT"
               className="w-full rounded-lg border border-zinc-300 px-3 py-2"
             />
           </div>
