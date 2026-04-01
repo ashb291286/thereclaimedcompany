@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && prisma generate && next build",
+    "build": "prisma generate && prisma db push && next build",
+    "build:migrate": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
+    "db:baseline": "node scripts/prisma-baseline.mjs",
     "db:seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
