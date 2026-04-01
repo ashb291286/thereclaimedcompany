@@ -16,6 +16,7 @@ import {
   parseDeliveryOptionsJson,
   type DeliveryOptionStored,
 } from "@/lib/delivery-carriers";
+import { computeListingCarbonSnapshot } from "@/lib/carbon/listing";
 
 type ParsedListing = {
   listingKind: ListingKind;
@@ -169,6 +170,24 @@ function parseDeliveryFields(
   };
 }
 
+async function materialCarbonFromForm(formData: FormData) {
+  const materialType = ((formData.get("materialType") as string) ?? "").trim() || null;
+  const qtyRaw = ((formData.get("materialQuantity") as string) ?? "").trim();
+  const materialQuantity =
+    qtyRaw !== "" && !Number.isNaN(parseFloat(qtyRaw)) ? parseFloat(qtyRaw) : null;
+  const unitRaw = ((formData.get("materialUnit") as string) ?? "").trim().toLowerCase() || null;
+  const distRaw = ((formData.get("distanceSavedKm") as string) ?? "").trim();
+  const distanceSavedKm =
+    distRaw !== "" && !Number.isNaN(parseFloat(distRaw)) ? parseFloat(distRaw) : null;
+
+  return computeListingCarbonSnapshot({
+    materialType,
+    materialQuantity,
+    materialUnit: unitRaw,
+    distanceSavedKm,
+  });
+}
+
 export async function createListing(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
@@ -238,6 +257,8 @@ export async function createListing(formData: FormData) {
   const category = await prisma.category.findUnique({ where: { id: categoryId } });
   if (!category) redirect("/dashboard/sell?error=" + encodeURIComponent("Invalid category"));
 
+  const carbon = await materialCarbonFromForm(formData);
+
   await prisma.listing.create({
     data: {
       sellerId: session.user.id,
@@ -261,6 +282,16 @@ export async function createListing(formData: FormData) {
         deliveryOptions === null ? Prisma.DbNull : (deliveryOptions as Prisma.InputJsonValue),
       auctionEndsAt,
       auctionReservePence,
+      materialType: carbon.materialType,
+      materialQuantity: carbon.materialQuantity,
+      materialUnit: carbon.materialUnit,
+      distanceSavedKm: carbon.distanceSavedKm,
+      carbonSavedKg: carbon.carbonSavedKg,
+      carbonWasteDivertedKg: carbon.carbonWasteDivertedKg,
+      carbonImpactJson:
+        carbon.carbonImpactJson === null
+          ? Prisma.DbNull
+          : (carbon.carbonImpactJson as Prisma.InputJsonValue),
       status: publish ? ListingStatus.active : ListingStatus.draft,
     },
   });
@@ -331,6 +362,8 @@ export async function updateListing(id: string, formData: FormData) {
   const category = await prisma.category.findUnique({ where: { id: categoryId } });
   if (!category) redirect(editUrl + "?error=" + encodeURIComponent("Invalid category"));
 
+  const carbon = await materialCarbonFromForm(formData);
+
   await prisma.listing.update({
     where: { id },
     data: {
@@ -354,6 +387,16 @@ export async function updateListing(id: string, formData: FormData) {
         deliveryOptions === null ? Prisma.DbNull : (deliveryOptions as Prisma.InputJsonValue),
       auctionEndsAt,
       auctionReservePence,
+      materialType: carbon.materialType,
+      materialQuantity: carbon.materialQuantity,
+      materialUnit: carbon.materialUnit,
+      distanceSavedKm: carbon.distanceSavedKm,
+      carbonSavedKg: carbon.carbonSavedKg,
+      carbonWasteDivertedKg: carbon.carbonWasteDivertedKg,
+      carbonImpactJson:
+        carbon.carbonImpactJson === null
+          ? Prisma.DbNull
+          : (carbon.carbonImpactJson as Prisma.InputJsonValue),
       status: publish ? ListingStatus.active : ListingStatus.draft,
     },
   });

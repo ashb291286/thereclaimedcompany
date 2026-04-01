@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
+import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
 import { NextResponse } from "next/server";
 
 const PLATFORM_FEE_PERCENT = 10;
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
 
   // Free to collector — no Stripe
   if (listing.listingKind === "sell" && listing.freeToCollector && listing.price === 0) {
+    const carbonSnap = purchaseCarbonSnapshotFromListing(listing);
     await prisma.$transaction([
       prisma.order.create({
         data: {
@@ -50,6 +52,7 @@ export async function POST(req: Request) {
           amount: 0,
           platformFee: 0,
           status: "paid",
+          ...carbonSnap,
         },
       }),
       prisma.listing.update({
@@ -128,6 +131,12 @@ export async function POST(req: Request) {
     (amount * PLATFORM_FEE_PERCENT) / 100 + PLATFORM_FEE_FIXED
   );
 
+  const carbonLine =
+    listing.carbonSavedKg != null && listing.carbonSavedKg > 0
+      ? ` Saves ~${Math.round(listing.carbonSavedKg)} kg CO₂e vs new production (ICE-style factors).`
+      : "";
+  const productDescription = (listing.description.slice(0, 420) + carbonLine).slice(0, 500);
+
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -144,7 +153,7 @@ export async function POST(req: Request) {
             unit_amount: amount,
             product_data: {
               name: listing.title,
-              description: listing.description.slice(0, 500),
+              description: productDescription,
               images: listing.images.length ? [listing.images[0]] : undefined,
             },
           },

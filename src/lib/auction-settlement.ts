@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { createNotification } from "@/lib/notifications";
+import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
 import { ListingStatus } from "@/generated/prisma/client";
 
 const PLATFORM_FEE_PERCENT = 10;
@@ -143,6 +144,7 @@ export async function finalizeAuctionListing(listingId: string): Promise<void> {
             stripePaymentIntentId: pi.id,
             status: "paid",
             bidId: top.id,
+            ...purchaseCarbonSnapshotFromListing(listing),
           },
         });
         await tx.listing.update({

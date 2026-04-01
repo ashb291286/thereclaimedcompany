@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { getMaterialOptionsForForm } from "@/lib/carbon/factors";
 import { redirect, notFound } from "next/navigation";
 import { ListingForm } from "@/app/(dashboard)/dashboard/sell/ListingForm";
 
@@ -25,10 +26,14 @@ export default async function EditListingPage({
     where: { userId: session.user.id },
   });
 
-  const categories = await prisma.category.findMany({
-    where: { parentId: null },
-    orderBy: { name: "asc" },
-  });
+  const [categories, materialOpts] = await Promise.all([
+    prisma.category.findMany({
+      where: { parentId: null },
+      orderBy: { name: "asc" },
+    }),
+    getMaterialOptionsForForm(),
+  ]);
+  const materialOptions = materialOpts.map(({ materialType, label }) => ({ materialType, label }));
 
   return (
     <div>
@@ -42,6 +47,7 @@ export default async function EditListingPage({
         defaultPostcode={listing.postcode ?? ""}
         listing={listing}
         sellerDisplayName={sellerProfile?.displayName}
+        materialOptions={materialOptions}
       />
     </div>
   );

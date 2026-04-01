@@ -140,6 +140,22 @@ model SellerProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// ---- Embodied carbon (ICE-style factors; admin-editable) ----
+model CarbonFactor {
+  id               String   @id @default(cuid())
+  materialType     String // slug: timber, brick, steel, concrete, tile, other
+  unitType         String // kg | m3 | tonne (factor is CO2e per this unit)
+  co2PerUnit       Float // kg CO2e per unit
+  source           String   @default("ICE Database")
+  label            String // display name, e.g. "Timber (general)"
+  densityKgPerM3   Float? // when converting m³ → kg for waste mass if unit is m3 row
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([materialType, unitType])
+  @@index([materialType])
+}
+
 // ---- Categories ----
 model Category {
   id        String   @id @default(cuid())
@@ -177,6 +193,14 @@ model Listing {
   auctionEndsAt        DateTime? // auction only: bidding closes at this time (UTC)
   auctionReservePence  Int? // optional minimum winning amount (pence); null = no reserve
   auctionFinalizedAt   DateTime? // set after end-of-auction settlement (reserve check / charge)
+  // Material / carbon (optional; ICE-based estimates when provided)
+  materialType           String? // matches CarbonFactor.materialType
+  materialQuantity       Float?
+  materialUnit           String? // kg | tonne | m3
+  distanceSavedKm        Float? // optional user note; not used in core formula yet
+  carbonSavedKg          Float? // cached embodied carbon avoided (kg CO2e)
+  carbonWasteDivertedKg  Float? // mass diverted (kg)
+  carbonImpactJson       Json? // full breakdown for UI / API
   createdAt            DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -282,6 +306,10 @@ model Order {
   status                OrderStatus @default(pending)
   offerId               String?     @unique
   bidId                 String?     @unique
+  /** Snapshot from listing at purchase (kg CO2e avoided vs new). */
+  purchaseCarbonSavedKg       Float?
+  /** Snapshot from listing at purchase (kg mass kept in use). */
+  purchaseWasteDivertedKg     Float?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 

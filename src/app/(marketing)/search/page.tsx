@@ -5,6 +5,8 @@ import { SearchForm } from "./SearchForm";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { searchListings } from "@/lib/listing-search";
 import { formatMiles } from "@/lib/geo";
+import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
+import { CarbonBadge } from "@/components/CarbonBadge";
 
 export default async function SearchPage({
   searchParams,
@@ -122,7 +124,9 @@ export default async function SearchPage({
         <p className="mt-8 text-zinc-500">No listings match your filters.</p>
       ) : (
         <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {listingsOrdered.map((l) => (
+          {listingsOrdered.map((l) => {
+            const impact = parseStoredCarbonImpact(l);
+            return (
             <li key={l.id}>
               <Link
                 href={`/listings/${l.id}`}
@@ -182,10 +186,16 @@ export default async function SearchPage({
                       {l.postcode ? ` · ${l.postcode}` : ""}
                     </p>
                   )}
+                  {impact ? (
+                    <div className="mt-2">
+                      <CarbonBadge impact={impact} variant="compact" />
+                    </div>
+                  ) : null}
                 </div>
               </Link>
             </li>
-          ))}
+          );
+          })}
         </ul>
       )}
       {totalPages > 1 && (

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import Image from "next/image";
 import { HeroSearch } from "./HeroSearch";
+import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
+import { CarbonBadge } from "@/components/CarbonBadge";
 
 export default async function HomePage() {
   const listings = await prisma.listing.findMany({
@@ -72,7 +74,9 @@ export default async function HomePage() {
           </p>
         ) : (
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {listings.map((l) => (
+            {listings.map((l) => {
+              const impact = parseStoredCarbonImpact(l);
+              return (
               <li key={l.id}>
                 <Link
                   href={`/listings/${l.id}`}
@@ -120,10 +124,16 @@ export default async function HomePage() {
                           ? `From £${(l.price / 100).toFixed(2)} · ${l.category.name}`
                           : `£${(l.price / 100).toFixed(2)} · ${l.category.name}`}
                     </p>
+                    {impact ? (
+                      <div className="mt-2">
+                        <CarbonBadge impact={impact} variant="compact" />
+                      </div>
+                    ) : null}
                   </div>
                 </Link>
               </li>
-            ))}
+            );
+            })}
           </ul>
         )}
       </div>

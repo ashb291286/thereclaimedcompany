@@ -15,6 +15,8 @@ import {
 } from "@/lib/delivery-carriers";
 import { minimumNextBidPence } from "@/lib/auction";
 import { finalizeAuctionListing } from "@/lib/auction-settlement";
+import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
+import { CarbonBadge, carbonSeoSentence } from "@/components/CarbonBadge";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -25,15 +27,20 @@ export async function generateMetadata({
   const { id } = await params;
   const listing = await prisma.listing.findUnique({
     where: { id, status: "active" },
-    select: { title: true, description: true, price: true },
+    select: { title: true, description: true, carbonImpactJson: true, carbonSavedKg: true },
   });
   if (!listing) return { title: "Listing" };
+  const carbonMeta = parseStoredCarbonImpact(listing);
+  const desc =
+    carbonMeta != null
+      ? carbonSeoSentence(carbonMeta).slice(0, 160)
+      : listing.description.slice(0, 160);
   return {
     title: listing.title,
-    description: listing.description.slice(0, 160),
+    description: desc.slice(0, 160),
     openGraph: {
       title: listing.title,
-      description: listing.description.slice(0, 160),
+      description: desc.slice(0, 160),
     },
   };
 }
@@ -140,6 +147,8 @@ export default async function ListingPage({
     Array.isArray(listing.deliveryOptions) && listing.deliveryOptions.length > 0
       ? (listing.deliveryOptions as DeliveryOptionStored[])
       : null;
+
+  const carbonImpact = parseStoredCarbonImpact(listing);
 
   const sectionClass =
     "rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6";
@@ -269,6 +278,11 @@ export default async function ListingPage({
                 </span>
               </p>
             )}
+            {carbonImpact ? (
+              <div className="mt-4 border-t border-zinc-100 pt-4">
+                <CarbonBadge impact={carbonImpact} />
+              </div>
+            ) : null}
           </section>
 
           <section className={sectionClass}>
@@ -492,6 +506,9 @@ export default async function ListingPage({
 
       <section className={`${sectionClass} mt-10 max-w-4xl`}>
         <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">About this item</h2>
+        {carbonImpact ? (
+          <p className="mt-4 text-sm leading-relaxed text-emerald-900/90">{carbonSeoSentence(carbonImpact)}</p>
+        ) : null}
         <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-zinc-700">
           {listing.description}
         </p>

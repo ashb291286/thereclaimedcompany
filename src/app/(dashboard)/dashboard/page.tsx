@@ -1,4 +1,4 @@
-﻿import { auth } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { StripeConnectButton } from "./StripeConnectButton";
@@ -12,13 +12,17 @@ export default async function DashboardPage({
   if (!session?.user?.id) return null;
   const { stripe: stripeParam } = await searchParams;
 
-  const [sellerProfile, listings] = await Promise.all([
+  const [sellerProfile, listings, listingCarbon] = await Promise.all([
     prisma.sellerProfile.findUnique({ where: { userId: session.user.id } }),
     prisma.listing.findMany({
       where: { sellerId: session.user.id },
       orderBy: { updatedAt: "desc" },
       take: 20,
       include: { category: true },
+    }),
+    prisma.listing.aggregate({
+      where: { sellerId: session.user.id },
+      _sum: { carbonSavedKg: true, carbonWasteDivertedKg: true },
     }),
   ]);
 
@@ -49,6 +53,34 @@ export default async function DashboardPage({
       {stripeParam === "success" && sellerProfile.stripeAccountId && (
         <p className="mt-4 text-sm text-green-700">Stripe account connected. You can receive payouts when you make a sale.</p>
       )}
+      {(listingCarbon._sum.carbonSavedKg ?? 0) > 0 || (listingCarbon._sum.carbonWasteDivertedKg ?? 0) > 0 ? (
+        <div className="mt-6 rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/80 p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800/90">
+            Environmental impact of your listings
+          </p>
+          <p className="mt-2 text-sm text-zinc-800">
+            Across current and past listings with material data:{" "}
+            <strong>
+              {(listingCarbon._sum.carbonSavedKg ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} kg
+            </strong>{" "}
+            CO₂e estimated avoided vs new
+            {(listingCarbon._sum.carbonWasteDivertedKg ?? 0) > 0 ? (
+              <>
+                {" "}
+                ·{" "}
+                <strong>
+                  {(listingCarbon._sum.carbonWasteDivertedKg ?? 0).toLocaleString(undefined, {
+                    maximumFractionDigits: 1,
+                  })}{" "}
+                  kg
+                </strong>{" "}
+                mass in use
+              </>
+            ) : null}
+            . Indicative; based on ICE-style factors.
+          </p>
+        </div>
+      ) : null}
       {!sellerProfile.stripeAccountId && (
         <div className="mt-6 rounded-xl border border-brand/20 bg-brand-soft p-4">
           <h2 className="font-medium text-zinc-900">Complete setup to get paid</h2>

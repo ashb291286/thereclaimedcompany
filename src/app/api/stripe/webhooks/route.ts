@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
+import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
 import { NextResponse } from "next/server";
 import type { Stripe } from "stripe";
 
@@ -39,6 +40,13 @@ export async function POST(req: Request) {
         ? await prisma.order.findUnique({ where: { bidId: bidIdMeta } })
         : null;
       if (!existingBidOrder) {
+        const listingRow = await prisma.listing.findUnique({
+          where: { id: listingId },
+          select: { carbonSavedKg: true, carbonWasteDivertedKg: true },
+        });
+        const carbonSnap = purchaseCarbonSnapshotFromListing(
+          listingRow ?? { carbonSavedKg: null, carbonWasteDivertedKg: null }
+        );
         await prisma.$transaction([
           prisma.order.create({
             data: {
@@ -49,6 +57,7 @@ export async function POST(req: Request) {
               platformFee,
               stripePaymentIntentId: paymentIntentId,
               status: "paid",
+              ...carbonSnap,
               ...(offerIdMeta ? { offerId: offerIdMeta } : {}),
               ...(bidIdMeta ? { bidId: bidIdMeta } : {}),
             },
@@ -74,6 +83,13 @@ export async function POST(req: Request) {
       if (listingId && buyerId && sellerId && bidIdMeta && pi.id) {
         const existing = await prisma.order.findUnique({ where: { bidId: bidIdMeta } });
         if (!existing) {
+          const listingRow = await prisma.listing.findUnique({
+            where: { id: listingId },
+            select: { carbonSavedKg: true, carbonWasteDivertedKg: true },
+          });
+          const carbonSnap = purchaseCarbonSnapshotFromListing(
+            listingRow ?? { carbonSavedKg: null, carbonWasteDivertedKg: null }
+          );
           await prisma.$transaction([
             prisma.order.create({
               data: {
@@ -85,6 +101,7 @@ export async function POST(req: Request) {
                 stripePaymentIntentId: pi.id,
                 status: "paid",
                 bidId: bidIdMeta,
+                ...carbonSnap,
               },
             }),
             prisma.listing.update({

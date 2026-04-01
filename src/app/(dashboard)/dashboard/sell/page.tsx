@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { getMaterialOptionsForForm } from "@/lib/carbon/factors";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ListingForm } from "./ListingForm";
@@ -19,10 +20,14 @@ export default async function SellPage({
   });
   if (!sellerProfile) redirect("/dashboard/onboarding");
 
-  const categories = await prisma.category.findMany({
-    where: { parentId: null },
-    orderBy: { name: "asc" },
-  });
+  const [categories, materialOpts] = await Promise.all([
+    prisma.category.findMany({
+      where: { parentId: null },
+      orderBy: { name: "asc" },
+    }),
+    getMaterialOptionsForForm(),
+  ]);
+  const materialOptions = materialOpts.map(({ materialType, label }) => ({ materialType, label }));
 
   return (
     <div>
@@ -51,6 +56,7 @@ export default async function SellPage({
         categories={categories}
         defaultPostcode={sellerProfile.postcode}
         sellerDisplayName={sellerProfile.displayName}
+        materialOptions={materialOptions}
       />
     </div>
   );

@@ -95,16 +95,20 @@ function FormSection({
   );
 }
 
+export type MaterialOption = { materialType: string; label: string };
+
 export function ListingForm({
   categories,
   defaultPostcode,
   listing,
   sellerDisplayName,
+  materialOptions,
 }: {
   categories: Category[];
   defaultPostcode: string;
   listing?: ListingWithCategory;
   sellerDisplayName?: string;
+  materialOptions: MaterialOption[];
 }) {
   const [imageUrls, setImageUrls] = useState<string[]>(listing?.images ?? []);
   const [uploading, setUploading] = useState(false);
@@ -147,6 +151,14 @@ export function ListingForm({
     () => listing?.postcode?.trim() || defaultPostcode.trim() || ""
   );
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [materialType, setMaterialType] = useState(listing?.materialType ?? "");
+  const [materialQtyStr, setMaterialQtyStr] = useState(
+    listing?.materialQuantity != null ? String(listing.materialQuantity) : ""
+  );
+  const [materialUnit, setMaterialUnit] = useState(listing?.materialUnit ?? "kg");
+  const [distanceKmStr, setDistanceKmStr] = useState(
+    listing?.distanceSavedKm != null ? String(listing.distanceSavedKm) : ""
+  );
 
   useEffect(() => {
     if (freeToCollector) setFulfillmentMode("collection_only");
@@ -622,6 +634,83 @@ export function ListingForm({
             </p>
           </div>
         )}
+
+        <div className="border-t border-zinc-100 pt-5">
+          <p className="text-sm font-medium text-zinc-800">Material &amp; carbon estimate (optional)</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            ICE-style embodied carbon factors (University of Bath) are used to show buyers an indicative CO₂e
+            saving vs new production. Leave blank if you prefer not to show this.
+          </p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label htmlFor="materialType" className="mb-1 block text-sm font-medium text-zinc-700">
+                Material type
+              </label>
+              <select
+                id="materialType"
+                name="materialType"
+                value={materialType}
+                onChange={(e) => setMaterialType(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              >
+                <option value="">Not specified</option>
+                {materialOptions.map((m) => (
+                  <option key={m.materialType} value={m.materialType}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="materialQuantity" className="mb-1 block text-sm font-medium text-zinc-700">
+                Quantity
+              </label>
+              <input
+                id="materialQuantity"
+                name="materialQuantity"
+                type="number"
+                step="any"
+                min="0"
+                value={materialQtyStr}
+                onChange={(e) => setMaterialQtyStr(e.target.value)}
+                placeholder="e.g. 120"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              />
+            </div>
+            <div>
+              <label htmlFor="materialUnit" className="mb-1 block text-sm font-medium text-zinc-700">
+                Unit
+              </label>
+              <select
+                id="materialUnit"
+                name="materialUnit"
+                value={materialUnit}
+                onChange={(e) => setMaterialUnit(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              >
+                <option value="kg">Kilograms (kg)</option>
+                <option value="tonne">Tonnes</option>
+                <option value="m3">Cubic metres (m³)</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="distanceSavedKm" className="mb-1 block text-sm font-medium text-zinc-700">
+                Approx. transport saved (km, optional)
+              </label>
+              <input
+                id="distanceSavedKm"
+                name="distanceSavedKm"
+                type="number"
+                step="any"
+                min="0"
+                value={distanceKmStr}
+                onChange={(e) => setDistanceKmStr(e.target.value)}
+                placeholder="For your records — not used in the CO₂e formula yet"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              />
+            </div>
+          </div>
+        </div>
       </FormSection>
 
       <FormSection

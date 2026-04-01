@@ -1,7 +1,8 @@
-﻿import { auth } from "@/auth";
+import { auth } from "@/auth";
 import Link from "next/link";
 import { signOut } from "@/auth";
 import { prisma } from "@/lib/db";
+import { isCarbonAdmin } from "@/lib/admin";
 
 export default async function DashboardLayout({
   children,
@@ -15,6 +16,7 @@ export default async function DashboardLayout({
           where: { userId: session.user.id, readAt: null },
         })
       : 0;
+  const carbonAdmin = session ? isCarbonAdmin(session) : false;
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -42,6 +44,17 @@ export default async function DashboardLayout({
             <Link href="/dashboard/wanted" className="text-sm text-zinc-600 hover:text-zinc-900">
               My wanted
             </Link>
+            <Link href="/orders" className="text-sm text-zinc-600 hover:text-zinc-900">
+              Orders
+            </Link>
+            {carbonAdmin ? (
+              <Link
+                href="/dashboard/admin/carbon-factors"
+                className="text-sm text-emerald-800 hover:text-emerald-950"
+              >
+                Carbon data
+              </Link>
+            ) : null}
             <Link
               href="/dashboard/notifications"
               className="relative text-sm text-zinc-600 hover:text-zinc-900"
