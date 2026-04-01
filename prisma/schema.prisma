@@ -165,6 +165,9 @@ model Listing {
   status            ListingStatus @default(draft)
   listingKind       ListingKind   @default(sell)
   freeToCollector   Boolean       @default(false) // sell only: free pickup, no payment
+  offersDelivery    Boolean       @default(false) // seller may arrange delivery (as well as collection)
+  deliveryNotes     String? // couriers, areas, lead times — shown to buyers
+  deliveryCostPence Int? // null = quote on request; set = fixed UK delivery from £x
   auctionEndsAt     DateTime? // auction only: bidding closes at this time (UTC)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt

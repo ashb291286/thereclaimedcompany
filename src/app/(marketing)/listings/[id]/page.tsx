@@ -145,6 +145,11 @@ export default async function ListingPage({
               Free to collector
             </span>
           )}
+          {listing.offersDelivery && (
+            <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-900">
+              Delivers
+            </span>
+          )}
         </div>
         <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{listing.title}</h1>
         {listing.listingKind === "sell" && !listing.freeToCollector && (
@@ -180,6 +185,39 @@ export default async function ListingPage({
             {listing.postcode ? `${listing.adminDistrict || listing.region ? " · " : ""}${listing.postcode}` : ""}
           </p>
         )}
+        <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
+          <h3 className="text-sm font-semibold text-zinc-900">Collection &amp; delivery</h3>
+          {listing.listingKind === "sell" && listing.freeToCollector ? (
+            <p className="mt-1 text-sm text-zinc-700">Collection only — this item is free; arrange pickup with the seller.</p>
+          ) : listing.offersDelivery ? (
+            <div className="mt-1 space-y-2 text-sm text-zinc-700">
+              <p>
+                Buyers can <strong>collect</strong> from the location above, or the seller may{" "}
+                <strong>arrange delivery</strong> as described below.
+              </p>
+              {listing.deliveryNotes ? (
+                <p className="whitespace-pre-wrap rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-800">
+                  {listing.deliveryNotes}
+                </p>
+              ) : null}
+              <p className="text-zinc-600">
+                {listing.deliveryCostPence != null ? (
+                  <>
+                    Indicative delivery from{" "}
+                    <strong>£{(listing.deliveryCostPence / 100).toFixed(2)}</strong> — confirm details with the
+                    seller after purchase.
+                  </>
+                ) : (
+                  <>Delivery: <strong>quote on request</strong> — agree cost and timing with the seller.</>
+                )}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-zinc-700">
+              <strong>Collection only</strong> — arrange pickup with the seller from the item location.
+            </p>
+          )}
+        </div>
         <p className="mt-4 whitespace-pre-wrap text-zinc-700">{listing.description}</p>
 
         {!isOwner && listing.status === "active" && session?.user?.id && (

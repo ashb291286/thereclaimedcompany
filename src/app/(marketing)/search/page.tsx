@@ -156,6 +156,11 @@ export default async function SearchPage({
                         Free
                       </span>
                     )}
+                    {l.offersDelivery && (
+                      <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-sky-900">
+                        Delivers
+                      </span>
+                    )}
                     {l.distanceMiles != null && (
                       <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
                         {formatMiles(l.distanceMiles)}

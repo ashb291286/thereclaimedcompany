@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import Image from "next/image";
 import { HeroSearch } from "./HeroSearch";
@@ -13,9 +13,16 @@ export default async function HomePage() {
 
   return (
     <div className="pb-12">
-      <section className="relative overflow-hidden bg-zinc-900">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1800&q=80')] bg-cover bg-center opacity-35" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-black/50" />
+      <section className="relative min-h-[320px] overflow-hidden bg-zinc-900 sm:min-h-[380px]">
+        <Image
+          src="/images/hero-home.png"
+          alt="Weathered reclaimed timber planks"
+          fill
+          className="object-cover object-[center_40%] sm:object-center"
+          sizes="100vw"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/82 via-black/55 to-black/40" />
         <div className="relative mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
           <p className="text-xs font-semibold uppercase tracking-widest text-sky-200/90">
             Find your next piece
@@ -97,6 +104,11 @@ export default async function HomePage() {
                       {l.listingKind === "sell" && l.freeToCollector && (
                         <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
                           Free
+                        </span>
+                      )}
+                      {l.offersDelivery && (
+                        <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-sky-900">
+                          Delivers
                         </span>
                       )}
                     </div>

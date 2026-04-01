@@ -75,6 +75,64 @@ function parseListingCommerce(
   };
 }
 
+type DeliveryParsed = {
+  offersDelivery: boolean;
+  deliveryNotes: string | null;
+  deliveryCostPence: number | null;
+};
+
+function parseDeliveryFields(
+  formData: FormData,
+  opts: { freeToCollector: boolean }
+): { ok: true; data: DeliveryParsed } | { ok: false; message: string } {
+  if (opts.freeToCollector) {
+    return {
+      ok: true,
+      data: { offersDelivery: false, deliveryNotes: null, deliveryCostPence: null },
+    };
+  }
+  const mode = formData.get("fulfillmentMode") as string;
+  if (mode !== "collect_or_deliver") {
+    return {
+      ok: true,
+      data: { offersDelivery: false, deliveryNotes: null, deliveryCostPence: null },
+    };
+  }
+  const notes = ((formData.get("deliveryNotes") as string) ?? "").trim();
+  if (!notes) {
+    return {
+      ok: false,
+      message: "Describe your delivery options (areas, couriers, packing, lead times).",
+    };
+  }
+  const pricing = formData.get("deliveryPricing") as string;
+  if (pricing === "fixed") {
+    const raw = (formData.get("deliveryCost") as string)?.trim();
+    const pounds = parseFloat(raw ?? "");
+    if (Number.isNaN(pounds) || pounds < 0) {
+      return {
+        ok: false,
+        message: "Enter a valid delivery cost in £, or choose “Quote on request”.",
+      };
+    }
+    return {
+      ok: true,
+      data: {
+        offersDelivery: true,
+        deliveryNotes: notes,
+        deliveryCostPence: Math.round(pounds * 100),
+      },
+    };
+  }
+  if (pricing === "quote") {
+    return {
+      ok: true,
+      data: { offersDelivery: true, deliveryNotes: notes, deliveryCostPence: null },
+    };
+  }
+  return { ok: false, message: "Choose delivery pricing: fixed price or quote on request." };
+}
+
 export async function createListing(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
@@ -117,6 +175,12 @@ export async function createListing(formData: FormData) {
   }
   const { listingKind, freeToCollector, price, auctionEndsAt } = parsed.data;
 
+  const deliveryParsed = parseDeliveryFields(formData, { freeToCollector });
+  if (!deliveryParsed.ok) {
+    redirect("/dashboard/sell?error=" + encodeURIComponent(deliveryParsed.message));
+  }
+  const { offersDelivery, deliveryNotes, deliveryCostPence } = deliveryParsed.data;
+
   const validConditions: Condition[] = [
     "like_new",
     "used",
@@ -154,6 +218,9 @@ export async function createListing(formData: FormData) {
       images,
       listingKind,
       freeToCollector,
+      offersDelivery,
+      deliveryNotes,
+      deliveryCostPence,
       auctionEndsAt,
       status: publish ? ListingStatus.active : ListingStatus.draft,
     },
@@ -198,6 +265,12 @@ export async function updateListing(id: string, formData: FormData) {
   }
   const { listingKind, freeToCollector, price, auctionEndsAt } = parsed.data;
 
+  const deliveryParsed = parseDeliveryFields(formData, { freeToCollector });
+  if (!deliveryParsed.ok) {
+    redirect(editUrl + "?error=" + encodeURIComponent(deliveryParsed.message));
+  }
+  const { offersDelivery, deliveryNotes, deliveryCostPence } = deliveryParsed.data;
+
   const validConditions: Condition[] = [
     "like_new",
     "used",
@@ -235,6 +308,9 @@ export async function updateListing(id: string, formData: FormData) {
       images,
       listingKind,
       freeToCollector,
+      offersDelivery,
+      deliveryNotes,
+      deliveryCostPence,
       auctionEndsAt,
       status: publish ? ListingStatus.active : ListingStatus.draft,
     },
