@@ -9,8 +9,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Must reference next/font variables; those are defined on <html> so they resolve everywhere */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: "Satoshi", var(--font-plus-jakarta), ui-sans-serif, sans-serif;
+  --font-heading: "Satoshi", var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
   /* Primary UI (buttons, links, focus) */
   --color-brand: #014e6d;
@@ -26,18 +27,18 @@
 }
 
 @layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
+
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    font-family: var(--font-heading);
+    font-family: "Satoshi", var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
 }
