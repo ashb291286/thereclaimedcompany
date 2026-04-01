@@ -61,10 +61,10 @@ export default async function MarketingLayout({
           </div>
 
           <div className="mt-6 text-center">
-            <h2 className="text-4xl font-semibold leading-tight sm:text-6xl">
+            <h2 className="text-3xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
               Your next salvage is just one click away.
             </h2>
-            <p className="mx-auto mt-3 max-w-3xl text-base font-semibold text-white/95 sm:text-xl">
+            <p className="mx-auto mt-3 max-w-3xl text-sm leading-relaxed text-white/90 sm:text-lg">
               Find local reclamation yards and treasures like usual only faster, smarter, and completely online.
             </p>
           </div>
@@ -77,7 +77,7 @@ export default async function MarketingLayout({
                   alt="Reclaimed"
                   className="h-16 w-16 rounded-full border border-white/30 object-cover"
                 />
-                <p className="max-w-[210px] text-[36px] leading-none text-white/95">
+                <p className="max-w-[230px] text-3xl leading-tight tracking-tight text-white/95 sm:text-4xl">
                   Make this official, join and access the future of reclamation.
                 </p>
                 <p className="text-sm font-semibold text-white/95">Join us</p>
@@ -93,21 +93,21 @@ export default async function MarketingLayout({
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm text-white/95">
+              <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
                 <p className="text-xs font-semibold tracking-widest text-white/80">SALVAGERS</p>
                 <p>Marketplace</p>
                 <p>Free To Collect</p>
                 <p>Wanted</p>
               </div>
 
-              <div className="space-y-2 text-sm text-white/95">
+              <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
                 <p className="text-xs font-semibold tracking-widest text-white/80">LOCAL RECLAMATION YARDS</p>
                 <p>Marketplace</p>
                 <p>Free To Collect</p>
                 <p>Wanted</p>
               </div>
 
-              <div className="space-y-2 text-sm text-white/95">
+              <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
                 <p className="text-xs font-semibold tracking-widest text-white/80">RESOURCES</p>
                 <p>Marketplace</p>
                 <p>Antiques Dealers</p>
@@ -115,7 +115,7 @@ export default async function MarketingLayout({
                 <p>Press &amp; Media</p>
               </div>
 
-              <div className="space-y-2 text-sm text-white/95">
+              <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
                 <p className="text-xs font-semibold tracking-widest text-white/80">COMPANY</p>
                 <p>Safety Tips</p>
                 <p>Terms</p>
@@ -126,7 +126,7 @@ export default async function MarketingLayout({
             </div>
 
             <div className="mt-8 rounded-xl border border-white/20 bg-white/10 px-5 py-4 sm:flex sm:items-center sm:justify-between">
-              <p className="max-w-2xl text-[35px] leading-none">
+              <p className="max-w-2xl text-2xl font-semibold leading-tight tracking-tight sm:text-[32px]">
                 Get found fast. Connect with homeowners and salvagers who need reclaimed items all online.
               </p>
               <Link
