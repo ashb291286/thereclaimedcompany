@@ -212,6 +212,11 @@ export default async function ListingPage({
               </div>
             )}
           </div>
+          {carbonImpact ? (
+            <div className="mt-5 sm:mt-6">
+              <CarbonBadge impact={carbonImpact} />
+            </div>
+          ) : null}
         </div>
 
         <aside className="w-full shrink-0 space-y-5 lg:w-[min(100%,22rem)] xl:w-96">
@@ -231,6 +236,7 @@ export default async function ListingPage({
                   Delivers
                 </span>
               )}
+              {carbonImpact ? <CarbonBadge impact={carbonImpact} variant="pill" /> : null}
             </div>
             <h1 className="mt-3 text-xl font-semibold leading-snug text-zinc-900 sm:text-2xl">
               {listing.title}
@@ -278,11 +284,6 @@ export default async function ListingPage({
                 </span>
               </p>
             )}
-            {carbonImpact ? (
-              <div className="mt-4 border-t border-zinc-100 pt-4">
-                <CarbonBadge impact={carbonImpact} />
-              </div>
-            ) : null}
           </section>
 
           <section className={sectionClass}>

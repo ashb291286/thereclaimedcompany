@@ -15,7 +15,7 @@ export function CarbonBadge({
   className = "",
 }: {
   impact: CarbonImpactResult;
-  variant?: "full" | "compact";
+  variant?: "full" | "compact" | "pill";
   className?: string;
 }) {
   if (variant === "compact") {
@@ -25,6 +25,19 @@ export function CarbonBadge({
       >
         Saves ~{fmt(impact.carbon_saved_kg, 0)} kg CO₂e
       </div>
+    );
+  }
+
+  if (variant === "pill") {
+    return (
+      <span
+        className={`inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-600/12 to-teal-600/12 px-2.5 py-0.5 text-xs font-semibold text-emerald-900 ring-1 ring-emerald-600/25 ${className}`}
+      >
+        <span aria-hidden className="text-sm leading-none">
+          🌱
+        </span>
+        Saves {fmt(impact.carbon_saved_kg)} kg CO₂e
+      </span>
     );
   }
 
