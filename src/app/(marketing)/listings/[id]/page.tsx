@@ -141,153 +141,203 @@ export default async function ListingPage({
       ? (listing.deliveryOptions as DeliveryOptionStored[])
       : null;
 
-  return (
-    <div className="flex flex-col gap-8 lg:flex-row">
-      <div className="flex-1">
-        <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-200">
-          {listing.images[0] ? (
-            <Image
-              src={listing.images[0]}
-              alt={listing.title}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-zinc-500">
-              No image
-            </div>
-          )}
-        </div>
-        {listing.images.length > 1 && (
-          <div className="mt-3 flex gap-2 overflow-x-auto">
-            {listing.images.slice(1, 5).map((url) => (
-              <div
-                key={url}
-                className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-200"
-              >
-                <Image src={url} alt="" fill className="object-cover" unoptimized />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="lg:w-96">
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700">
-            {LISTING_KIND_LABELS[listing.listingKind]}
-          </span>
-          {listing.listingKind === "sell" && listing.freeToCollector && (
-            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-              Free to collector
-            </span>
-          )}
-          {listing.offersDelivery && (
-            <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-900">
-              Delivers
-            </span>
-          )}
-        </div>
-        <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{listing.title}</h1>
-        {listing.listingKind === "sell" && !listing.freeToCollector && (
-          <p className="mt-2 text-2xl font-medium text-zinc-900">
-            £{(listing.price / 100).toFixed(2)}
-          </p>
-        )}
-        {listing.listingKind === "sell" && listing.freeToCollector && (
-          <p className="mt-2 text-lg font-semibold text-emerald-800">Free — arrange collection with the seller</p>
-        )}
-        {isAuction && (
-          <div className="mt-2 space-y-1">
-            <p className="text-2xl font-medium text-zinc-900">
-              {topBid
-                ? `Current bid £${(topBid.amountPence / 100).toFixed(2)}`
-                : `Starting bid £${(listing.price / 100).toFixed(2)}`}
-            </p>
-            {listing.auctionEndsAt && (
-              <p className="text-sm text-zinc-600">
-                {auctionEnded ? "Auction ended" : `Ends ${listing.auctionEndsAt.toLocaleString()}`}
-              </p>
-            )}
-            {auctionLive && listing.auctionReservePence != null && (
-              <p className="text-xs font-medium text-amber-900">
-                Reserve applies — the item will not sell unless bidding reaches the seller’s minimum.
-              </p>
-            )}
-          </div>
-        )}
-        <p className="mt-1 text-sm text-zinc-500">
-          {listing.category.name} · {CONDITION_LABELS[listing.condition]}
-        </p>
-        {(listing.postcode || listing.adminDistrict || listing.region) && (
-          <p className="mt-2 text-sm text-zinc-600">
-            <span className="font-medium text-zinc-700">Item location</span>
-            <br />
-            {[listing.adminDistrict, listing.region].filter(Boolean).join(" · ")}
-            {listing.postcode ? `${listing.adminDistrict || listing.region ? " · " : ""}${listing.postcode}` : ""}
-          </p>
-        )}
-        <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
-          <h3 className="text-sm font-semibold text-zinc-900">Collection &amp; delivery</h3>
-          {listing.listingKind === "sell" && listing.freeToCollector ? (
-            <p className="mt-1 text-sm text-zinc-700">Collection only — this item is free; arrange pickup with the seller.</p>
-          ) : listing.offersDelivery ? (
-            <div className="mt-1 space-y-2 text-sm text-zinc-700">
-              <p>
-                Buyers can <strong>collect</strong> from the location above, or the seller may{" "}
-                <strong>arrange delivery</strong> as described below.
-              </p>
-              {structuredDelivery ? (
-                <ul className="space-y-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-800">
-                  {structuredDelivery.map((o, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="text-zinc-400">·</span>
-                      <span>{formatDeliveryOptionLine(o)}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <>
-                  {listing.deliveryNotes ? (
-                    <p className="whitespace-pre-wrap rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-800">
-                      {listing.deliveryNotes}
-                    </p>
-                  ) : null}
-                  <p className="text-zinc-600">
-                    {listing.deliveryCostPence != null ? (
-                      <>
-                        Indicative delivery from{" "}
-                        <strong>£{(listing.deliveryCostPence / 100).toFixed(2)}</strong> — confirm with the
-                        seller after purchase.
-                      </>
-                    ) : (
-                      <>
-                        Delivery: <strong>quote on request</strong> — agree cost and timing with the seller.
-                      </>
-                    )}
-                  </p>
-                </>
-              )}
-              {listing.deliveryNotes && structuredDelivery ? (
-                <p className="whitespace-pre-wrap rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-800">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    More detail
-                  </span>
-                  <br />
-                  {listing.deliveryNotes}
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <p className="mt-1 text-sm text-zinc-700">
-              <strong>Collection only</strong> — arrange pickup with the seller from the item location.
-            </p>
-          )}
-        </div>
-        <p className="mt-4 whitespace-pre-wrap text-zinc-700">{listing.description}</p>
+  const sectionClass =
+    "rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6";
 
-        {!isOwner && session?.user?.id && (
-          <div className="mt-6 space-y-4">
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:max-w-7xl lg:py-10">
+      <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-500">
+        <Link href="/" className="hover:text-zinc-800">
+          Home
+        </Link>
+        <span aria-hidden className="text-zinc-300">
+          /
+        </span>
+        <Link href="/search" className="hover:text-zinc-800">
+          Browse
+        </Link>
+        <span aria-hidden className="text-zinc-300">
+          /
+        </span>
+        <Link
+          href={`/search?categoryId=${listing.categoryId}`}
+          className="hover:text-zinc-800"
+        >
+          {listing.category.name}
+        </Link>
+        <span aria-hidden className="text-zinc-300">
+          /
+        </span>
+        <span className="line-clamp-1 font-medium text-zinc-700">{listing.title}</span>
+      </nav>
+
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
+        <div className="min-w-0 flex-1 lg:max-w-[min(100%,calc(100%-22rem))]">
+          <div className={`${sectionClass} p-4 sm:p-5`}>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Photos</p>
+            <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-100">
+              {listing.images[0] ? (
+                <Image
+                  src={listing.images[0]}
+                  alt={listing.title}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-zinc-500">
+                  No image
+                </div>
+              )}
+            </div>
+            {listing.images.length > 1 && (
+              <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+                {listing.images.slice(1, 5).map((url) => (
+                  <div
+                    key={url}
+                    className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100"
+                  >
+                    <Image src={url} alt="" fill className="object-cover" unoptimized />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <aside className="w-full shrink-0 space-y-5 lg:w-[min(100%,22rem)] xl:w-96">
+          <section className={sectionClass}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Listing</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700">
+                {LISTING_KIND_LABELS[listing.listingKind]}
+              </span>
+              {listing.listingKind === "sell" && listing.freeToCollector && (
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                  Free to collector
+                </span>
+              )}
+              {listing.offersDelivery && (
+                <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-900">
+                  Delivers
+                </span>
+              )}
+            </div>
+            <h1 className="mt-3 text-xl font-semibold leading-snug text-zinc-900 sm:text-2xl">
+              {listing.title}
+            </h1>
+            {listing.listingKind === "sell" && !listing.freeToCollector && (
+              <p className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
+                £{(listing.price / 100).toFixed(2)}
+              </p>
+            )}
+            {listing.listingKind === "sell" && listing.freeToCollector && (
+              <p className="mt-3 text-lg font-semibold text-emerald-800">
+                Free — arrange collection with the seller
+              </p>
+            )}
+            {isAuction && (
+              <div className="mt-3 space-y-1 border-t border-zinc-100 pt-3">
+                <p className="text-2xl font-semibold tracking-tight text-zinc-900">
+                  {topBid
+                    ? `Current bid £${(topBid.amountPence / 100).toFixed(2)}`
+                    : `Starting bid £${(listing.price / 100).toFixed(2)}`}
+                </p>
+                {listing.auctionEndsAt && (
+                  <p className="text-sm text-zinc-600">
+                    {auctionEnded ? "Auction ended" : `Ends ${listing.auctionEndsAt.toLocaleString()}`}
+                  </p>
+                )}
+                {auctionLive && listing.auctionReservePence != null && (
+                  <p className="text-xs font-medium text-amber-900">
+                    Reserve applies — the item will not sell unless bidding reaches the seller’s minimum.
+                  </p>
+                )}
+              </div>
+            )}
+            <p className="mt-3 text-sm text-zinc-500">
+              {listing.category.name} · {CONDITION_LABELS[listing.condition]}
+            </p>
+            {(listing.postcode || listing.adminDistrict || listing.region) && (
+              <p className="mt-3 border-t border-zinc-100 pt-3 text-sm text-zinc-600">
+                <span className="font-medium text-zinc-800">Location</span>
+                <span className="mt-1 block">
+                  {[listing.adminDistrict, listing.region].filter(Boolean).join(" · ")}
+                  {listing.postcode
+                    ? `${listing.adminDistrict || listing.region ? " · " : ""}${listing.postcode}`
+                    : ""}
+                </span>
+              </p>
+            )}
+          </section>
+
+          <section className={sectionClass}>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Collection &amp; delivery
+            </h2>
+            {listing.listingKind === "sell" && listing.freeToCollector ? (
+              <p className="mt-3 text-sm text-zinc-700">
+                Collection only — this item is free; arrange pickup with the seller.
+              </p>
+            ) : listing.offersDelivery ? (
+              <div className="mt-3 space-y-3 text-sm text-zinc-700">
+                <p>
+                  Buyers can <strong>collect</strong> from the location above, or the seller may{" "}
+                  <strong>arrange delivery</strong> as described below.
+                </p>
+                {structuredDelivery ? (
+                  <ul className="space-y-1.5 rounded-xl border border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-zinc-800">
+                    {structuredDelivery.map((o, i) => (
+                      <li key={i} className="flex gap-2">
+                        <span className="text-zinc-400">·</span>
+                        <span>{formatDeliveryOptionLine(o)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <>
+                    {listing.deliveryNotes ? (
+                      <p className="whitespace-pre-wrap rounded-xl border border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-zinc-800">
+                        {listing.deliveryNotes}
+                      </p>
+                    ) : null}
+                    <p className="text-zinc-600">
+                      {listing.deliveryCostPence != null ? (
+                        <>
+                          Indicative delivery from{" "}
+                          <strong>£{(listing.deliveryCostPence / 100).toFixed(2)}</strong> — confirm with
+                          the seller after purchase.
+                        </>
+                      ) : (
+                        <>
+                          Delivery: <strong>quote on request</strong> — agree cost and timing with the
+                          seller.
+                        </>
+                      )}
+                    </p>
+                  </>
+                )}
+                {listing.deliveryNotes && structuredDelivery ? (
+                  <p className="whitespace-pre-wrap rounded-xl border border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-zinc-800">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                      More detail
+                    </span>
+                    <br />
+                    {listing.deliveryNotes}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-zinc-700">
+                <strong>Collection only</strong> — arrange pickup with the seller from the item location.
+              </p>
+            )}
+          </section>
+
+          {!isOwner && session?.user?.id && (
+            <section className={`${sectionClass} space-y-4`}>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Buy or bid</h2>
+              <div className="space-y-4">
             {listing.status === "active" && listing.listingKind === "sell" && listing.freeToCollector && (
               <FreeCollectButton listingId={listing.id} />
             )}
@@ -335,11 +385,12 @@ export default async function ListingPage({
             {listing.status === "active" && isAuction && auctionEnded && !userWonAuction && (
               <p className="text-sm text-zinc-600">This auction has ended.</p>
             )}
-          </div>
-        )}
+              </div>
+            </section>
+          )}
 
         {isOwner && listing.listingKind === "auction" && listing.status === "ended" && (
-          <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+          <section className={`${sectionClass} text-sm text-zinc-700`}>
             <p className="font-semibold text-zinc-900">Auction ended</p>
             <p className="mt-1">
               {!topBid
@@ -349,30 +400,32 @@ export default async function ListingPage({
                   ? "The highest bid was below your reserve — there was no sale."
                   : "There was no sale. Check your dashboard for next steps."}
             </p>
-          </div>
+          </section>
         )}
 
         {isOwner && listing.status === "payment_pending" && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-950">
+          <section className="rounded-2xl border border-amber-200 bg-amber-50/90 p-5 text-sm text-amber-950 shadow-sm sm:p-6">
             <p className="font-semibold">Awaiting payment</p>
             <p className="mt-1 text-amber-900/90">
               The winning bidder is completing payment (we tried their saved card first). You’ll see the
               sale in your dashboard when it succeeds.
             </p>
-          </div>
+          </section>
         )}
 
         {!isOwner && !session?.user?.id && (
-          <p className="mt-6 text-sm text-zinc-600">
-            <Link href="/auth/signin" className="font-medium text-brand hover:underline">
-              Sign in
-            </Link>{" "}
-            to buy, bid, or make an offer.
-          </p>
+          <section className={sectionClass}>
+            <p className="text-sm text-zinc-600">
+              <Link href="/auth/signin" className="font-medium text-brand hover:underline">
+                Sign in
+              </Link>{" "}
+              to buy, bid, or make an offer.
+            </p>
+          </section>
         )}
 
         {isOwner && incomingOffers.length > 0 && (
-          <div className="mt-6 rounded-xl border border-brand/20 bg-brand-soft/80 p-4">
+          <section className="rounded-2xl border border-brand/25 bg-brand-soft/50 p-5 shadow-sm sm:p-6">
             <h2 className="text-sm font-semibold text-zinc-900">Offers on this listing</h2>
             <ul className="mt-3 space-y-3">
               {incomingOffers.map((o) => (
@@ -386,11 +439,11 @@ export default async function ListingPage({
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
         )}
 
         {myOffers.length > 0 && (
-          <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-600">
+          <section className={sectionClass}>
             <p className="font-medium text-zinc-800">Your recent offers</p>
             <ul className="mt-2 space-y-1">
               {myOffers.map((o) => (
@@ -399,11 +452,11 @@ export default async function ListingPage({
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
         )}
 
         {isAuction && recentBids.length > 0 && (
-          <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+          <section className="rounded-2xl border border-zinc-200/90 bg-zinc-50/90 p-5 shadow-sm sm:p-6">
             <h2 className="text-sm font-semibold text-zinc-900">Recent bids</h2>
             <ul className="mt-2 space-y-1 text-sm text-zinc-600">
               {recentBids.map((b) => (
@@ -412,29 +465,37 @@ export default async function ListingPage({
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
         )}
 
         {sellerProfile && (
-          <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
-            <h2 className="font-medium text-zinc-900">Seller</h2>
+          <section className={sectionClass}>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Seller</h2>
             <Link
               href={`/sellers/${listing.sellerId}`}
-              className="mt-1 block text-brand hover:underline"
+              className="mt-3 block text-base font-medium text-brand hover:underline"
             >
               {sellerProfile.displayName}
               {sellerProfile.businessName && ` · ${sellerProfile.businessName}`}
             </Link>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-2 text-sm text-zinc-500">
               {[sellerProfile.adminDistrict, sellerProfile.region].filter(Boolean).join(" · ")}
               {sellerProfile.postcode
                 ? `${sellerProfile.adminDistrict || sellerProfile.region ? " · " : ""}${sellerProfile.postcode}`
                 : ""}
               {sellerProfile.openingHours && ` · ${sellerProfile.openingHours}`}
             </p>
-          </div>
+          </section>
         )}
+        </aside>
       </div>
+
+      <section className={`${sectionClass} mt-10 max-w-4xl`}>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">About this item</h2>
+        <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-zinc-700">
+          {listing.description}
+        </p>
+      </section>
     </div>
   );
 }
