@@ -7,6 +7,8 @@ import { searchListings } from "@/lib/listing-search";
 import { formatMiles } from "@/lib/geo";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
+import { BrowseMobileReels, type ReelListing } from "./BrowseMobileReels";
+import type { SearchListingRow } from "@/lib/listing-search";
 
 export default async function SearchPage({
   searchParams,
@@ -83,6 +85,31 @@ export default async function SearchPage({
     return sp.toString();
   }
 
+  function toReelListing(l: SearchListingRow): ReelListing {
+    const carbon = parseStoredCarbonImpact(l);
+    const priceLine =
+      l.listingKind === "sell" && l.freeToCollector
+        ? "Free to collect"
+        : l.listingKind === "auction"
+          ? `From £${(l.price / 100).toFixed(2)}`
+          : `£${(l.price / 100).toFixed(2)}`;
+    return {
+      id: l.id,
+      title: l.title,
+      imageUrl: l.images[0] ?? null,
+      priceLine,
+      categoryName: l.category.name,
+      conditionLabel: CONDITION_LABELS[l.condition],
+      listingKind: l.listingKind,
+      freeToCollector: l.freeToCollector,
+      offersDelivery: l.offersDelivery,
+      distanceLabel: l.distanceMiles != null ? formatMiles(l.distanceMiles) : null,
+      carbonSavedKg: carbon?.carbon_saved_kg ?? null,
+    };
+  }
+
+  const reelListings = listingsOrdered.map(toReelListing);
+
   let locationNote: string | null = null;
   if (params.postcode?.trim()) {
     if (sortByDistance && searchOriginPostcode) {
@@ -96,7 +123,7 @@ export default async function SearchPage({
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-6xl overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <h1 className="text-2xl font-semibold text-zinc-900">Browse listings</h1>
       {fromImage ? (
         <p className="mt-3 rounded-lg border border-brand/20 bg-brand-soft px-4 py-3 text-sm text-zinc-900">
@@ -120,83 +147,89 @@ export default async function SearchPage({
       <p className="mt-4 text-sm text-zinc-500">
         {total} listing{total !== 1 ? "s" : ""} found
       </p>
+      {total > 0 ? (
+        <p className="mt-1 text-xs text-zinc-500 md:hidden">Swipe cards vertically — full-screen previews, then open a listing.</p>
+      ) : null}
       {listingsOrdered.length === 0 ? (
         <p className="mt-8 text-zinc-500">No listings match your filters.</p>
       ) : (
-        <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {listingsOrdered.map((l) => {
-            const impact = parseStoredCarbonImpact(l);
-            return (
-            <li key={l.id}>
-              <Link
-                href={`/listings/${l.id}`}
-                className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
-              >
-                <div className="relative aspect-square bg-zinc-200">
-                  {l.images[0] ? (
-                    <Image
-                      src={l.images[0]}
-                      alt={l.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-zinc-400">
-                      No image
+        <>
+          <BrowseMobileReels listings={reelListings} />
+          <ul className="mt-6 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {listingsOrdered.map((l) => {
+              const impact = parseStoredCarbonImpact(l);
+              return (
+                <li key={l.id}>
+                  <Link
+                    href={`/listings/${l.id}`}
+                    className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
+                  >
+                    <div className="relative aspect-square bg-zinc-200">
+                      {l.images[0] ? (
+                        <Image
+                          src={l.images[0]}
+                          alt={l.title}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-zinc-400">
+                          No image
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="p-3">
-                  <div className="mb-1 flex flex-wrap gap-1">
-                    {l.listingKind === "auction" && (
-                      <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
-                        Auction
-                      </span>
-                    )}
-                    {l.listingKind === "sell" && l.freeToCollector && (
-                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
-                        Free
-                      </span>
-                    )}
-                    {l.offersDelivery && (
-                      <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-sky-900">
-                        Delivers
-                      </span>
-                    )}
-                    {l.distanceMiles != null && (
-                      <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
-                        {formatMiles(l.distanceMiles)}
-                      </span>
-                    )}
-                  </div>
-                  <p className="truncate font-medium text-zinc-900">{l.title}</p>
-                  <p className="text-sm text-zinc-500">
-                    {l.listingKind === "sell" && l.freeToCollector
-                      ? `Free to collect · ${l.category.name}`
-                      : l.listingKind === "auction"
-                        ? `From £${(l.price / 100).toFixed(2)} · ${l.category.name}`
-                        : `£${(l.price / 100).toFixed(2)} · ${l.category.name}`}
-                    {l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
-                  </p>
-                  {(l.adminDistrict || l.region || l.postcode) && (
-                    <p className="mt-1 truncate text-xs text-zinc-500">
-                      {[l.adminDistrict, l.region].filter(Boolean).join(" · ")}
-                      {l.postcode ? ` · ${l.postcode}` : ""}
-                    </p>
-                  )}
-                  {impact ? (
-                    <div className="mt-2">
-                      <CarbonBadge impact={impact} variant="compact" />
+                    <div className="p-3">
+                      <div className="mb-1 flex flex-wrap gap-1">
+                        {l.listingKind === "auction" && (
+                          <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
+                            Auction
+                          </span>
+                        )}
+                        {l.listingKind === "sell" && l.freeToCollector && (
+                          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
+                            Free
+                          </span>
+                        )}
+                        {l.offersDelivery && (
+                          <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-sky-900">
+                            Delivers
+                          </span>
+                        )}
+                        {l.distanceMiles != null && (
+                          <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
+                            {formatMiles(l.distanceMiles)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="truncate font-medium text-zinc-900">{l.title}</p>
+                      <p className="text-sm text-zinc-500">
+                        {l.listingKind === "sell" && l.freeToCollector
+                          ? `Free to collect · ${l.category.name}`
+                          : l.listingKind === "auction"
+                            ? `From £${(l.price / 100).toFixed(2)} · ${l.category.name}`
+                            : `£${(l.price / 100).toFixed(2)} · ${l.category.name}`}
+                        {l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
+                      </p>
+                      {(l.adminDistrict || l.region || l.postcode) && (
+                        <p className="mt-1 truncate text-xs text-zinc-500">
+                          {[l.adminDistrict, l.region].filter(Boolean).join(" · ")}
+                          {l.postcode ? ` · ${l.postcode}` : ""}
+                        </p>
+                      )}
+                      {impact ? (
+                        <div className="mt-2">
+                          <CarbonBadge impact={impact} variant="compact" />
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
-                </div>
-              </Link>
-            </li>
-          );
-          })}
-        </ul>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
       {totalPages > 1 && (
         <div className="mt-8 flex justify-center gap-2">

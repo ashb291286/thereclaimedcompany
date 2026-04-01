@@ -17,6 +17,9 @@ import { minimumNextBidPence } from "@/lib/auction";
 import { finalizeAuctionListing } from "@/lib/auction-settlement";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge, carbonSeoSentence } from "@/components/CarbonBadge";
+import { ListingFavoriteButton } from "@/components/ListingFavoriteButton";
+import { ListingFomoStrip } from "@/components/ListingFomoStrip";
+import { buildSellerBadges } from "@/lib/seller-badges";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -97,7 +100,19 @@ export default async function ListingPage({
         })
       : null;
 
-  const [recentBids, incomingOffers, myOffers, acceptedMine] = await Promise.all([
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [
+    recentBids,
+    incomingOffers,
+    myOffers,
+    acceptedMine,
+    sellerPaidSales,
+    sellerActiveListings,
+    views7d,
+    favoriteCount,
+    userFavorite,
+  ] = await Promise.all([
     prisma.bid.findMany({
       where: { listingId: id },
       orderBy: { createdAt: "desc" },
@@ -127,6 +142,24 @@ export default async function ListingPage({
           },
         })
       : Promise.resolve(null),
+    prisma.order.count({
+      where: { sellerId: listing.sellerId, status: "paid" },
+    }),
+    prisma.listing.count({
+      where: { sellerId: listing.sellerId, status: "active" },
+    }),
+    prisma.listingViewEvent.count({
+      where: { listingId: id, createdAt: { gte: sevenDaysAgo } },
+    }),
+    prisma.listingFavorite.count({ where: { listingId: id } }),
+    session?.user?.id
+      ? prisma.listingFavorite.findUnique({
+          where: {
+            userId_listingId: { userId: session.user.id, listingId: id },
+          },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
   ]);
 
   const now = new Date();
@@ -149,6 +182,14 @@ export default async function ListingPage({
       : null;
 
   const carbonImpact = parseStoredCarbonImpact(listing);
+
+  const sellerBadges = buildSellerBadges({
+    paidSalesCount: sellerPaidSales,
+    activeListingsCount: sellerActiveListings,
+    role: listing.seller?.role ?? null,
+    verificationStatus: sellerProfile?.verificationStatus ?? null,
+    memberSince: listing.seller?.createdAt ?? new Date(0),
+  });
 
   const sectionClass =
     "rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6";
@@ -238,9 +279,23 @@ export default async function ListingPage({
               )}
               {carbonImpact ? <CarbonBadge impact={carbonImpact} variant="pill" /> : null}
             </div>
-            <h1 className="mt-3 text-xl font-semibold leading-snug text-zinc-900 sm:text-2xl">
-              {listing.title}
-            </h1>
+            <ListingFomoStrip
+              listingId={id}
+              views7d={views7d}
+              favoriteCount={favoriteCount}
+              isOwner={isOwner}
+            />
+            <div className="mt-3 flex items-start justify-between gap-3">
+              <h1 className="min-w-0 flex-1 text-xl font-semibold leading-snug text-zinc-900 sm:text-2xl">
+                {listing.title}
+              </h1>
+              <ListingFavoriteButton
+                listingId={id}
+                initialFavorited={!!userFavorite}
+                isLoggedIn={!!session?.user?.id}
+                isOwner={isOwner}
+              />
+            </div>
             {listing.listingKind === "sell" && !listing.freeToCollector && (
               <p className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
                 £{(listing.price / 100).toFixed(2)}
@@ -486,6 +541,20 @@ export default async function ListingPage({
         {sellerProfile && (
           <section className={sectionClass}>
             <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Seller</h2>
+            {sellerBadges.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {sellerBadges.map((b) => (
+                  <Link
+                    key={b.key + b.label}
+                    href={b.href}
+                    title={b.title}
+                    className="inline-flex items-center rounded-full border border-emerald-200/90 bg-gradient-to-r from-emerald-50 to-teal-50 px-2.5 py-1 text-xs font-semibold text-emerald-900 shadow-sm ring-1 ring-emerald-100/80 transition hover:border-emerald-300 hover:from-emerald-100/80 hover:to-teal-100/80"
+                  >
+                    {b.label}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
             <Link
               href={`/sellers/${listing.sellerId}`}
               className="mt-3 block text-base font-medium text-brand hover:underline"

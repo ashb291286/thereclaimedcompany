@@ -81,6 +81,7 @@ model User {
   bids          Bid[]
   wantedAds     WantedAd[]
   notifications Notification[]
+  listingFavorites ListingFavorite[]
 
   stripeCustomerId     String? @unique // platform Customer for saved auction payment method
   bidPaymentMethodId   String? // default PaymentMethod id (card on file for bids)
@@ -209,6 +210,8 @@ model Listing {
   orders   Order[]
   offers   Offer[]
   bids     Bid[]
+  favorites ListingFavorite[]
+  viewEvents ListingViewEvent[]
 
   @@index([sellerId])
   @@index([categoryId])
@@ -216,6 +219,29 @@ model Listing {
   @@index([lat, lng])
   @@index([createdAt])
   @@index([listingKind])
+}
+
+model ListingFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+model ListingViewEvent {
+  id        String   @id @default(cuid())
+  listingId String
+  createdAt DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, createdAt])
 }
 
 model Bid {
