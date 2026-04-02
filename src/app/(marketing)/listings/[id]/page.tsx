@@ -22,6 +22,7 @@ import { ListingFomoStrip } from "@/components/ListingFomoStrip";
 import { buildSellerBadges } from "@/lib/seller-badges";
 import { openingHoursCompactLine, scheduleFromDbField } from "@/lib/opening-hours";
 import { publicSellerPath } from "@/lib/yard-public-path";
+import { ListingLocalYardsForOwner } from "@/components/ListingLocalYardsForOwner";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -509,6 +510,13 @@ export default async function ListingPage({
             </p>
           </section>
         )}
+
+        {isOwner &&
+          listing.status === "active" &&
+          listing.listingKind === "sell" &&
+          !listing.freeToCollector && (
+            <ListingLocalYardsForOwner listingId={id} notifyLocalYards={listing.notifyLocalYards} />
+          )}
 
         {isOwner && incomingOffers.length > 0 && (
           <section className="rounded-2xl border border-brand/25 bg-brand-soft/50 p-5 shadow-sm sm:p-6">

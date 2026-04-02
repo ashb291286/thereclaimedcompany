@@ -43,12 +43,20 @@ export default async function DashboardLayout({
               Dashboard
             </Link>
             {isYardAccount ? (
-              <Link
-                href="/dashboard/seller-profile"
-                className="text-sm text-zinc-600 hover:text-zinc-900"
-              >
-                Yard profile
-              </Link>
+              <>
+                <Link
+                  href="/dashboard/nearby-stock"
+                  className="text-sm text-zinc-600 hover:text-zinc-900"
+                >
+                  Nearby stock
+                </Link>
+                <Link
+                  href="/dashboard/seller-profile"
+                  className="text-sm text-zinc-600 hover:text-zinc-900"
+                >
+                  Yard profile
+                </Link>
+              </>
             ) : null}
             <Link href="/dashboard/sell" className="text-sm text-zinc-600 hover:text-zinc-900">
               Sell

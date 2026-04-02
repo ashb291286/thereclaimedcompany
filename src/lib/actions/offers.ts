@@ -33,17 +33,18 @@ export async function submitOffer(listingId: string, offeredPricePounds: number,
   }
 
   const trimmed = message?.trim() || null;
+  const now = new Date();
 
-  await prisma.$transaction([
-    prisma.offer.updateMany({
+  await prisma.$transaction(async (tx) => {
+    await tx.offer.updateMany({
       where: {
         listingId,
         buyerId: session.user.id,
         status: "pending",
       },
-      data: { status: "withdrawn", respondedAt: new Date() },
-    }),
-    prisma.offer.create({
+      data: { status: "withdrawn", respondedAt: now },
+    });
+    const created = await tx.offer.create({
       data: {
         listingId,
         buyerId: session.user.id,
@@ -51,8 +52,16 @@ export async function submitOffer(listingId: string, offeredPricePounds: number,
         message: trimmed,
         status: "pending",
       },
-    }),
-  ]);
+    });
+    await tx.listingLocalYardAlert.updateMany({
+      where: {
+        listingId,
+        yardUserId: session.user.id,
+        status: "PENDING",
+      },
+      data: { linkedOfferId: created.id },
+    });
+  });
 
   await createNotification({
     userId: listing.sellerId,
@@ -64,6 +73,7 @@ export async function submitOffer(listingId: string, offeredPricePounds: number,
 
   revalidatePath(`/listings/${listingId}`);
   revalidatePath("/dashboard/offers");
+  revalidatePath("/dashboard/nearby-stock");
   return { ok: true as const };
 }
 
@@ -100,6 +110,7 @@ export async function respondToOffer(offerId: string, action: "accept" | "declin
     });
     revalidatePath(`/listings/${offer.listingId}`);
     revalidatePath("/dashboard/offers");
+    revalidatePath("/dashboard/nearby-stock");
     return { ok: true as const };
   }
 
@@ -128,5 +139,6 @@ export async function respondToOffer(offerId: string, action: "accept" | "declin
 
   revalidatePath(`/listings/${offer.listingId}`);
   revalidatePath("/dashboard/offers");
+  revalidatePath("/dashboard/nearby-stock");
   return { ok: true as const };
 }

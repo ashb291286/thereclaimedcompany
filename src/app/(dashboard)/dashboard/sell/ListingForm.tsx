@@ -116,6 +116,7 @@ export function ListingForm({
   const [error, setError] = useState<string | null>(null);
   const [listingKind, setListingKind] = useState<ListingKind>(listing?.listingKind ?? "sell");
   const [freeToCollector, setFreeToCollector] = useState(listing?.freeToCollector ?? false);
+  const [notifyLocalYards, setNotifyLocalYards] = useState(listing?.notifyLocalYards ?? false);
   const [fulfillmentMode, setFulfillmentMode] = useState<"collection_only" | "collect_or_deliver">(
     listing?.offersDelivery ? "collect_or_deliver" : "collection_only"
   );
@@ -164,6 +165,10 @@ export function ListingForm({
   useEffect(() => {
     if (freeToCollector) setFulfillmentMode("collection_only");
   }, [freeToCollector]);
+
+  useEffect(() => {
+    if (freeToCollector || listingKind !== "sell") setNotifyLocalYards(false);
+  }, [freeToCollector, listingKind]);
 
   useEffect(() => {
     if (listingKind === "sell" && freeToCollector) setPriceStr("0");
@@ -413,6 +418,25 @@ export function ListingForm({
               <span className="font-medium">Free to collector</span>
               <span className="mt-0.5 block text-xs text-zinc-600">
                 No payment — buyer arranges pickup from your location.
+              </span>
+            </span>
+          </label>
+        )}
+        {listingKind === "sell" && !freeToCollector && (
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/50 px-4 py-3 text-sm text-zinc-800">
+            <input
+              type="checkbox"
+              name="notifyLocalYards"
+              value="on"
+              checked={notifyLocalYards}
+              onChange={(e) => setNotifyLocalYards(e.target.checked)}
+              className="rounded border-zinc-300 text-emerald-700"
+            />
+            <span>
+              <span className="font-medium">Offer to local reclamation yards</span>
+              <span className="mt-0.5 block text-xs text-zinc-600">
+                When you publish, we notify yards within about 50 miles of this item&apos;s postcode. They can
+                pass or send a price offer like any other buyer.
               </span>
             </span>
           </label>

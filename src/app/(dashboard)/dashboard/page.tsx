@@ -94,7 +94,8 @@ export default async function DashboardPage({
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [sellerProfile, dbUser, listings, listingCarbon, viewsTotal, views7d] = await Promise.all([
+  const [sellerProfile, dbUser, listings, listingCarbon, viewsTotal, views7d, localStockPendingCount] =
+    await Promise.all([
     prisma.sellerProfile.findUnique({ where: { userId: session.user.id } }),
     prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }),
     prisma.listing.findMany({
@@ -119,6 +120,14 @@ export default async function DashboardPage({
         createdAt: { gte: sevenDaysAgo },
       },
       _count: { _all: true },
+    }),
+    prisma.listingLocalYardAlert.count({
+      where: {
+        yardUserId: session.user.id,
+        status: "PENDING",
+        linkedOfferId: null,
+        listing: { status: "active" },
+      },
     }),
   ]);
 
@@ -162,6 +171,14 @@ export default async function DashboardPage({
       </p>
       {isYardAccount ? (
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <Link href="/dashboard/nearby-stock" className="font-medium text-emerald-800 hover:underline">
+            Nearby stock
+            {localStockPendingCount > 0 ? (
+              <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-bold text-white">
+                {localStockPendingCount > 9 ? "9+" : localStockPendingCount}
+              </span>
+            ) : null}
+          </Link>
           <Link href="/dashboard/seller-profile" className="font-medium text-brand hover:underline">
             Yard profile &amp; SEO
           </Link>
@@ -195,6 +212,36 @@ export default async function DashboardPage({
         <p className="mt-2 text-sm text-rose-700">
           Couldn&apos;t start boost checkout. Ensure listing is active and try again.
         </p>
+      ) : null}
+      {isYardAccount ? (
+        <Link
+          href="/dashboard/nearby-stock"
+          className={`mt-6 block rounded-xl border p-5 shadow-sm transition hover:border-emerald-300 ${
+            localStockPendingCount > 0
+              ? "border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50/80"
+              : "border-zinc-200 bg-white hover:bg-zinc-50/80"
+          }`}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900/90">Reclamation yards</p>
+          <p className="mt-1 text-lg font-semibold text-zinc-900">New stock near you</p>
+          <p className="mt-2 text-sm text-zinc-600">
+            {localStockPendingCount > 0 ? (
+              <>
+                <span className="inline-flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </span>
+                  {localStockPendingCount} listing{localStockPendingCount === 1 ? "" : "s"} waiting for your
+                  response (within ~50 mi).
+                </span>
+              </>
+            ) : (
+              "Sellers can notify yards within 50 miles when they list. Open to see history and new alerts."
+            )}
+          </p>
+          <span className="mt-3 inline-block text-sm font-medium text-brand">View nearby stock →</span>
+        </Link>
       ) : null}
       <div className="mt-6 rounded-xl border border-driven-warm bg-driven-paper p-5 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

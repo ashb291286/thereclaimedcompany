@@ -17,6 +17,7 @@ import {
   type DeliveryOptionStored,
 } from "@/lib/delivery-carriers";
 import { computeListingCarbonSnapshot } from "@/lib/carbon/listing";
+import { syncListingLocalYardAlerts } from "@/lib/listing-local-yard-alerts";
 
 type ParsedListing = {
   listingKind: ListingKind;
@@ -256,7 +257,10 @@ export async function createListing(formData: FormData) {
 
   const carbon = await materialCarbonFromForm(formData);
 
-  await prisma.listing.create({
+  const notifyLocalYards =
+    listingKind === "sell" && !freeToCollector && formData.get("notifyLocalYards") === "on";
+
+  const created = await prisma.listing.create({
     data: {
       sellerId: session.user.id,
       title: title.trim(),
@@ -272,6 +276,7 @@ export async function createListing(formData: FormData) {
       images,
       listingKind,
       freeToCollector,
+      notifyLocalYards,
       offersDelivery,
       deliveryNotes,
       deliveryCostPence,
@@ -292,6 +297,8 @@ export async function createListing(formData: FormData) {
       status: publish ? ListingStatus.active : ListingStatus.draft,
     },
   });
+
+  await syncListingLocalYardAlerts(created.id);
 
   redirect("/dashboard");
 }
@@ -361,6 +368,9 @@ export async function updateListing(id: string, formData: FormData) {
 
   const carbon = await materialCarbonFromForm(formData);
 
+  const notifyLocalYards =
+    listingKind === "sell" && !freeToCollector && formData.get("notifyLocalYards") === "on";
+
   await prisma.listing.update({
     where: { id },
     data: {
@@ -377,6 +387,7 @@ export async function updateListing(id: string, formData: FormData) {
       images,
       listingKind,
       freeToCollector,
+      notifyLocalYards,
       offersDelivery,
       deliveryNotes,
       deliveryCostPence,
@@ -397,6 +408,8 @@ export async function updateListing(id: string, formData: FormData) {
       status: publish ? ListingStatus.active : ListingStatus.draft,
     },
   });
+
+  await syncListingLocalYardAlerts(id);
 
   redirect("/dashboard");
 }

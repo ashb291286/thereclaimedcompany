@@ -38,7 +38,7 @@ export function HaggleForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+    <form id="listing-offer" onSubmit={onSubmit} className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
       <h3 className="text-sm font-semibold text-zinc-900">Make an offer</h3>
       <p className="mt-1 text-xs text-zinc-600">
         Suggest a price. If the seller accepts, you&apos;ll pay that amount at checkout.

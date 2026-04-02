@@ -53,6 +53,11 @@ enum OfferStatus {
   withdrawn
 }
 
+enum ListingLocalYardAlertStatus {
+  PENDING
+  DECLINED
+}
+
 enum WantedAdStatus {
   active
   fulfilled
@@ -85,6 +90,7 @@ model User {
 
   stripeCustomerId     String? @unique // platform Customer for saved auction payment method
   bidPaymentMethodId   String? // default PaymentMethod id (card on file for bids)
+  localYardAlerts      ListingLocalYardAlert[] @relation("YardLocalAlerts")
 }
 
 model Account {
@@ -206,6 +212,7 @@ model Listing {
   auctionFinalizedAt   DateTime? // set after end-of-auction settlement (reserve check / charge)
   boostedUntil         DateTime? // paid promotion window end timestamp
   boostLastPaymentIntentId String? // last processed Stripe PI for idempotency
+  notifyLocalYards     Boolean   @default(false) // ping reclamation yards within radius when published (fixed-price sell)
   // Material / carbon (optional; ICE-based estimates when provided)
   materialType           String? // matches CarbonFactor.materialType
   materialQuantity       Float?
@@ -224,6 +231,7 @@ model Listing {
   bids     Bid[]
   favorites ListingFavorite[]
   viewEvents ListingViewEvent[]
+  localYardAlerts ListingLocalYardAlert[]
 
   @@index([sellerId])
   @@index([categoryId])
@@ -256,6 +264,26 @@ model ListingViewEvent {
   @@index([listingId, createdAt])
 }
 
+// Fixed-price listings: seller opted in to notify reclamation yards within ~50 mi
+model ListingLocalYardAlert {
+  id             String                      @id @default(cuid())
+  listingId      String
+  yardUserId     String
+  status         ListingLocalYardAlertStatus @default(PENDING)
+  distanceMiles  Float?
+  linkedOfferId  String?                     @unique
+  createdAt      DateTime                    @default(now())
+  respondedAt    DateTime?
+
+  listing     Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  yardUser    User    @relation("YardLocalAlerts", fields: [yardUserId], references: [id], onDelete: Cascade)
+  linkedOffer Offer?  @relation(fields: [linkedOfferId], references: [id], onDelete: SetNull)
+
+  @@unique([listingId, yardUserId])
+  @@index([yardUserId])
+  @@index([listingId])
+}
+
 model Bid {
   id          String   @id @default(cuid())
   listingId   String
@@ -286,6 +314,7 @@ model Offer {
   listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
   buyer   User    @relation("OffersMade", fields: [buyerId], references: [id], onDelete: Cascade)
   order   Order?
+  localYardAlert ListingLocalYardAlert?
 
   @@index([listingId])
   @@index([buyerId])
