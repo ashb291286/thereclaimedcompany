@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
 import { SearchForm } from "./SearchForm";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { searchListings } from "@/lib/listing-search";
@@ -42,7 +43,7 @@ export default async function SearchPage({
     ? Math.min(100, Math.max(5, radiusRaw))
     : 50;
 
-  const [searchResult, categories] = await Promise.all([
+  const [searchResult, categories, session] = await Promise.all([
     searchListings({
       q: params.q,
       categoryId: params.categoryId,
@@ -58,6 +59,7 @@ export default async function SearchPage({
       where: { parentId: null },
       orderBy: { name: "asc" },
     }),
+    auth(),
   ]);
 
   const { listings: listingsOrdered, total, sortByDistance, searchOriginPostcode } = searchResult;
@@ -131,6 +133,7 @@ export default async function SearchPage({
         </p>
       ) : null}
       <SearchForm
+        id="search-filters"
         categories={categories}
         defaultQ={params.q}
         defaultCategoryId={params.categoryId}
@@ -154,7 +157,22 @@ export default async function SearchPage({
         <p className="mt-8 text-zinc-500">No listings match your filters.</p>
       ) : (
         <>
-          <BrowseMobileReels listings={reelListings} />
+          <BrowseMobileReels
+            listings={reelListings}
+            initialPage={page}
+            totalPages={totalPages}
+            query={{
+              q: params.q,
+              categoryId: params.categoryId,
+              condition: params.condition,
+              postcode: params.postcode,
+              radius: params.radius ?? (params.postcode?.trim() ? String(radiusMiles) : undefined),
+              sellerType: params.sellerType,
+              ids: params.ids,
+              fromImage: params.fromImage,
+            }}
+            profileHref={session?.user?.id ? "/dashboard" : "/auth/signin?callbackUrl=%2Fsearch"}
+          />
           <ul className="mt-6 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {listingsOrdered.map((l) => {
               const impact = parseStoredCarbonImpact(l);
@@ -232,7 +250,7 @@ export default async function SearchPage({
         </>
       )}
       {totalPages > 1 && (
-        <div className="mt-8 flex justify-center gap-2">
+        <div className="mt-8 hidden justify-center gap-2 md:flex">
           {page > 1 && (
             <Link
               href={`/search?${paginationQuery(page - 1)}`}

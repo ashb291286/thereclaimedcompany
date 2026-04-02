@@ -12,6 +12,12 @@ export async function GET(req: NextRequest) {
     ? Math.min(100, Math.max(5, radiusRaw))
     : 50;
   const sellerType = searchParams.get("sellerType") ?? "";
+  const idsParam = searchParams.get("ids") ?? "";
+  const idList = idsParam
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 48);
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const pageSize = Math.min(24, parseInt(searchParams.get("pageSize") ?? "12", 10));
   const skip = (page - 1) * pageSize;
@@ -23,6 +29,7 @@ export async function GET(req: NextRequest) {
     sellerType: sellerType || undefined,
     postcode: postcode || undefined,
     radiusMiles,
+    idList: idList.length > 0 ? idList : undefined,
     skip,
     take: pageSize,
   });

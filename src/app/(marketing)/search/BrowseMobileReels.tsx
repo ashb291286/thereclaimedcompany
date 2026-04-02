@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
+import { CONDITION_LABELS } from "@/lib/constants";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type ReelListing = {
   id: string;
@@ -18,8 +20,91 @@ export type ReelListing = {
   carbonSavedKg: number | null;
 };
 
-export function BrowseMobileReels({ listings }: { listings: ReelListing[] }) {
+type FeedQuery = {
+  q?: string;
+  categoryId?: string;
+  condition?: string;
+  postcode?: string;
+  radius?: string;
+  sellerType?: string;
+  ids?: string;
+  fromImage?: string;
+};
+
+type ApiListingRow = {
+  id: string;
+  title: string;
+  images: string[];
+  price: number;
+  category: { name: string };
+  condition: keyof typeof CONDITION_LABELS;
+  listingKind: "sell" | "auction";
+  freeToCollector: boolean;
+  offersDelivery: boolean;
+  distanceMiles: number | null;
+  carbonImpactJson?: unknown;
+  carbonSavedKg?: number | null;
+};
+
+function milesLabel(m: number): string {
+  if (!Number.isFinite(m)) return "";
+  if (m < 1) return "<1 mi";
+  if (m < 10) return `${m.toFixed(1)} mi`;
+  return `${Math.round(m)} mi`;
+}
+
+function toReelListing(l: ApiListingRow): ReelListing {
+  const carbon = parseStoredCarbonImpact({
+    carbonImpactJson: l.carbonImpactJson ?? null,
+    carbonSavedKg: l.carbonSavedKg ?? null,
+  });
+  const priceLine =
+    l.listingKind === "sell" && l.freeToCollector
+      ? "Free to collect"
+      : l.listingKind === "auction"
+        ? `From £${(l.price / 100).toFixed(2)}`
+        : `£${(l.price / 100).toFixed(2)}`;
+  return {
+    id: l.id,
+    title: l.title,
+    imageUrl: l.images[0] ?? null,
+    priceLine,
+    categoryName: l.category.name,
+    conditionLabel: CONDITION_LABELS[l.condition] ?? "Used",
+    listingKind: l.listingKind,
+    freeToCollector: l.freeToCollector,
+    offersDelivery: l.offersDelivery,
+    distanceLabel: l.distanceMiles != null ? milesLabel(l.distanceMiles) : null,
+    carbonSavedKg: carbon?.carbon_saved_kg ?? null,
+  };
+}
+
+export function BrowseMobileReels({
+  listings,
+  initialPage,
+  totalPages,
+  query,
+  profileHref,
+}: {
+  listings: ReelListing[];
+  initialPage: number;
+  totalPages: number;
+  query: FeedQuery;
+  profileHref: string;
+}) {
+  const [items, setItems] = useState<ReelListing[]>(listings);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [page, setPage] = useState(initialPage);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const hasMore = page < totalPages;
+
+  useEffect(() => {
+    setItems(listings);
+    setPage(initialPage);
+    setLoadError(null);
+  }, [listings, initialPage]);
 
   const shareListing = useCallback(async (l: ReelListing) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -41,11 +126,65 @@ export function BrowseMobileReels({ listings }: { listings: ReelListing[] }) {
     }
   }, []);
 
-  if (listings.length === 0) return null;
+  const queryString = useMemo(() => {
+    const sp = new URLSearchParams();
+    if (query.q) sp.set("q", query.q);
+    if (query.categoryId) sp.set("categoryId", query.categoryId);
+    if (query.condition) sp.set("condition", query.condition);
+    if (query.postcode) sp.set("postcode", query.postcode);
+    if (query.radius) sp.set("radius", query.radius);
+    if (query.sellerType) sp.set("sellerType", query.sellerType);
+    if (query.ids) sp.set("ids", query.ids);
+    if (query.fromImage) sp.set("fromImage", query.fromImage);
+    return sp.toString();
+  }, [query]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    setLoadError(null);
+    const nextPage = page + 1;
+    try {
+      const qs = new URLSearchParams(queryString);
+      qs.set("page", String(nextPage));
+      qs.set("pageSize", "12");
+      const res = await fetch(`/api/listings?${qs.toString()}`, { method: "GET" });
+      if (!res.ok) throw new Error("Failed to load listings");
+      const data = (await res.json()) as { listings: ApiListingRow[]; page: number };
+      const mapped = data.listings.map(toReelListing);
+      setItems((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        const unique = mapped.filter((m) => !seen.has(m.id));
+        return [...prev, ...unique];
+      });
+      setPage(nextPage);
+    } catch {
+      setLoadError("Couldn’t load more listings. Tap to retry.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadingMore, page, queryString]);
+
+  useEffect(() => {
+    if (!hasMore || !sentinelRef.current) return;
+    const el = sentinelRef.current;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          void loadMore();
+        }
+      },
+      { rootMargin: "300px 0px 300px 0px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMore, loadMore]);
+
+  if (items.length === 0) return null;
 
   return (
     <div
-      className="md:hidden relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 px-3 pb-6 sm:px-4"
+      className="md:hidden relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 px-3 pb-24 sm:px-4"
       aria-label="Swipe through listings"
     >
       <div
@@ -53,7 +192,7 @@ export function BrowseMobileReels({ listings }: { listings: ReelListing[] }) {
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         <ul className="flex flex-col gap-3 pt-1">
-          {listings.map((l) => (
+          {items.map((l) => (
             <li
               key={l.id}
               className="relative h-[min(calc(100dvh-5.5rem),640px)] min-h-[22rem] w-full shrink-0 snap-start snap-always overflow-hidden rounded-2xl border border-zinc-200/90 bg-zinc-900 shadow-2xl ring-1 ring-black/10"
@@ -137,6 +276,52 @@ export function BrowseMobileReels({ listings }: { listings: ReelListing[] }) {
             </li>
           ))}
         </ul>
+        <div ref={sentinelRef} className="h-12" />
+        {loadingMore ? (
+          <p className="pb-4 text-center text-xs text-zinc-500">Loading more listings…</p>
+        ) : null}
+        {loadError ? (
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            className="mx-auto mb-3 block rounded-full border border-zinc-300 bg-white px-4 py-2 text-xs font-medium text-zinc-700"
+          >
+            {loadError}
+          </button>
+        ) : null}
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200/90 bg-white/95 px-3 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 backdrop-blur sm:px-4">
+        <div className="mx-auto grid max-w-xl grid-cols-4 gap-1.5">
+          <button
+            type="button"
+            className="rounded-xl bg-zinc-900 px-2 py-2.5 text-[11px] font-semibold text-white"
+          >
+            Feed
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const filters = document.getElementById("search-filters");
+              filters?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            className="rounded-xl border border-zinc-300 bg-white px-2 py-2.5 text-[11px] font-semibold text-zinc-700"
+          >
+            Filters
+          </button>
+          <Link
+            href="/dashboard/sell"
+            className="rounded-xl border border-zinc-300 bg-white px-2 py-2.5 text-center text-[11px] font-semibold text-zinc-700"
+          >
+            Add listing
+          </Link>
+          <Link
+            href={profileHref}
+            className="rounded-xl border border-zinc-300 bg-white px-2 py-2.5 text-center text-[11px] font-semibold text-zinc-700"
+          >
+            Profile
+          </Link>
+        </div>
       </div>
     </div>
   );

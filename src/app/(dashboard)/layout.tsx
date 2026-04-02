@@ -35,6 +35,14 @@ export default async function DashboardLayout({
             <Link href="/dashboard" className="text-sm text-zinc-600 hover:text-zinc-900">
               Dashboard
             </Link>
+            {session?.user?.role === "reclamation_yard" ? (
+              <Link
+                href="/dashboard/seller-profile"
+                className="text-sm text-zinc-600 hover:text-zinc-900"
+              >
+                Yard profile
+              </Link>
+            ) : null}
             <Link href="/dashboard/sell" className="text-sm text-zinc-600 hover:text-zinc-900">
               Sell
             </Link>

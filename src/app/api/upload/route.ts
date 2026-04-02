@@ -10,6 +10,7 @@ export async function POST(req: Request) {
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
+  const folder = formData.get("folder") as string | null;
   if (!file) {
     return NextResponse.json({ error: "No file" }, { status: 400 });
   }
@@ -22,8 +23,19 @@ export async function POST(req: Request) {
     );
   }
 
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+  const stamp = Date.now();
+  let objectPath: string;
+  if (folder === "yard-logo") {
+    objectPath = `yards/${session.user.id}/logo-${stamp}-${safeName}`;
+  } else if (folder === "yard-header") {
+    objectPath = `yards/${session.user.id}/header-${stamp}-${safeName}`;
+  } else {
+    objectPath = `listings/${session.user.id}/${stamp}-${safeName}`;
+  }
+
   try {
-    const blob = await put(`listings/${session.user.id}/${Date.now()}-${file.name}`, file, {
+    const blob = await put(objectPath, file, {
       access: "public",
       token,
     });

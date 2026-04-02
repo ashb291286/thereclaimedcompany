@@ -5,6 +5,9 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import type { UserRole } from "@/generated/prisma/client";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
+import { defaultYardOpeningHours, parseOpeningHoursSchedule } from "@/lib/opening-hours";
+import type { Prisma } from "@/generated/prisma/client";
+import { allocateYardSlug } from "@/lib/yard-slug";
 
 export async function completeSellerOnboarding(formData: FormData): Promise<void> {
   const session = await auth();
@@ -14,7 +17,7 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   const displayName = formData.get("displayName") as string;
   const postcodeRaw = formData.get("postcode") as string;
   const businessName = formData.get("businessName") as string | null;
-  const openingHours = formData.get("openingHours") as string | null;
+  const openingHoursScheduleRaw = formData.get("openingHoursSchedule") as string | null;
 
   if (!sellerType || !displayName?.trim() || !postcodeRaw?.trim()) {
     redirect("/dashboard/onboarding?error=Display+name+and+postcode+required");
@@ -29,6 +32,31 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
       "/dashboard/onboarding?error=" +
         encodeURIComponent("Enter a full valid UK postcode (e.g. SW1A 1AA).")
     );
+  }
+
+  let openingHoursSchedule: Prisma.InputJsonValue | undefined;
+  if (sellerType === "reclamation_yard") {
+    let json: unknown;
+    if (openingHoursScheduleRaw?.trim()) {
+      try {
+        json = JSON.parse(openingHoursScheduleRaw) as unknown;
+      } catch {
+        redirect("/dashboard/onboarding?error=" + encodeURIComponent("Invalid opening hours."));
+      }
+    } else {
+      json = defaultYardOpeningHours();
+    }
+    const parsed = parseOpeningHoursSchedule(json);
+    if (!parsed) {
+      redirect("/dashboard/onboarding?error=" + encodeURIComponent("Invalid opening hours."));
+    }
+    openingHoursSchedule = parsed as unknown as Prisma.InputJsonValue;
+  }
+
+  let yardSlug: string | undefined;
+  if (sellerType === "reclamation_yard") {
+    const baseName = (businessName?.trim() || displayName.trim()) as string;
+    yardSlug = await allocateYardSlug(prisma, baseName, session.user.id);
   }
 
   await prisma.$transaction([
@@ -46,7 +74,9 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
         adminDistrict: resolved.adminDistrict,
         region: resolved.region,
         businessName: sellerType === "reclamation_yard" ? (businessName?.trim() || null) : null,
-        openingHours: sellerType === "reclamation_yard" ? (openingHours?.trim() || null) : null,
+        openingHours: null,
+        openingHoursSchedule,
+        yardSlug: sellerType === "reclamation_yard" ? yardSlug : null,
       },
     }),
   ]);

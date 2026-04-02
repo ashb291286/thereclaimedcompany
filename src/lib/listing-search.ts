@@ -126,7 +126,7 @@ export async function searchListings(params: ListingSearchParams): Promise<{
   const [listings, total] = await Promise.all([
     prisma.listing.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ boostedUntil: "desc" }, { updatedAt: "desc" }],
       skip: params.skip,
       take: params.take,
       include: { category: true },

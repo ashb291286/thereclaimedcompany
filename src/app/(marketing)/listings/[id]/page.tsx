@@ -20,6 +20,8 @@ import { CarbonBadge, carbonSeoSentence } from "@/components/CarbonBadge";
 import { ListingFavoriteButton } from "@/components/ListingFavoriteButton";
 import { ListingFomoStrip } from "@/components/ListingFomoStrip";
 import { buildSellerBadges } from "@/lib/seller-badges";
+import { openingHoursCompactLine, scheduleFromDbField } from "@/lib/opening-hours";
+import { publicSellerPath } from "@/lib/yard-public-path";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -91,6 +93,20 @@ export default async function ListingPage({
   }
 
   const sellerProfile = listing.seller?.sellerProfile;
+  const sellerHoursLine = sellerProfile
+    ? openingHoursCompactLine(
+        scheduleFromDbField(sellerProfile.openingHoursSchedule),
+        sellerProfile.openingHours
+      )
+    : null;
+
+  const sellerPublicHref = listing.seller
+    ? publicSellerPath({
+        sellerId: listing.sellerId,
+        role: listing.seller.role,
+        yardSlug: sellerProfile?.yardSlug ?? null,
+      })
+    : `/sellers/${listing.sellerId}`;
 
   const buyerBidPay =
     session?.user?.id && !isOwner
@@ -556,7 +572,7 @@ export default async function ListingPage({
               </div>
             ) : null}
             <Link
-              href={`/sellers/${listing.sellerId}`}
+              href={sellerPublicHref}
               className="mt-3 block text-base font-medium text-brand hover:underline"
             >
               {sellerProfile.displayName}
@@ -567,8 +583,19 @@ export default async function ListingPage({
               {sellerProfile.postcode
                 ? `${sellerProfile.adminDistrict || sellerProfile.region ? " · " : ""}${sellerProfile.postcode}`
                 : ""}
-              {sellerProfile.openingHours && ` · ${sellerProfile.openingHours}`}
+              {sellerHoursLine ? ` · ${sellerHoursLine}` : ""}
             </p>
+            {listing.seller?.role === "reclamation_yard" &&
+            (sellerProfile.openingHoursSchedule != null || sellerProfile.openingHours) ? (
+              <p className="mt-2 text-xs">
+                <Link
+                  href={`${sellerPublicHref}#opening-hours`}
+                  className="font-medium text-brand hover:underline"
+                >
+                  Full opening hours
+                </Link>
+              </p>
+            ) : null}
           </section>
         )}
         </aside>

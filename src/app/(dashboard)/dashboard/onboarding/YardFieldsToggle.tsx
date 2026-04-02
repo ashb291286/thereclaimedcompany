@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
+import { OpeningHoursEditor } from "@/components/OpeningHoursEditor";
 
 export function YardFieldsToggle() {
   const [sellerType, setSellerType] = useState<"individual" | "reclamation_yard">("individual");
@@ -12,29 +13,32 @@ export function YardFieldsToggle() {
         <label className="block text-sm font-medium text-zinc-700 mb-2">
           I am selling as
         </label>
-        <div className="flex gap-4">
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="radio"
-              name="sellerType"
-              value="individual"
-              checked={sellerType === "individual"}
-              onChange={() => setSellerType("individual")}
-              className="h-4 w-4 border-zinc-300 text-brand focus:ring-brand"
-            />
-            <span className="text-zinc-900">Individual</span>
-          </label>
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="radio"
-              name="sellerType"
-              value="reclamation_yard"
-              checked={sellerType === "reclamation_yard"}
-              onChange={() => setSellerType("reclamation_yard")}
-              className="h-4 w-4 border-zinc-300 text-brand focus:ring-brand"
-            />
-            <span className="text-zinc-900">Reclamation yard</span>
-          </label>
+        <input type="hidden" name="sellerType" value={sellerType} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setSellerType("individual")}
+            className={`rounded-xl border p-4 text-left transition ${
+              sellerType === "individual"
+                ? "border-brand bg-brand-soft/60 ring-1 ring-brand/25"
+                : "border-zinc-200 bg-white hover:border-zinc-300"
+            }`}
+          >
+            <p className="text-sm font-semibold text-zinc-900">Individual seller</p>
+            <p className="mt-1 text-xs text-zinc-600">Selling your own reclaimed items.</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSellerType("reclamation_yard")}
+            className={`rounded-xl border p-4 text-left transition ${
+              sellerType === "reclamation_yard"
+                ? "border-brand bg-brand-soft/60 ring-1 ring-brand/25"
+                : "border-zinc-200 bg-white hover:border-zinc-300"
+            }`}
+          >
+            <p className="text-sm font-semibold text-zinc-900">Reclamation yard</p>
+            <p className="mt-1 text-xs text-zinc-600">Business inventory and yard details.</p>
+          </button>
         </div>
       </div>
       {showYard && (
@@ -51,18 +55,7 @@ export function YardFieldsToggle() {
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
-          <div>
-            <label htmlFor="openingHours" className="block text-sm font-medium text-zinc-700 mb-1">
-              Opening hours (optional)
-            </label>
-            <input
-              id="openingHours"
-              name="openingHours"
-              type="text"
-              placeholder="e.g. Mon–Sat 9am–5pm"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-            />
-          </div>
+          <OpeningHoursEditor />
         </div>
       )}
     </>

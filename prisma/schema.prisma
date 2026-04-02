@@ -132,7 +132,17 @@ model SellerProfile {
   lng               Float?
   adminDistrict     String?   // town / borough (postcodes.io admin_district)
   region            String?   // e.g. England region / London
-  openingHours      String?   // free text or JSON string for yards
+  openingHours         String?  // legacy free text (optional fallback)
+  openingHoursSchedule Json?    // structured Mon–Sun for reclamation yards
+  yardSlug             String?  @unique // public SEO URL for reclamation yards only
+  yardTagline          String?   // short line for SEO / hero
+  yardAbout            String?   @db.Text // longer about copy for page + meta
+  yardLogoUrl          String?
+  yardHeaderImageUrl   String?
+  yardContactEmail     String?
+  yardContactPhone     String?
+  yardWebsiteUrl       String?
+  yardSocialJson       Json?    // instagram, facebook, x, linkedin, tiktok URLs
   verificationStatus String?  @default("none") // none | pending | verified
   stripeAccountId   String?   // Stripe Connect account id when onboarding complete
   createdAt         DateTime  @default(now())
@@ -194,6 +204,8 @@ model Listing {
   auctionEndsAt        DateTime? // auction only: bidding closes at this time (UTC)
   auctionReservePence  Int? // optional minimum winning amount (pence); null = no reserve
   auctionFinalizedAt   DateTime? // set after end-of-auction settlement (reserve check / charge)
+  boostedUntil         DateTime? // paid promotion window end timestamp
+  boostLastPaymentIntentId String? // last processed Stripe PI for idempotency
   // Material / carbon (optional; ICE-based estimates when provided)
   materialType           String? // matches CarbonFactor.materialType
   materialQuantity       Float?

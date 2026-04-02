@@ -9,6 +9,7 @@ export async function register(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const name = formData.get("name") as string;
+  const accountIntent = ((formData.get("accountIntent") as string) ?? "buying").trim();
 
   if (!email?.trim() || !password?.trim()) {
     return { error: "Email and password are required" };
@@ -31,9 +32,12 @@ export async function register(formData: FormData) {
     },
   });
 
+  const redirectTo =
+    accountIntent === "selling" ? "/dashboard/onboarding?welcome=1" : "/search?welcome=1";
+
   await signIn("credentials", {
     email: email.trim(),
     password,
-    redirectTo: "/dashboard/onboarding?welcome=1",
+    redirectTo,
   });
 }

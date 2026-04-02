@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/db";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { CONDITION_LABELS } from "@/lib/constants";
+import { OpeningHoursBlock } from "@/components/OpeningHoursBlock";
 
 export default async function SellerPage({
   params,
@@ -26,6 +27,10 @@ export default async function SellerPage({
   const profile = seller.sellerProfile;
   const isYard = seller.role === "reclamation_yard";
 
+  if (isYard && profile.yardSlug) {
+    permanentRedirect(`/reclamation-yard/${profile.yardSlug}`);
+  }
+
   return (
     <div>
       <div className="rounded-xl border border-zinc-200 bg-white p-6">
@@ -39,9 +44,13 @@ export default async function SellerPage({
           </span>
         )}
         <p className="mt-2 text-zinc-600">{profile.postcode}</p>
-        {profile.openingHours && (
-          <p className="mt-1 text-sm text-zinc-500">Opening hours: {profile.openingHours}</p>
-        )}
+        {isYard || profile.openingHoursSchedule || profile.openingHours ? (
+          <OpeningHoursBlock
+            id="opening-hours"
+            scheduleJson={profile.openingHoursSchedule}
+            legacyText={profile.openingHours}
+          />
+        ) : null}
       </div>
       <h2 className="mt-8 text-lg font-medium text-zinc-900">Listings</h2>
       {seller.listings.length === 0 ? (

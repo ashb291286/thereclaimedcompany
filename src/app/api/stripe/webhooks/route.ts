@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
 import { NextResponse } from "next/server";
 import type { Stripe } from "stripe";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
+    const kind = session.metadata?.kind;
     const listingId = session.metadata?.listingId;
     const buyerId = session.metadata?.buyerId;
     const sellerId = session.metadata?.sellerId;
@@ -34,6 +36,69 @@ export async function POST(req: Request) {
       : session.payment_intent?.id;
     const offerIdMeta = session.metadata?.offerId?.trim();
     const bidIdMeta = session.metadata?.bidId?.trim();
+
+    if (kind === "listing_boost" && listingId && sellerId && paymentIntentId) {
+      const listing = await prisma.listing.findFirst({
+        where: { id: listingId, sellerId },
+        select: {
+          id: true,
+          sellerId: true,
+          title: true,
+          adminDistrict: true,
+          region: true,
+          boostLastPaymentIntentId: true,
+          boostedUntil: true,
+        },
+      });
+      if (listing && listing.boostLastPaymentIntentId !== paymentIntentId) {
+        const now = new Date();
+        const base = listing.boostedUntil && listing.boostedUntil > now ? listing.boostedUntil : now;
+        const boostedUntil = new Date(base.getTime() + 7 * 24 * 60 * 60 * 1000);
+        await prisma.listing.update({
+          where: { id: listing.id },
+          data: {
+            boostedUntil,
+            boostLastPaymentIntentId: paymentIntentId,
+            updatedAt: now,
+          },
+        });
+
+        const localWhere: {
+          OR?: Array<{ sellerProfile: { is: { adminDistrict?: string; region?: string } } }>;
+          role: "reclamation_yard";
+          id: { not: string };
+          sellerProfile: { isNot: null };
+        } = {
+          role: "reclamation_yard",
+          id: { not: listing.sellerId },
+          sellerProfile: { isNot: null },
+        };
+        const or: Array<{ sellerProfile: { is: { adminDistrict?: string; region?: string } } }> = [];
+        if (listing.adminDistrict) {
+          or.push({ sellerProfile: { is: { adminDistrict: listing.adminDistrict } } });
+        }
+        if (listing.region) {
+          or.push({ sellerProfile: { is: { region: listing.region } } });
+        }
+        if (or.length > 0) localWhere.OR = or;
+        else return NextResponse.json({ received: true });
+
+        const localYards = await prisma.user.findMany({
+          where: localWhere,
+          select: { id: true },
+        });
+        for (const yard of localYards) {
+          await createNotification({
+            userId: yard.id,
+            type: "boosted_listing_local",
+            title: "Local boosted listing available",
+            body: `“${listing.title}” has been promoted locally and is available now.`,
+            linkUrl: `/listings/${listing.id}`,
+          });
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
 
     if (listingId && buyerId && sellerId && paymentIntentId) {
       const existingBidOrder = bidIdMeta
