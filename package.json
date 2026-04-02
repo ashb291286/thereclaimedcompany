@@ -20,6 +20,7 @@
     "@prisma/client": "^7.4.2",
     "@stripe/react-stripe-js": "^6.1.0",
     "@stripe/stripe-js": "^9.0.1",
+    "@uploadthing/react": "^7.7.4",
     "@vercel/blob": "^2.3.1",
     "bcryptjs": "^3.0.3",
     "next": "16.1.6",
@@ -30,7 +31,8 @@
     "react-dom": "19.2.3",
     "react-easy-crop": "^5.5.7",
     "sharp": "^0.34.5",
-    "stripe": "^20.4.0"
+    "stripe": "^20.4.0",
+    "uploadthing": "^7.7.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

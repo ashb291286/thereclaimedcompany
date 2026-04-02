@@ -362,3 +362,174 @@ model Order {
   @@index([listingId])
   @@index([status])
 }
+
+// ---- Driven · Lineage (additive; ownerId/userId reference User.id without Prisma relation) ----
+
+enum DrivenVehicleStatus {
+  PRIVATE
+  LISTED
+  SOLD
+}
+
+enum DrivenTitleStatus {
+  UNVERIFIED
+  ESCROWED
+  TRANSFERRED
+}
+
+enum DrivenSellerType {
+  PRIVATE_PARTY
+  DEALER
+}
+
+enum DrivenAuctionStatus {
+  ACTIVE
+  ENDED
+  WITHDRAWN
+}
+
+enum DrivenGarageRelationship {
+  OWNED
+  WATCHING
+  SOLD
+}
+
+enum DrivenValuationSource {
+  HAGERTY
+  MANUAL
+  AUCTION_COMPARABLE
+}
+
+enum DrivenDocumentType {
+  INVOICE
+  PHOTO
+  CERTIFICATE
+  MOT
+  BUILD_SHEET
+  INSPECTION
+  OTHER
+}
+
+enum DrivenEntryCategory {
+  FACTORY
+  OWNERSHIP
+  SERVICE
+  BODYWORK
+  RESTORATION
+  COMPETITION
+  DOCUMENT
+}
+
+model DrivenVehicle {
+  id             String              @id @default(cuid())
+  vin            String?
+  registration   String
+  make           String
+  model          String
+  year           Int
+  colour         String?
+  mileage        Int?
+  ownerId        String
+  passportScore  Int                 @default(0)
+  status         DrivenVehicleStatus @default(PRIVATE)
+  titleStatus    DrivenTitleStatus   @default(UNVERIFIED)
+  sellerType     DrivenSellerType    @default(PRIVATE_PARTY)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  lineageEntries DrivenLineageEntry[]
+  inspection     DrivenInspection?
+  valuations     DrivenValuationSnapshot[]
+  garageEntries  DrivenGarageEntry[]
+  auction        DrivenAuctionListing?
+
+  @@index([ownerId])
+  @@index([registration])
+  @@index([status])
+}
+
+model DrivenLineageEntry {
+  id            String               @id @default(cuid())
+  vehicleId     String
+  vehicle       DrivenVehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date          DateTime
+  mileageAtTime Int?
+  category      DrivenEntryCategory
+  title         String
+  description   String?
+  cost          Int?
+  workshop      String?
+  documents     DrivenDocument[]
+  createdAt     DateTime             @default(now())
+
+  @@index([vehicleId])
+  @@index([date])
+}
+
+model DrivenDocument {
+  id         String             @id @default(cuid())
+  entryId    String
+  entry      DrivenLineageEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  type       DrivenDocumentType
+  url        String
+  fileName   String
+  uploadedAt DateTime           @default(now())
+
+  @@index([entryId])
+}
+
+model DrivenInspection {
+  id            String        @id @default(cuid())
+  vehicleId     String        @unique
+  vehicle       DrivenVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  overallScore  Int
+  bodyAndPaint  Int
+  mechanical    Int
+  interior      Int
+  underbody     Int
+  electrics     Int
+  reportUrl     String?
+  inspectorName String?
+  inspectedAt   DateTime
+}
+
+model DrivenValuationSnapshot {
+  id             String                @id @default(cuid())
+  vehicleId      String
+  vehicle        DrivenVehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  capturedAt     DateTime              @default(now())
+  estimatedValue Int
+  source         DrivenValuationSource
+
+  @@index([vehicleId])
+  @@index([capturedAt])
+}
+
+model DrivenGarageEntry {
+  id            String                   @id @default(cuid())
+  userId        String
+  vehicleId     String
+  vehicle       DrivenVehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  relationship  DrivenGarageRelationship
+  priceAlert    Int?
+  notes         String?
+  createdAt     DateTime                 @default(now())
+
+  @@index([userId])
+  @@index([vehicleId])
+}
+
+model DrivenAuctionListing {
+  id             String               @id @default(cuid())
+  vehicleId      String               @unique
+  vehicle        DrivenVehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  reservePrice   Int
+  currentBid     Int                  @default(0)
+  bidCount       Int                  @default(0)
+  watcherCount   Int                  @default(0)
+  endsAt         DateTime
+  status         DrivenAuctionStatus  @default(ACTIVE)
+  createdAt      DateTime             @default(now())
+
+  @@index([status])
+  @@index([endsAt])
+}

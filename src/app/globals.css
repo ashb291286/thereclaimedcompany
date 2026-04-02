@@ -17,6 +17,14 @@
   --color-brand: #014e6d;
   --color-brand-hover: #01354a;
   --color-brand-soft: #e5f1f5;
+
+  /* Driven · Lineage (additive tokens) */
+  --color-driven-ink: #1a1814;
+  --color-driven-paper: #f7f4ef;
+  --color-driven-warm: #e8e3da;
+  --color-driven-accent: #c4571a;
+  --color-driven-accent-light: #f0e8e0;
+  --color-driven-muted: #7a756d;
 }
 
 @media (prefers-color-scheme: dark) {
