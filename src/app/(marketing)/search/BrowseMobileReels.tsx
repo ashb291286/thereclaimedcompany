@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -54,10 +53,7 @@ function milesLabel(m: number): string {
 }
 
 function toReelListing(l: ApiListingRow): ReelListing {
-  const carbon = parseStoredCarbonImpact({
-    carbonImpactJson: l.carbonImpactJson ?? null,
-    carbonSavedKg: l.carbonSavedKg ?? null,
-  });
+  const carbon = parseCarbonSavedKg(l.carbonImpactJson, l.carbonSavedKg ?? null);
   const priceLine =
     l.listingKind === "sell" && l.freeToCollector
       ? "Free to collect"
@@ -75,8 +71,17 @@ function toReelListing(l: ApiListingRow): ReelListing {
     freeToCollector: l.freeToCollector,
     offersDelivery: l.offersDelivery,
     distanceLabel: l.distanceMiles != null ? milesLabel(l.distanceMiles) : null,
-    carbonSavedKg: carbon?.carbon_saved_kg ?? null,
+    carbonSavedKg: carbon,
   };
+}
+
+/** Client-safe parser to avoid importing server-only carbon modules. */
+function parseCarbonSavedKg(carbonImpactJson: unknown, carbonSavedKg: number | null): number | null {
+  if (carbonImpactJson && typeof carbonImpactJson === "object") {
+    const json = carbonImpactJson as Record<string, unknown>;
+    if (typeof json.carbon_saved_kg === "number") return json.carbon_saved_kg;
+  }
+  return typeof carbonSavedKg === "number" ? carbonSavedKg : null;
 }
 
 export function BrowseMobileReels({
