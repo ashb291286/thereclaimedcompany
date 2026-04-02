@@ -21,7 +21,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function updateYardProfileAction(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
-  if (session.user.role !== "reclamation_yard") redirect("/dashboard");
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  if ((dbUser?.role ?? session.user.role) !== "reclamation_yard") redirect("/dashboard");
 
   const displayName = (formData.get("displayName") as string)?.trim();
   if (!displayName) {

@@ -10,12 +10,19 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  const unreadCount =
+  const [unreadCount, dbRole] =
     session?.user?.id != null
-      ? await prisma.notification.count({
-          where: { userId: session.user.id, readAt: null },
-        })
-      : 0;
+      ? await Promise.all([
+          prisma.notification.count({
+            where: { userId: session.user.id, readAt: null },
+          }),
+          prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { role: true },
+          }),
+        ]).then(([count, user]) => [count, user?.role ?? null] as const)
+      : [0, null];
+  const isYardAccount = (session?.user?.role ?? dbRole) === "reclamation_yard";
   const carbonAdmin = session ? isCarbonAdmin(session) : false;
 
   return (
@@ -35,7 +42,7 @@ export default async function DashboardLayout({
             <Link href="/dashboard" className="text-sm text-zinc-600 hover:text-zinc-900">
               Dashboard
             </Link>
-            {session?.user?.role === "reclamation_yard" ? (
+            {isYardAccount ? (
               <Link
                 href="/dashboard/seller-profile"
                 className="text-sm text-zinc-600 hover:text-zinc-900"

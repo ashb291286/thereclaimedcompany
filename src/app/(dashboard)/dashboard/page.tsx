@@ -94,8 +94,9 @@ export default async function DashboardPage({
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [sellerProfile, listings, listingCarbon, viewsTotal, views7d] = await Promise.all([
+  const [sellerProfile, dbUser, listings, listingCarbon, viewsTotal, views7d] = await Promise.all([
     prisma.sellerProfile.findUnique({ where: { userId: session.user.id } }),
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }),
     prisma.listing.findMany({
       where: { sellerId: session.user.id },
       orderBy: { updatedAt: "desc" },
@@ -123,6 +124,11 @@ export default async function DashboardPage({
 
   const totalViewsByListing = new Map(viewsTotal.map((v) => [v.listingId, v._count._all]));
   const views7dByListing = new Map(views7d.map((v) => [v.listingId, v._count._all]));
+  const sellerRole = dbUser?.role ?? session.user.role ?? null;
+  const isYardAccount =
+    sellerRole === "reclamation_yard" ||
+    !!sellerProfile?.yardSlug ||
+    !!sellerProfile?.businessName;
 
   if (!sellerProfile) {
     return (
@@ -148,7 +154,7 @@ export default async function DashboardPage({
         {sellerProfile.displayName}
         {sellerProfile.businessName && ` · ${sellerProfile.businessName}`}
       </p>
-      {session.user.role === "reclamation_yard" ? (
+      {isYardAccount ? (
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           <Link href="/dashboard/seller-profile" className="font-medium text-brand hover:underline">
             Yard profile &amp; SEO
@@ -157,7 +163,7 @@ export default async function DashboardPage({
             <Link
               href={publicSellerPath({
                 sellerId: session.user.id,
-                role: session.user.role,
+                role: sellerRole,
                 yardSlug: sellerProfile.yardSlug,
               })}
               className="font-medium text-emerald-800 hover:underline"

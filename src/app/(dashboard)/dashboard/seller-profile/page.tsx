@@ -17,19 +17,21 @@ export default async function SellerProfileSettingsPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
-  if (session.user.role !== "reclamation_yard") redirect("/dashboard");
 
   const profile = await prisma.sellerProfile.findUnique({
     where: { userId: session.user.id },
+    include: { user: { select: { role: true } } },
   });
   if (!profile) redirect("/dashboard/onboarding");
+  const isYardAccount = (profile.user.role ?? session.user.role) === "reclamation_yard";
+  if (!isYardAccount) redirect("/dashboard");
 
   const { saved, error } = await searchParams;
   const initialSchedule = scheduleFromDbField(profile.openingHoursSchedule);
   const social = parseYardSocialJson(profile.yardSocialJson);
   const previewHref = publicSellerPath({
     sellerId: session.user.id,
-    role: session.user.role,
+    role: profile.user.role,
     yardSlug: profile.yardSlug,
   });
   const siteUrl = getSiteUrl();
