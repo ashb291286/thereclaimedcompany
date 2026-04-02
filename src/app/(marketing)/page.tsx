@@ -55,6 +55,29 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <Link
+        href="/driven"
+        className="group flex border-y border-driven-warm bg-driven-paper transition-colors hover:bg-driven-accent-light/60"
+      >
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 sm:py-5">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-driven-accent">The Reclaimed Company</p>
+            <p className="mt-1 text-lg font-semibold tracking-tight text-driven-ink sm:text-xl">
+              Driven · <span className="italic font-normal text-driven-muted">Lineage</span>
+            </p>
+            <p className="mt-1 max-w-xl text-sm text-driven-muted">
+              Vehicle passports, provenance, and curated auctions — every car has a story.
+            </p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-driven-ink bg-driven-ink px-5 py-2.5 text-sm font-semibold text-driven-paper group-hover:bg-driven-accent group-hover:border-driven-accent">
+            Open Driven
+            <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+              →
+            </span>
+          </span>
+        </div>
+      </Link>
+
       <section className="mx-auto mt-10 w-full max-w-7xl px-4 sm:px-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-zinc-900">Latest listings</h2>

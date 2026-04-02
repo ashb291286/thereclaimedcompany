@@ -28,6 +28,12 @@ export default async function MarketingLayout({
             <Link href="/wanted" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
               Wanted
             </Link>
+            <Link
+              href="/driven"
+              className="text-sm font-medium text-driven-accent hover:text-driven-ink"
+            >
+              Driven
+            </Link>
             {session ? (
               <>
                 <Link href="/dashboard" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">

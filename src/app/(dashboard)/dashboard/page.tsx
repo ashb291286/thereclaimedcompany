@@ -143,6 +143,12 @@ export default async function DashboardPage({
         >
           Set up seller profile
         </Link>
+        <p className="mt-6 text-sm text-zinc-600">
+          Classic cars &amp; provenance?{" "}
+          <Link href="/driven" className="font-medium text-driven-accent hover:underline">
+            Explore Driven · Lineage
+          </Link>
+        </p>
       </div>
     );
   }
@@ -190,6 +196,31 @@ export default async function DashboardPage({
           Couldn&apos;t start boost checkout. Ensure listing is active and try again.
         </p>
       ) : null}
+      <div className="mt-6 rounded-xl border border-driven-warm bg-driven-paper p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-driven-accent">The Reclaimed Company</p>
+            <h2 className="mt-1 text-lg font-semibold text-driven-ink">Driven · Lineage</h2>
+            <p className="mt-1 max-w-xl text-sm text-driven-muted">
+              Build a vehicle passport, add history and documents, browse auctions, and manage your garage.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:shrink-0">
+            <Link
+              href="/driven"
+              className="inline-flex rounded-lg border border-driven-ink bg-driven-ink px-4 py-2 text-sm font-semibold text-driven-paper hover:bg-driven-accent hover:border-driven-accent"
+            >
+              Open Driven
+            </Link>
+            <Link
+              href="/driven/garage"
+              className="inline-flex rounded-lg border border-driven-warm bg-white px-4 py-2 text-sm font-medium text-driven-ink hover:border-driven-ink"
+            >
+              Your garage
+            </Link>
+          </div>
+        </div>
+      </div>
       {(listingCarbon._sum.carbonSavedKg ?? 0) > 0 || (listingCarbon._sum.carbonWasteDivertedKg ?? 0) > 0 ? (
         <div className="mt-6 rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/80 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800/90">
