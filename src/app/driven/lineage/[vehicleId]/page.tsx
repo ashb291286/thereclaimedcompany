@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!v) return { title: "Passport" };
   return {
     title: `${v.year} ${v.make} ${v.model}`,
-    description: `Lineage passport · ${v.registration}`,
+    description: `Reclaimed passport · ${v.registration}`,
   };
 }
 
@@ -57,7 +57,7 @@ export default async function DrivenLineagePublicPage({ params }: Props) {
 
       <header className="mt-6 border border-driven-warm bg-white px-6 py-8">
         <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-[0.25em] text-driven-accent">
-          Driven · Lineage
+          Driven · Reclaimed
         </p>
         <h1 className="mt-3 font-[family-name:var(--font-driven-display)] text-3xl font-semibold sm:text-4xl">
           {vehicle.year} {vehicle.make} {vehicle.model}
@@ -70,7 +70,7 @@ export default async function DrivenLineagePublicPage({ params }: Props) {
           <div className="border border-driven-warm bg-white p-10 text-center">
             <p className="font-[family-name:var(--font-driven-display)] text-xl italic text-driven-ink">No entries yet</p>
             <p className="mt-3 text-sm text-driven-muted">
-              The owner has not published history for this vehicle on Lineage.
+              The owner has not published history for this vehicle on Reclaimed.
             </p>
           </div>
         ) : (

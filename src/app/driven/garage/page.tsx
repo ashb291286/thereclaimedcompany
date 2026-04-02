@@ -36,7 +36,7 @@ export default async function DrivenGaragePage() {
         <div>
           <h1 className="font-[family-name:var(--font-driven-display)] text-3xl italic text-driven-ink">Your garage</h1>
           <p className="mt-2 max-w-xl text-sm text-driven-muted">
-            Vehicles you own, watch, or have sold on Lineage. Add a car to start its passport.
+            Vehicles you own, watch, or have sold on Driven · Reclaimed. Add a car to start its passport.
           </p>
         </div>
         <Link
@@ -50,7 +50,7 @@ export default async function DrivenGaragePage() {
       {rows.length === 0 ? (
         <div className="mt-12 border border-driven-warm bg-white p-12 text-center">
           <p className="font-[family-name:var(--font-driven-display)] text-xl italic">Garage is empty</p>
-          <p className="mt-3 text-sm text-driven-muted">Register a vehicle to build its Lineage record.</p>
+          <p className="mt-3 text-sm text-driven-muted">Register a vehicle to build its Reclaimed record.</p>
           <Link
             href="/driven/garage/add"
             className="mt-6 inline-block font-[family-name:var(--font-driven-mono)] text-xs uppercase text-driven-accent underline"

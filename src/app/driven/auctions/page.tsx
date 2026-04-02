@@ -15,7 +15,7 @@ export default async function DrivenAuctionsPage() {
     <div>
       <h1 className="font-[family-name:var(--font-driven-display)] text-3xl italic text-driven-ink">Active auctions</h1>
       <p className="mt-2 max-w-2xl text-sm text-driven-muted">
-        This passport transfers to the next owner. Every document in the record is permanent.
+        This passport transfers to the next owner. Every document in the Reclaimed record is permanent.
       </p>
 
       <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -25,7 +25,7 @@ export default async function DrivenAuctionsPage() {
               Sample
             </p>
             <p className="mt-2 font-[family-name:var(--font-driven-display)] text-lg text-driven-ink">1987 Porsche 911 Carrera</p>
-            <p className="mt-1 text-xs text-driven-muted">Curated demo · full Lineage timeline</p>
+            <p className="mt-1 text-xs text-driven-muted">Curated demo · full Reclaimed timeline</p>
           </Link>
         </li>
         {rows.map((a) => (

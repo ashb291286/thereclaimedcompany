@@ -23,7 +23,7 @@ export function DrivenAuctionActions() {
       </button>
       <p className="font-[family-name:var(--font-driven-body)] text-[11px] leading-relaxed text-driven-muted">
         Bidding and garage sync with your Reclaimed account will arrive in a later release. This preview shows the
-        Lineage experience.
+        Reclaimed experience.
       </p>
     </div>
   );

@@ -111,7 +111,7 @@ export default async function DrivenAuctionDetailPage({ params }: Props) {
               Public passport
             </h2>
             <p className="mt-3 text-sm text-driven-muted">
-              Anyone can view this vehicle&apos;s Lineage record without an account.
+              Anyone can view this vehicle&apos;s Reclaimed record without an account.
             </p>
             <Link
               href={`/driven/lineage/${d.vehicleId}`}

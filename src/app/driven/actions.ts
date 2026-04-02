@@ -52,7 +52,7 @@ export async function createDrivenVehicleFromGarageAction(formData: FormData): P
       date: new Date(),
       mileageAtTime: Number.isFinite(mileage ?? NaN) ? mileage : null,
       category: "OWNERSHIP",
-      title: "Added to Driven · Lineage",
+      title: "Added to Driven · Reclaimed",
       description: howAcquired || "Vehicle record started on Reclaimed Marketplace.",
     },
   });

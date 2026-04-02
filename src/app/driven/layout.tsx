@@ -26,11 +26,11 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: {
-    default: "Driven · Lineage | The Reclaimed Company",
-    template: "%s | Driven · Lineage",
+    default: "Driven · Reclaimed | The Reclaimed Company",
+    template: "%s | Driven · Reclaimed",
   },
   description:
-    "Every car has a story. This is where it lives. Editorial vehicle passports, auctions, and provenance for discerning collectors.",
+    "Every car has a story. This is where it lives. Editorial vehicle passports, auctions, and provenance — Driven · Reclaimed.",
 };
 
 export default function DrivenLayout({ children }: { children: React.ReactNode }) {

@@ -155,7 +155,7 @@ export default async function DashboardPage({
         <p className="mt-6 text-sm text-zinc-600">
           Classic cars &amp; provenance?{" "}
           <Link href="/driven" className="font-medium text-driven-accent hover:underline">
-            Explore Driven · Lineage
+            Explore Driven · Reclaimed
           </Link>
         </p>
       </div>
@@ -247,7 +247,7 @@ export default async function DashboardPage({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-driven-accent">The Reclaimed Company</p>
-            <h2 className="mt-1 text-lg font-semibold text-driven-ink">Driven · Lineage</h2>
+            <h2 className="mt-1 text-lg font-semibold text-driven-ink">Driven · Reclaimed</h2>
             <p className="mt-1 max-w-xl text-sm text-driven-muted">
               Build a vehicle passport, add history and documents, browse auctions, and manage your garage.
             </p>

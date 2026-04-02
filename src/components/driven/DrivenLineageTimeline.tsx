@@ -18,7 +18,7 @@ export function DrivenLineageTimeline({
     <section className="border border-driven-warm bg-white">
       <div className="border-b border-driven-warm px-5 py-4">
         <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-[0.25em] text-driven-accent">
-          Driven · Lineage
+          Driven · Reclaimed
         </p>
         <h2 className="mt-2 font-[family-name:var(--font-driven-display)] text-2xl italic text-driven-ink">
           The Record

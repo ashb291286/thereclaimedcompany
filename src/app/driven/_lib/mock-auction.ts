@@ -86,7 +86,7 @@ export function getMockAuctionDetail(): MockAuctionDetail {
         date: new Date("2025-03-01"),
         mileageAtTime: 67200,
         category: "DOCUMENT",
-        title: "Listed on Driven",
+        title: "Listed on Driven · Reclaimed",
         description: "Full passport uploaded · inspection ordered",
         documents: [{ label: "Inspection report PDF", type: "INSPECTION" }],
       },

@@ -23,7 +23,7 @@ export default async function DrivenGarageAddPage({ searchParams }: Props) {
       </nav>
       <h1 className="mt-6 font-[family-name:var(--font-driven-display)] text-3xl italic text-driven-ink">Add a vehicle</h1>
       <p className="mt-2 max-w-xl text-sm text-driven-muted">
-        We&apos;ll create your Lineage passport and take you to upload history. Registration can be prefilled with a DVLA lookup
+        We&apos;ll create your Reclaimed passport and take you to upload history. Registration can be prefilled with a DVLA lookup
         where configured.
       </p>
       <div className="mx-auto mt-10 max-w-lg">

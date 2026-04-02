@@ -19,7 +19,7 @@ export default async function DrivenHomePage() {
           The Reclaimed Company
         </p>
         <h1 className="mt-4 max-w-2xl font-[family-name:var(--font-driven-display)] text-4xl font-semibold leading-tight sm:text-5xl">
-          Driven · <span className="italic">Lineage</span>
+          Driven · <span className="italic">Reclaimed</span>
         </h1>
         <p className="mt-6 max-w-xl font-[family-name:var(--font-driven-body)] text-lg text-driven-muted">
           Every car has a story. This is where it lives.

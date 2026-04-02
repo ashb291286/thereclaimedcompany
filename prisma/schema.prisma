@@ -392,7 +392,7 @@ model Order {
   @@index([status])
 }
 
-// ---- Driven · Lineage (additive; ownerId/userId reference User.id without Prisma relation) ----
+// ---- Driven · Reclaimed (additive; ownerId/userId reference User.id without Prisma relation) ----
 
 enum DrivenVehicleStatus {
   PRIVATE

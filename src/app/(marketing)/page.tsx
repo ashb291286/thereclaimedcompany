@@ -63,7 +63,7 @@ export default async function HomePage() {
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-driven-accent">The Reclaimed Company</p>
             <p className="mt-1 text-lg font-semibold tracking-tight text-driven-ink sm:text-xl">
-              Driven · <span className="italic font-normal text-driven-muted">Lineage</span>
+              Driven · <span className="italic font-normal text-driven-muted">Reclaimed</span>
             </p>
             <p className="mt-1 max-w-xl text-sm text-driven-muted">
               Vehicle passports, provenance, and curated auctions — every car has a story.

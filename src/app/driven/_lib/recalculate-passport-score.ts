@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 
 /**
- * Passport score rules (caps at 100). Call after lineage/inspection changes.
+ * Passport score rules (caps at 100). Call after history/inspection changes.
  */
 export async function recalculatePassportScore(vehicleId: string): Promise<number> {
   const vehicle = await prisma.drivenVehicle.findUnique({

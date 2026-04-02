@@ -9,7 +9,7 @@ export function DrivenNav() {
             href="/driven"
             className="font-[family-name:var(--font-driven-display)] text-xl font-semibold tracking-tight text-driven-ink sm:text-2xl"
           >
-            Driven · Lineage
+            Driven · Reclaimed
           </Link>
           <span className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-[0.2em] text-driven-muted">
             The Reclaimed Company
