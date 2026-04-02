@@ -15,6 +15,8 @@ function mapDbToViewModel(args: {
   bidCount: number;
   watcherCount: number;
   endsAt: Date;
+  reclaimedPublicId: string;
+  inspectionIsSelfAssessment: boolean;
   vehicle: {
     registration: string;
     make: string;
@@ -73,6 +75,8 @@ function mapDbToViewModel(args: {
   return {
     auctionId: args.auctionId,
     vehicleId: args.vehicleId,
+    reclaimedPublicId: args.reclaimedPublicId,
+    inspectionIsSelfAssessment: args.inspectionIsSelfAssessment,
     title: `${v.year} ${v.make} ${v.model}`,
     specLine: specParts.join(" · "),
     registration: v.registration,
@@ -121,6 +125,9 @@ export async function getAuctionDetail(id: string): Promise<AuctionDetailResult 
 
   const v = row.vehicle;
   const ins = v.inspection;
+  const inspectionIsSelfAssessment = Boolean(
+    ins?.inspectorName?.toLowerCase().includes("self-assessment")
+  );
   const data = mapDbToViewModel({
     auctionId: row.id,
     vehicleId: v.id,
@@ -129,6 +136,8 @@ export async function getAuctionDetail(id: string): Promise<AuctionDetailResult 
     bidCount: row.bidCount,
     watcherCount: row.watcherCount,
     endsAt: row.endsAt,
+    reclaimedPublicId: v.reclaimedPublicId,
+    inspectionIsSelfAssessment,
     vehicle: {
       registration: v.registration,
       make: v.make,

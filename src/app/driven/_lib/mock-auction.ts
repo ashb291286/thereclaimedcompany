@@ -16,6 +16,8 @@ export type MockLineageRow = {
 export type MockAuctionDetail = {
   auctionId: string;
   vehicleId: string;
+  reclaimedPublicId: string;
+  inspectionIsSelfAssessment: boolean;
   title: string;
   specLine: string;
   registration: string;
@@ -49,6 +51,8 @@ export function getMockAuctionDetail(): MockAuctionDetail {
   return {
     auctionId: MOCK_AUCTION_LISTING_ID,
     vehicleId: MOCK_VEHICLE_ID,
+    reclaimedPublicId: "TRC-DRV-DEMO0001",
+    inspectionIsSelfAssessment: false,
     title: "1987 Porsche 911 Carrera",
     specLine: "Guards Red · G50 5-speed · Sunroof delete",
     registration: "ABC 1T",

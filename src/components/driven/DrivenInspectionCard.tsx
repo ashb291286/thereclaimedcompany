@@ -15,12 +15,21 @@ const ROWS: { key: keyof Omit<Scores, "overallScore">; label: string }[] = [
   { key: "electrics", label: "Electrics" },
 ];
 
-export function DrivenInspectionCard({ scores }: { scores: Scores }) {
+export function DrivenInspectionCard({
+  scores,
+  footnote,
+}: {
+  scores: Scores;
+  footnote?: string;
+}) {
   return (
     <div className="border border-driven-warm bg-white p-5">
       <h2 className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-[0.2em] text-driven-muted">
         Inspection
       </h2>
+      {footnote ? (
+        <p className="mt-2 text-xs leading-relaxed text-driven-muted">{footnote}</p>
+      ) : null}
       <p className="mt-3 font-[family-name:var(--font-driven-display)] text-3xl text-driven-ink">
         {scores.overallScore}
         <span className="font-[family-name:var(--font-driven-mono)] text-sm text-driven-muted"> /100</span>

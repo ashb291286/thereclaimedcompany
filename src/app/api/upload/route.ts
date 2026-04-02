@@ -30,6 +30,8 @@ export async function POST(req: Request) {
     objectPath = `yards/${session.user.id}/logo-${stamp}-${safeName}`;
   } else if (folder === "yard-header") {
     objectPath = `yards/${session.user.id}/header-${stamp}-${safeName}`;
+  } else if (folder === "driven-vehicle") {
+    objectPath = `driven/${session.user.id}/draft/${stamp}-${safeName}`;
   } else {
     objectPath = `listings/${session.user.id}/${stamp}-${safeName}`;
   }

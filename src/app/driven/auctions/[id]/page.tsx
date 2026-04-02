@@ -55,6 +55,7 @@ export default async function DrivenAuctionDetailPage({ params }: Props) {
           {d.registration}
           {d.mileage != null ? ` · ${d.mileage.toLocaleString()} mi` : ""}
         </p>
+        <p className="mt-2 font-[family-name:var(--font-driven-mono)] text-xs text-driven-muted">Reclaimed ID {d.reclaimedPublicId}</p>
 
         <div className="mt-8 flex flex-wrap items-end gap-8 border-t border-driven-warm pt-8">
           <div>
@@ -84,9 +85,15 @@ export default async function DrivenAuctionDetailPage({ params }: Props) {
           <span className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide ring-1 ring-driven-warm bg-driven-accent-light/50 px-3 py-1 text-driven-ink">
             Title in escrow
           </span>
-          <span className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide ring-1 ring-driven-warm bg-driven-accent-light/50 px-3 py-1 text-driven-ink">
-            Independent inspection
-          </span>
+          {d.inspection ? (
+            <span className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide ring-1 ring-driven-warm bg-driven-accent-light/50 px-3 py-1 text-driven-ink">
+              {d.inspectionIsSelfAssessment ? "Owner self-assessment" : "Inspection on file"}
+            </span>
+          ) : (
+            <span className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide ring-1 ring-driven-warm bg-driven-warm px-3 py-1 text-driven-muted">
+              No inspection scores
+            </span>
+          )}
         </div>
       </header>
 
@@ -94,16 +101,28 @@ export default async function DrivenAuctionDetailPage({ params }: Props) {
         <div className="space-y-8">
           <DrivenLineageTimeline entries={lineageSorted} />
           <section className="border border-driven-warm bg-white px-5 py-6">
-            <h2 className="font-[family-name:var(--font-driven-display)] text-xl italic text-driven-ink">Comments</h2>
+            <h2 className="font-[family-name:var(--font-driven-display)] text-xl italic text-driven-ink">
+              Questions &amp; comments
+            </h2>
             <p className="mt-3 text-sm text-driven-muted">
-              Threaded questions and seller replies will appear here in a future release.
+              Buyer questions, comments, and seller replies aren&apos;t available on auctions yet — we&apos;ll add a
+              threaded Q&amp;A area in a future release.
             </p>
           </section>
         </div>
 
         <aside className="space-y-6">
           <DrivenAuctionActions />
-          {d.inspection ? <DrivenInspectionCard scores={d.inspection} /> : null}
+          {d.inspection ? (
+            <DrivenInspectionCard
+              scores={d.inspection}
+              footnote={
+                d.inspectionIsSelfAssessment
+                  ? "These scores reflect the seller's personal opinion only and are not a professional inspection. An independent inspection is recommended."
+                  : undefined
+              }
+            />
+          ) : null}
           <DrivenValueTracker valuations={d.valuations} todayEstimate={d.currentBid} />
           <DrivenPassportCompleteness score={d.passportScore} />
           <div className="border border-driven-warm bg-white p-5">

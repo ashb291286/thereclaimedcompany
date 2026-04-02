@@ -35,11 +35,22 @@ export default async function DrivenGarageRecordPage({ params }: Props) {
       </nav>
 
       <header className="mt-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="font-[family-name:var(--font-driven-display)] text-3xl italic text-driven-ink">
             {vehicle.year} {vehicle.make} {vehicle.model}
           </h1>
           <p className="mt-1 font-[family-name:var(--font-driven-mono)] text-sm text-driven-muted">{vehicle.registration}</p>
+          <p className="mt-1 font-[family-name:var(--font-driven-mono)] text-xs text-driven-ink">{vehicle.reclaimedPublicId}</p>
+          {vehicle.imageUrls.length > 0 ? (
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+              {vehicle.imageUrls.map((url) => (
+                <div key={url} className="h-20 w-28 shrink-0 overflow-hidden border border-driven-warm bg-driven-warm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-3">
           <Link

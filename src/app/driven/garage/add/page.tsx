@@ -3,6 +3,8 @@ import Link from "next/link";
 
 const ERROR_MESSAGES: Record<string, string> = {
   "missing-fields": "Please fill in registration, make, model, and year.",
+  "disclaimer-required": "To save personal condition scores, confirm the disclaimer checkbox.",
+  "invalid-inspection-scores": "Each condition score must be a whole number from 0 to 100.",
 };
 
 type Props = { searchParams: Promise<{ error?: string }> };
@@ -26,7 +28,7 @@ export default async function DrivenGarageAddPage({ searchParams }: Props) {
         We&apos;ll create your Reclaimed passport and take you to upload history. Registration can be prefilled with a DVLA lookup
         where configured.
       </p>
-      <div className="mx-auto mt-10 max-w-lg">
+      <div className="mx-auto mt-10 max-w-2xl">
         <DrivenAddCarForm error={error} />
       </div>
     </div>
