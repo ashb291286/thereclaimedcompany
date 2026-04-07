@@ -97,6 +97,7 @@ model User {
   stripeCustomerId     String? @unique // platform Customer for saved auction payment method
   bidPaymentMethodId   String? // default PaymentMethod id (card on file for bids)
   localYardAlerts      ListingLocalYardAlert[] @relation("YardLocalAlerts")
+  propRentalBookingsAsHirer PropRentalBooking[] @relation("PropRentalHirer")
 }
 
 model Account {
@@ -240,6 +241,7 @@ model Listing {
   favorites ListingFavorite[]
   viewEvents ListingViewEvent[]
   localYardAlerts ListingLocalYardAlert[]
+  propRentalOffer PropRentalOffer?
 
   @@index([sellerId])
   @@index([categoryId])
@@ -247,6 +249,81 @@ model Listing {
   @@index([lat, lng])
   @@index([createdAt])
   @@index([listingKind])
+}
+
+// ---- The Prop Yard (film / TV hire layer; reclamation yards only; links to existing listings) ----
+
+enum PropRentalFulfillment {
+  COLLECT_AND_RETURN
+  YARD_DELIVERS_AND_COLLECTS
+  ARRANGE_SEPARATELY
+}
+
+enum PropRentalBookingStatus {
+  REQUESTED
+  CONFIRMED
+  OUT_ON_HIRE
+  RETURNED
+  CANCELLED
+  DECLINED
+}
+
+/// One active prop-rental configuration per marketplace listing.
+model PropRentalOffer {
+  id               String   @id @default(cuid())
+  listingId        String   @unique
+  weeklyHirePence  Int // ex-VAT display; platform T&Cs apply
+  isActive         Boolean  @default(true)
+  yardHireNotes    String?  @db.Text // collection, condition, deposit notes for hirers
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  listing         Listing                  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  bookings        PropRentalBooking[]
+  unavailability  PropRentalUnavailability[]
+
+  @@index([isActive])
+}
+
+/// Yard-maintained blackout dates (maintenance, private hire, etc.).
+model PropRentalUnavailability {
+  id        String   @id @default(cuid())
+  offerId   String
+  startDate DateTime // inclusive, date-normalised UTC midnight
+  endDate   DateTime // inclusive
+  note      String?
+  createdAt DateTime @default(now())
+
+  offer PropRentalOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@index([offerId])
+  @@index([offerId, startDate])
+}
+
+model PropRentalBooking {
+  id                       String                   @id @default(cuid())
+  offerId                  String
+  hirerId                  String
+  hireStart                DateTime
+  hireEnd                  DateTime
+  billableWeeks            Int // ceil weeks between hireStart and hireEnd for quote
+  totalHirePence           Int // billableWeeks * weekly at request time
+  status                   PropRentalBookingStatus  @default(REQUESTED)
+  fulfillment              PropRentalFulfillment
+  contractAcceptedAt       DateTime?
+  hirerOrgName             String?
+  productionNotes          String?                  @db.Text
+  deliveryArrangementNotes String?                  @db.Text
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  offer PropRentalOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  hirer User            @relation("PropRentalHirer", fields: [hirerId], references: [id], onDelete: Cascade)
+
+  @@index([offerId])
+  @@index([hirerId])
+  @@index([status])
+  @@index([hireStart, hireEnd])
 }
 
 model ListingFavorite {

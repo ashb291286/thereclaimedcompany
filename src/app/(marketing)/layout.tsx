@@ -34,6 +34,9 @@ export default async function MarketingLayout({
             >
               Driven
             </Link>
+            <Link href="/prop-yard" className="text-sm font-medium text-amber-900 hover:text-amber-950">
+              Prop Yard
+            </Link>
             {session ? (
               <>
                 <Link href="/dashboard" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">

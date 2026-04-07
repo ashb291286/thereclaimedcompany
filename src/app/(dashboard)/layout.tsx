@@ -56,6 +56,12 @@ export default async function DashboardLayout({
                 >
                   Yard profile
                 </Link>
+                <Link
+                  href="/dashboard/prop-yard"
+                  className="text-sm text-amber-900 hover:text-amber-950"
+                >
+                  Prop Yard
+                </Link>
               </>
             ) : null}
             <Link href="/dashboard/sell" className="text-sm text-zinc-600 hover:text-zinc-900">
