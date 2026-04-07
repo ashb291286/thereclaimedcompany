@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ListingPricingMode } from "@/generated/prisma/client";
+import { ListingPricingMode } from "@/lib/listing-client-enums";
 import { BuyButton } from "./BuyButton";
 import { FreeCollectButton } from "./FreeCollectButton";
 

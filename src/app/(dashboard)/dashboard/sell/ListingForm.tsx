@@ -2,16 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createListing } from "@/lib/actions/listings";
+import type { Prisma } from "@/generated/prisma/client";
 import {
-  Condition,
   ListingPricingMode,
+  type Condition,
   type ListingKind,
-} from "@/generated/prisma/client";
+} from "@/lib/listing-client-enums";
 import {
   suggestCategoryFromTitle,
   type CategorySuggestionResult,
 } from "@/lib/category-suggest";
-import type { Prisma } from "@/generated/prisma/client";
 import { ListingImageCropModal } from "./ListingImageCropModal";
 import { ListingLivePreview } from "./ListingLivePreview";
 import { PostcodeLookupField } from "@/components/PostcodeLookupField";

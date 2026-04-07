@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { ListingKind } from "@/generated/prisma/client";
+import type { ListingKind } from "@/lib/listing-client-enums";
 
 export type ListingLivePreviewProps = {
   images: string[];

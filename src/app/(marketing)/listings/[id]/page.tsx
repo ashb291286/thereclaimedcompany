@@ -23,7 +23,7 @@ import { buildSellerBadges } from "@/lib/seller-badges";
 import { openingHoursCompactLine, scheduleFromDbField } from "@/lib/opening-hours";
 import { publicSellerPath } from "@/lib/yard-public-path";
 import { ListingLocalYardsForOwner } from "@/components/ListingLocalYardsForOwner";
-import { ListingPricingMode } from "@/generated/prisma/client";
+import { ListingPricingMode } from "@/lib/listing-client-enums";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
