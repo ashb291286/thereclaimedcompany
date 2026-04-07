@@ -5,9 +5,11 @@ import { useState } from "react";
 export function FreeCollectButton({
   listingId,
   quantity = 1,
+  label,
 }: {
   listingId: string;
   quantity?: number;
+  label?: string;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -40,7 +42,7 @@ export function FreeCollectButton({
       disabled={loading}
       className="w-full rounded-lg border-2 border-emerald-600 bg-emerald-50 px-4 py-3 font-semibold text-emerald-900 hover:bg-emerald-100 disabled:opacity-50"
     >
-      {loading ? "Confirming…" : "Confirm free collection"}
+      {loading ? "Confirming…" : (label ?? "Confirm free collection")}
     </button>
   );
 }

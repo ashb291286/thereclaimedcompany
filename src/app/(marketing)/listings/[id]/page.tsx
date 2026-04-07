@@ -433,6 +433,7 @@ export default async function ListingPage({
                   freeToCollector={listing.freeToCollector}
                   pricingMode={listing.pricingMode}
                   unitsAvailable={listing.unitsAvailable}
+                  unitPricePence={listing.price}
                   offerId={acceptedMine?.id}
                   offerPayLabel={
                     acceptedMine
