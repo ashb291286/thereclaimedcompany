@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { auth } from "@/auth";
 import { BuyButton } from "./BuyButton";
-import { FreeCollectButton } from "./FreeCollectButton";
+import { ListingCheckoutActions } from "./ListingCheckoutActions";
 import { HaggleForm } from "./HaggleForm";
 import { BidForm } from "./BidForm";
 import { OfferRespond } from "./OfferRespond";
@@ -23,6 +23,7 @@ import { buildSellerBadges } from "@/lib/seller-badges";
 import { openingHoursCompactLine, scheduleFromDbField } from "@/lib/opening-hours";
 import { publicSellerPath } from "@/lib/yard-public-path";
 import { ListingLocalYardsForOwner } from "@/components/ListingLocalYardsForOwner";
+import { ListingPricingMode } from "@/generated/prisma/client";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -425,22 +426,23 @@ export default async function ListingPage({
             <section className={`${sectionClass} space-y-4`}>
               <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Buy or bid</h2>
               <div className="space-y-4">
-            {listing.status === "active" && listing.listingKind === "sell" && listing.freeToCollector && (
-              <FreeCollectButton listingId={listing.id} />
-            )}
-
-            {listing.status === "active" && listing.listingKind === "sell" && !listing.freeToCollector && (
+            {listing.status === "active" && listing.listingKind === "sell" && (
               <>
-                {acceptedMine ? (
-                  <BuyButton
-                    listingId={listing.id}
-                    offerId={acceptedMine.id}
-                    label={`Pay agreed £${(acceptedMine.offeredPrice / 100).toFixed(2)}`}
-                  />
-                ) : (
-                  <BuyButton listingId={listing.id} label="Buy at listed price" />
-                )}
-                <HaggleForm listingId={listing.id} listPricePence={listing.price} />
+                <ListingCheckoutActions
+                  listingId={listing.id}
+                  freeToCollector={listing.freeToCollector}
+                  pricingMode={listing.pricingMode}
+                  unitsAvailable={listing.unitsAvailable}
+                  offerId={acceptedMine?.id}
+                  offerPayLabel={
+                    acceptedMine
+                      ? `Pay agreed £${(acceptedMine.offeredPrice / 100).toFixed(2)}`
+                      : undefined
+                  }
+                />
+                {!listing.freeToCollector ? (
+                  <HaggleForm listingId={listing.id} listPricePence={listing.price} />
+                ) : null}
               </>
             )}
 

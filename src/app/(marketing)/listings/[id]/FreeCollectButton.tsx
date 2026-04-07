@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-export function FreeCollectButton({ listingId }: { listingId: string }) {
+export function FreeCollectButton({
+  listingId,
+  quantity = 1,
+}: {
+  listingId: string;
+  quantity?: number;
+}) {
   const [loading, setLoading] = useState(false);
 
   async function handleConfirm() {
@@ -11,7 +17,7 @@ export function FreeCollectButton({ listingId }: { listingId: string }) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId }),
+        body: JSON.stringify({ listingId, quantity }),
       });
       const data = await res.json();
       if (!res.ok) {

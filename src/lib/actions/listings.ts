@@ -4,11 +4,13 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import {
+  ListingPricingMode,
   ListingStatus,
   Prisma,
   type Condition,
   type ListingKind,
 } from "@/generated/prisma/client";
+import { slugifyCategoryName } from "@/lib/category-suggest";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
 import {
@@ -117,6 +119,79 @@ function parseListingCommerce(
   };
 }
 
+function parseListingPricing(
+  formData: FormData,
+  opts: {
+    listingKind: ListingKind;
+    freeToCollector: boolean;
+    publish: boolean;
+    existingUnitsAvailable?: number | null;
+  }
+):
+  | { ok: true; pricingMode: ListingPricingMode; unitsAvailable: number | null }
+  | { ok: false; message: string } {
+  let pricingMode: ListingPricingMode =
+    (formData.get("pricingMode") as string)?.trim() === "PER_UNIT"
+      ? ListingPricingMode.PER_UNIT
+      : ListingPricingMode.LOT;
+
+  if (opts.listingKind === "auction" || opts.freeToCollector) {
+    pricingMode = ListingPricingMode.LOT;
+  }
+
+  let unitsAvailable: number | null = null;
+  if (pricingMode === ListingPricingMode.PER_UNIT) {
+    const raw = String(formData.get("unitsAvailable") ?? "").trim();
+    const n = parseInt(raw, 10);
+    if (opts.publish) {
+      if (!Number.isFinite(n) || n < 1) {
+        return {
+          ok: false,
+          message: "For per-unit pricing, enter how many units you have for sale (at least 1).",
+        };
+      }
+      unitsAvailable = n;
+    } else if (Number.isFinite(n) && n >= 1) {
+      unitsAvailable = n;
+    } else if (opts.existingUnitsAvailable != null && opts.existingUnitsAvailable >= 1) {
+      unitsAvailable = opts.existingUnitsAvailable;
+    } else {
+      unitsAvailable = null;
+    }
+  }
+
+  return { ok: true, pricingMode, unitsAvailable };
+}
+
+async function resolveListingCategoryId(formData: FormData): Promise<
+  | { ok: true; categoryId: string }
+  | { ok: false; message: string }
+> {
+  const newCategoryName = String(formData.get("newCategoryName") ?? "").trim();
+  if (newCategoryName.length > 0) {
+    const slug = slugifyCategoryName(newCategoryName);
+    if (!slug) {
+      return { ok: false, message: "Suggested category name is not valid — use letters or numbers." };
+    }
+    const cat = await prisma.category.upsert({
+      where: { slug },
+      create: { name: newCategoryName.slice(0, 120), slug },
+      update: { name: newCategoryName.slice(0, 120) },
+    });
+    return { ok: true, categoryId: cat.id };
+  }
+
+  const categoryId = String(formData.get("categoryId") ?? "").trim();
+  if (!categoryId) {
+    return { ok: false, message: "Category is required" };
+  }
+  const exists = await prisma.category.findUnique({ where: { id: categoryId } });
+  if (!exists) {
+    return { ok: false, message: "Invalid category" };
+  }
+  return { ok: true, categoryId };
+}
+
 type DeliveryParsed = {
   offersDelivery: boolean;
   deliveryNotes: string | null;
@@ -203,7 +278,6 @@ export async function createListing(formData: FormData) {
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
   const condition = formData.get("condition") as Condition;
-  const categoryId = formData.get("categoryId") as string;
   const postcodeRaw = (formData.get("postcode") as string)?.trim() || sellerProfile.postcode;
   const resolvedPostcode = await lookupUkPostcode(postcodeRaw);
   if (!resolvedPostcode) {
@@ -215,10 +289,10 @@ export async function createListing(formData: FormData) {
   const imagesStr = formData.get("images") as string;
   const publish = formData.get("publish") === "true";
 
-  if (!title?.trim() || !description?.trim() || !condition || !categoryId) {
+  if (!title?.trim() || !description?.trim() || !condition) {
     redirect(
       "/dashboard/sell?error=" +
-        encodeURIComponent("Title, description, condition and category are required")
+        encodeURIComponent("Title, description, and condition are required")
     );
   }
 
@@ -227,6 +301,17 @@ export async function createListing(formData: FormData) {
     redirect("/dashboard/sell?error=" + encodeURIComponent(parsed.message));
   }
   const { listingKind, freeToCollector, price, auctionEndsAt, auctionReservePence } = parsed.data;
+
+  const pricingParsed = parseListingPricing(formData, { listingKind, freeToCollector, publish });
+  if (!pricingParsed.ok) {
+    redirect("/dashboard/sell?error=" + encodeURIComponent(pricingParsed.message));
+  }
+
+  const categoryResolved = await resolveListingCategoryId(formData);
+  if (!categoryResolved.ok) {
+    redirect("/dashboard/sell?error=" + encodeURIComponent(categoryResolved.message));
+  }
+  const categoryId = categoryResolved.categoryId;
 
   const deliveryParsed = parseDeliveryFields(formData, { freeToCollector });
   if (!deliveryParsed.ok) {
@@ -252,9 +337,6 @@ export async function createListing(formData: FormData) {
     redirect("/dashboard/sell?error=" + encodeURIComponent("At least one image is required"));
   }
 
-  const category = await prisma.category.findUnique({ where: { id: categoryId } });
-  if (!category) redirect("/dashboard/sell?error=" + encodeURIComponent("Invalid category"));
-
   const carbon = await materialCarbonFromForm(formData);
 
   const notifyLocalYards =
@@ -268,6 +350,8 @@ export async function createListing(formData: FormData) {
       price,
       condition,
       categoryId,
+      pricingMode: pricingParsed.pricingMode,
+      unitsAvailable: pricingParsed.unitsAvailable,
       postcode: resolvedPostcode.postcode,
       lat: resolvedPostcode.lat,
       lng: resolvedPostcode.lng,
@@ -316,7 +400,6 @@ export async function updateListing(id: string, formData: FormData) {
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
   const condition = formData.get("condition") as Condition;
-  const categoryId = formData.get("categoryId") as string;
   const postcodeRaw =
     (formData.get("postcode") as string)?.trim() || listing.postcode || "";
   const resolvedPostcode = await lookupUkPostcode(postcodeRaw);
@@ -329,8 +412,10 @@ export async function updateListing(id: string, formData: FormData) {
   }
   const imagesStr = formData.get("images") as string;
   const publish = formData.get("publish") === "true";
-  if (!title?.trim() || !description?.trim() || !condition || !categoryId) {
-    redirect(editUrl + "?error=" + encodeURIComponent("Title, description, condition and category are required"));
+  if (!title?.trim() || !description?.trim() || !condition) {
+    redirect(
+      editUrl + "?error=" + encodeURIComponent("Title, description, and condition are required")
+    );
   }
 
   const parsed = parseListingCommerce(formData, publish);
@@ -339,11 +424,27 @@ export async function updateListing(id: string, formData: FormData) {
   }
   const { listingKind, freeToCollector, price, auctionEndsAt, auctionReservePence } = parsed.data;
 
+  const categoryResolved = await resolveListingCategoryId(formData);
+  if (!categoryResolved.ok) {
+    redirect(editUrl + "?error=" + encodeURIComponent(categoryResolved.message));
+  }
+  const categoryId = categoryResolved.categoryId;
+
   const deliveryParsed = parseDeliveryFields(formData, { freeToCollector });
   if (!deliveryParsed.ok) {
     redirect(editUrl + "?error=" + encodeURIComponent(deliveryParsed.message));
   }
   const { offersDelivery, deliveryNotes, deliveryCostPence, deliveryOptions } = deliveryParsed.data;
+
+  const pricingParsed = parseListingPricing(formData, {
+    listingKind,
+    freeToCollector,
+    publish,
+    existingUnitsAvailable: listing.unitsAvailable,
+  });
+  if (!pricingParsed.ok) {
+    redirect(editUrl + "?error=" + encodeURIComponent(pricingParsed.message));
+  }
 
   const validConditions: Condition[] = [
     "like_new",
@@ -363,9 +464,6 @@ export async function updateListing(id: string, formData: FormData) {
     redirect(editUrl + "?error=" + encodeURIComponent("At least one image is required"));
   }
 
-  const category = await prisma.category.findUnique({ where: { id: categoryId } });
-  if (!category) redirect(editUrl + "?error=" + encodeURIComponent("Invalid category"));
-
   const carbon = await materialCarbonFromForm(formData);
 
   const notifyLocalYards =
@@ -379,6 +477,8 @@ export async function updateListing(id: string, formData: FormData) {
       price,
       condition,
       categoryId,
+      pricingMode: pricingParsed.pricingMode,
+      unitsAvailable: pricingParsed.unitsAvailable,
       postcode: resolvedPostcode.postcode,
       lat: resolvedPostcode.lat,
       lng: resolvedPostcode.lng,

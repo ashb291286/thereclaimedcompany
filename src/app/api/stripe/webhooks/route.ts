@@ -5,6 +5,7 @@ import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
 import { NextResponse } from "next/server";
 import type { Stripe } from "stripe";
 import { createNotification } from "@/lib/notifications";
+import { ListingPricingMode } from "@/generated/prisma/client";
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -105,15 +106,23 @@ export async function POST(req: Request) {
         ? await prisma.order.findUnique({ where: { bidId: bidIdMeta } })
         : null;
       if (!existingBidOrder) {
-        const listingRow = await prisma.listing.findUnique({
-          where: { id: listingId },
-          select: { carbonSavedKg: true, carbonWasteDivertedKg: true },
-        });
-        const carbonSnap = purchaseCarbonSnapshotFromListing(
-          listingRow ?? { carbonSavedKg: null, carbonWasteDivertedKg: null }
-        );
-        await prisma.$transaction([
-          prisma.order.create({
+        const qtyRaw = parseInt(session.metadata?.quantity ?? "1", 10);
+        const orderQuantity =
+          Number.isFinite(qtyRaw) && qtyRaw >= 1 ? Math.min(qtyRaw, 10_000) : 1;
+        await prisma.$transaction(async (tx) => {
+          const listingRow = await tx.listing.findUnique({
+            where: { id: listingId },
+            select: {
+              carbonSavedKg: true,
+              carbonWasteDivertedKg: true,
+              pricingMode: true,
+              unitsAvailable: true,
+            },
+          });
+          const carbonSnap = purchaseCarbonSnapshotFromListing(
+            listingRow ?? { carbonSavedKg: null, carbonWasteDivertedKg: null }
+          );
+          await tx.order.create({
             data: {
               listingId,
               buyerId,
@@ -122,16 +131,34 @@ export async function POST(req: Request) {
               platformFee,
               stripePaymentIntentId: paymentIntentId,
               status: "paid",
+              quantity: offerIdMeta || bidIdMeta ? 1 : orderQuantity,
               ...carbonSnap,
               ...(offerIdMeta ? { offerId: offerIdMeta } : {}),
               ...(bidIdMeta ? { bidId: bidIdMeta } : {}),
             },
-          }),
-          prisma.listing.update({
-            where: { id: listingId },
-            data: { status: "sold" },
-          }),
-        ]);
+          });
+          const forStock = await tx.listing.findUnique({ where: { id: listingId } });
+          if (
+            forStock?.pricingMode === ListingPricingMode.PER_UNIT &&
+            forStock.unitsAvailable != null &&
+            !offerIdMeta &&
+            !bidIdMeta
+          ) {
+            const rem = forStock.unitsAvailable - orderQuantity;
+            await tx.listing.update({
+              where: { id: listingId },
+              data: {
+                unitsAvailable: rem > 0 ? rem : null,
+                status: rem <= 0 ? "sold" : "active",
+              },
+            });
+          } else {
+            await tx.listing.update({
+              where: { id: listingId },
+              data: { status: "sold" },
+            });
+          }
+        });
       }
     }
   }
@@ -166,6 +193,7 @@ export async function POST(req: Request) {
                 stripePaymentIntentId: pi.id,
                 status: "paid",
                 bidId: bidIdMeta,
+                quantity: 1,
                 ...carbonSnap,
               },
             }),

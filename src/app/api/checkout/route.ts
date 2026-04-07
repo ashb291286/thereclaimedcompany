@@ -2,7 +2,11 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
+import { ListingPricingMode } from "@/generated/prisma/client";
+import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
 import { NextResponse } from "next/server";
+
+const MAX_CHECKOUT_QUANTITY = 10_000;
 
 const PLATFORM_FEE_PERCENT = 10;
 const PLATFORM_FEE_FIXED = 20; // pence
@@ -17,6 +21,14 @@ export async function POST(req: Request) {
   const listingId = body.listingId as string | undefined;
   const offerId = body.offerId as string | undefined;
   const bidId = body.bidId as string | undefined;
+  const rawQty = body.quantity;
+  let quantity = 1;
+  if (rawQty != null) {
+    const q = typeof rawQty === "number" ? rawQty : parseInt(String(rawQty), 10);
+    if (Number.isFinite(q) && q >= 1) {
+      quantity = Math.min(Math.floor(q), MAX_CHECKOUT_QUANTITY);
+    }
+  }
 
   if (!listingId) {
     return NextResponse.json({ error: "listingId required" }, { status: 400 });
@@ -42,9 +54,24 @@ export async function POST(req: Request) {
 
   // Free to collector — no Stripe
   if (listing.listingKind === "sell" && listing.freeToCollector && listing.price === 0) {
+    if (listing.pricingMode === ListingPricingMode.PER_UNIT) {
+      const max = listing.unitsAvailable ?? 0;
+      if (max < 1) {
+        return NextResponse.json({ error: "This listing is sold out" }, { status: 400 });
+      }
+      if (quantity < 1 || quantity > max) {
+        return NextResponse.json(
+          { error: `Choose a quantity between 1 and ${max}` },
+          { status: 400 }
+        );
+      }
+    } else {
+      quantity = 1;
+    }
+
     const carbonSnap = purchaseCarbonSnapshotFromListing(listing);
-    await prisma.$transaction([
-      prisma.order.create({
+    await prisma.$transaction(async (tx) => {
+      await tx.order.create({
         data: {
           listingId,
           buyerId: session.user.id,
@@ -52,14 +79,30 @@ export async function POST(req: Request) {
           amount: 0,
           platformFee: 0,
           status: "paid",
+          quantity,
           ...carbonSnap,
         },
-      }),
-      prisma.listing.update({
-        where: { id: listingId },
-        data: { status: "sold" },
-      }),
-    ]);
+      });
+      const row = await tx.listing.findUnique({ where: { id: listingId } });
+      if (
+        row?.pricingMode === ListingPricingMode.PER_UNIT &&
+        row.unitsAvailable != null
+      ) {
+        const rem = row.unitsAvailable - quantity;
+        await tx.listing.update({
+          where: { id: listingId },
+          data: {
+            unitsAvailable: rem > 0 ? rem : null,
+            status: rem <= 0 ? "sold" : "active",
+          },
+        });
+      } else {
+        await tx.listing.update({
+          where: { id: listingId },
+          data: { status: "sold" },
+        });
+      }
+    });
     return NextResponse.json({ url: `${baseUrl}/orders?collected=1` });
   }
 
@@ -75,6 +118,8 @@ export async function POST(req: Request) {
   let amount = listing.price;
   let metadataOfferId = "";
   let metadataBidId = "";
+  let lineUnitAmount = listing.price;
+  let lineQuantity = 1;
 
   if (listing.listingKind === "auction") {
     const ended =
@@ -107,6 +152,9 @@ export async function POST(req: Request) {
     }
     amount = bid.amountPence;
     metadataBidId = bid.id;
+    quantity = 1;
+    lineUnitAmount = amount;
+    lineQuantity = 1;
   } else if (offerId) {
     const offer = await prisma.offer.findFirst({
       where: {
@@ -121,10 +169,48 @@ export async function POST(req: Request) {
     }
     amount = offer.offeredPrice;
     metadataOfferId = offer.id;
+    quantity = 1;
+    lineUnitAmount = amount;
+    lineQuantity = 1;
+  } else if (
+    listing.listingKind === "sell" &&
+    listing.pricingMode === ListingPricingMode.PER_UNIT
+  ) {
+    const max = listing.unitsAvailable ?? 0;
+    if (max < 1) {
+      return NextResponse.json({ error: "This listing is sold out" }, { status: 400 });
+    }
+    if (quantity < 1 || quantity > max) {
+      return NextResponse.json(
+        { error: `Choose a quantity between 1 and ${max}` },
+        { status: 400 }
+      );
+    }
+    lineUnitAmount = listing.price;
+    lineQuantity = quantity;
+    amount = listing.price * quantity;
+  } else {
+    quantity = 1;
+    lineUnitAmount = listing.price;
+    lineQuantity = 1;
+    amount = listing.price;
   }
 
   if (amount <= 0) {
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+  }
+
+  if (
+    listing.listingKind === "sell" &&
+    !listing.freeToCollector &&
+    !offerId &&
+    !bidId &&
+    amount < STRIPE_MIN_AMOUNT_PENCE
+  ) {
+    return NextResponse.json(
+      { error: `Order total must be at least £${(STRIPE_MIN_AMOUNT_PENCE / 100).toFixed(2)}` },
+      { status: 400 }
+    );
   }
 
   const applicationFeeAmount = Math.round(
@@ -150,14 +236,14 @@ export async function POST(req: Request) {
         {
           price_data: {
             currency: "gbp",
-            unit_amount: amount,
+            unit_amount: lineUnitAmount,
             product_data: {
               name: listing.title,
               description: productDescription,
               images: listing.images.length ? [listing.images[0]] : undefined,
             },
           },
-          quantity: 1,
+          quantity: lineQuantity,
         },
       ],
       success_url: `${baseUrl}/orders?session_id={CHECKOUT_SESSION_ID}`,
@@ -169,6 +255,7 @@ export async function POST(req: Request) {
         sellerId: listing.sellerId,
         amount: String(amount),
         platformFee: String(applicationFeeAmount),
+        quantity: String(quantity),
         ...(metadataOfferId ? { offerId: metadataOfferId } : {}),
         ...(metadataBidId ? { bidId: metadataBidId } : {}),
       },

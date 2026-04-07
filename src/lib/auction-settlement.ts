@@ -144,6 +144,7 @@ export async function finalizeAuctionListing(listingId: string): Promise<void> {
             stripePaymentIntentId: pi.id,
             status: "paid",
             bidId: top.id,
+            quantity: 1,
             ...purchaseCarbonSnapshotFromListing(listing),
           },
         });

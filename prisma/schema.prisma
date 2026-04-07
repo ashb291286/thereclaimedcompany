@@ -46,6 +46,12 @@ enum ListingKind {
   auction
 }
 
+/// LOT = one price for the whole line; PER_UNIT = price × quantity (e.g. bricks).
+enum ListingPricingMode {
+  LOT
+  PER_UNIT
+}
+
 enum OfferStatus {
   pending
   accepted
@@ -202,6 +208,8 @@ model Listing {
   images            String[] // blob URLs
   status            ListingStatus @default(draft)
   listingKind       ListingKind   @default(sell)
+  pricingMode       ListingPricingMode @default(LOT)
+  unitsAvailable    Int? // when PER_UNIT: units in stock; decremented on purchase until sold
   freeToCollector   Boolean       @default(false) // sell only: free pickup, no payment
   offersDelivery    Boolean       @default(false) // seller may arrange delivery (as well as collection)
   deliveryNotes     String? // extra context: packing, cut-offs, areas
@@ -377,6 +385,7 @@ model Order {
   purchaseCarbonSavedKg       Float?
   /** Snapshot from listing at purchase (kg mass kept in use). */
   purchaseWasteDivertedKg     Float?
+  quantity              Int         @default(1)
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 

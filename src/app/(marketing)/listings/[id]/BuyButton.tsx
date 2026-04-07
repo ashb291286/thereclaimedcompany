@@ -9,6 +9,8 @@ type Props = {
   label?: string;
   disabled?: boolean;
   disabledReason?: string;
+  /** For per-unit listings (ignored when paying an offer or auction). */
+  quantity?: number;
 };
 
 export function BuyButton({
@@ -18,6 +20,7 @@ export function BuyButton({
   label = "Buy now",
   disabled,
   disabledReason,
+  quantity = 1,
 }: Props) {
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +31,12 @@ export function BuyButton({
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId, offerId, bidId }),
+        body: JSON.stringify({
+          listingId,
+          offerId,
+          bidId,
+          quantity: offerId || bidId ? 1 : quantity,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {

@@ -90,6 +90,7 @@ export default async function OrdersPage({
                 )}
                 <p className="text-xs text-zinc-500">
                   {o.createdAt.toLocaleDateString("en-GB", { dateStyle: "medium" })}
+                  {o.quantity > 1 ? ` · ×${o.quantity}` : ""}
                   {o.amount > 0 ? ` · £${(o.amount / 100).toFixed(2)}` : " · Free collection"}
                 </p>
                 {o.purchaseCarbonSavedKg != null && o.purchaseCarbonSavedKg > 0 ? (

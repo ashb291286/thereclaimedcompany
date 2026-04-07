@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createListing } from "@/lib/actions/listings";
-import { Condition, type ListingKind } from "@/generated/prisma/client";
+import {
+  Condition,
+  ListingPricingMode,
+  type ListingKind,
+} from "@/generated/prisma/client";
+import {
+  suggestCategoryFromTitle,
+  type CategorySuggestionResult,
+} from "@/lib/category-suggest";
 import type { Prisma } from "@/generated/prisma/client";
 import { ListingImageCropModal } from "./ListingImageCropModal";
 import { ListingLivePreview } from "./ListingLivePreview";
@@ -158,6 +166,13 @@ export function ListingForm({
     listing?.materialQuantity != null ? String(listing.materialQuantity) : ""
   );
   const [materialUnit, setMaterialUnit] = useState(listing?.materialUnit ?? "kg");
+  const [pricingModeUi, setPricingModeUi] = useState<ListingPricingMode>(
+    () => listing?.pricingMode ?? ListingPricingMode.LOT
+  );
+  const [unitsAvailableStr, setUnitsAvailableStr] = useState(() =>
+    listing?.unitsAvailable != null ? String(listing.unitsAvailable) : ""
+  );
+  const [categoryHint, setCategoryHint] = useState<CategorySuggestionResult | null>(null);
 
   const materialSelectOptions =
     materialOptions.length > 0 ? materialOptions : MATERIAL_FORM_OPTIONS_FALLBACK;
@@ -173,6 +188,23 @@ export function ListingForm({
   useEffect(() => {
     if (listingKind === "sell" && freeToCollector) setPriceStr("0");
   }, [listingKind, freeToCollector]);
+
+  useEffect(() => {
+    if (listingKind === "auction" || freeToCollector) {
+      setPricingModeUi(ListingPricingMode.LOT);
+    }
+  }, [listingKind, freeToCollector]);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      if (title.trim().length < 3) {
+        setCategoryHint(null);
+        return;
+      }
+      setCategoryHint(suggestCategoryFromTitle(title, categories));
+    }, 450);
+    return () => clearTimeout(id);
+  }, [title, categories]);
 
   useEffect(() => {
     if (!previewOpen) return;
@@ -278,7 +310,16 @@ export function ListingForm({
     } else {
       const p = parseFloat(priceStr);
       if (priceStr.trim() !== "" && !Number.isNaN(p)) {
-        priceLine = `£${p.toFixed(2)}`;
+        if (pricingModeUi === ListingPricingMode.PER_UNIT) {
+          const u = parseInt(unitsAvailableStr, 10);
+          const stock =
+            Number.isFinite(u) && u >= 1
+              ? `${u} unit${u === 1 ? "" : "s"}`
+              : "set stock quantity";
+          priceLine = `£${p.toFixed(2)} each · ${stock}`;
+        } else {
+          priceLine = `£${p.toFixed(2)} (whole lot)`;
+        }
       } else {
         priceLine = "Set a price";
       }
@@ -359,9 +400,14 @@ export function ListingForm({
                 const p = form.querySelector('[name="price"]') as HTMLInputElement;
                 if (p) p.value = "0";
               }
+              if (pricingModeUi !== ListingPricingMode.PER_UNIT) {
+                const u = form.querySelector("#listing-units-available") as HTMLInputElement | null;
+                if (u) u.value = "";
+              }
             }}
           >
       <input type="hidden" name="listingKind" value={listingKind} />
+      <input type="hidden" name="pricingMode" value={pricingModeUi} />
       {listingKind === "auction" ? (
         <input
           type="hidden"
@@ -561,6 +607,30 @@ export function ListingForm({
             className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
+        {title.trim().length > 2 ? (
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50/90 px-3 py-3 text-sm text-zinc-700">
+            {categoryHint?.bestMatch && categoryHint.score >= 0.65 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span>
+                  Suggested category:{" "}
+                  <strong className="text-zinc-900">{categoryHint.bestMatch.name}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCategoryId(categoryHint.bestMatch!.id)}
+                  className="rounded-lg bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand-hover"
+                >
+                  Use suggestion
+                </button>
+              </div>
+            ) : null}
+            {categoryHint?.lowConfidence ? (
+              <p className={categoryHint?.bestMatch && categoryHint.score >= 0.65 ? "mt-2" : ""}>
+                No strong category match from the title alone — choose below or suggest a new category.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div>
           <label htmlFor="description" className="mb-1 block text-sm font-medium text-zinc-700">
             Description
@@ -595,6 +665,24 @@ export function ListingForm({
                 </option>
               ))}
             </select>
+            <div className="mt-3">
+              <label
+                htmlFor="newCategoryName"
+                className="mb-1 block text-sm font-medium text-zinc-700"
+              >
+                Suggest a new category (optional)
+              </label>
+              <input
+                id="newCategoryName"
+                name="newCategoryName"
+                type="text"
+                placeholder="e.g. Cast iron radiators"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              />
+              <p className="mt-1 text-xs text-zinc-500">
+                If you enter a name here, we&apos;ll add it and use it for this listing instead of the dropdown.
+              </p>
+            </div>
           </div>
           <div>
             <label htmlFor="condition" className="mb-1 block text-sm font-medium text-zinc-700">
@@ -637,6 +725,67 @@ export function ListingForm({
             <p className="mt-1 text-xs text-zinc-500">£0 — no checkout; buyer confirms collection only.</p>
           )}
         </div>
+        {listingKind === "sell" && !freeToCollector && (
+          <fieldset className="rounded-xl border border-zinc-200 bg-zinc-50/50 px-3 py-4">
+            <legend className="px-1 text-sm font-medium text-zinc-800">How is your price structured?</legend>
+            <p className="mb-3 text-xs text-zinc-600">
+              <strong>Bulk / lot</strong> — one price for everything. <strong>Per unit</strong> — same price
+              for each item; buyers choose how many they want (up to your stock).
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-zinc-800">
+                <input
+                  type="radio"
+                  className="mt-1 border-zinc-300 text-brand"
+                  checked={pricingModeUi === ListingPricingMode.LOT}
+                  onChange={() => setPricingModeUi(ListingPricingMode.LOT)}
+                />
+                <span>
+                  <span className="font-medium">Bulk / lot</span>
+                  <span className="mt-0.5 block text-xs text-zinc-600">One checkout buys the full listing.</span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-zinc-800">
+                <input
+                  type="radio"
+                  className="mt-1 border-zinc-300 text-brand"
+                  checked={pricingModeUi === ListingPricingMode.PER_UNIT}
+                  onChange={() => setPricingModeUi(ListingPricingMode.PER_UNIT)}
+                />
+                <span>
+                  <span className="font-medium">Per unit (individual pricing)</span>
+                  <span className="mt-0.5 block text-xs text-zinc-600">
+                    Price above is for a single unit; set how many you&apos;re selling.
+                  </span>
+                </span>
+              </label>
+            </div>
+            {pricingModeUi === ListingPricingMode.PER_UNIT ? (
+              <div className="mt-4">
+                <label
+                  htmlFor="listing-units-available"
+                  className="mb-1 block text-sm font-medium text-zinc-700"
+                >
+                  How many units are for sale?
+                </label>
+                <input
+                  id="listing-units-available"
+                  name="unitsAvailable"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={unitsAvailableStr}
+                  onChange={(e) => setUnitsAvailableStr(e.target.value)}
+                  placeholder="e.g. 24"
+                  className="max-w-xs rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+                <p className="mt-1 text-xs text-zinc-500">
+                  Required to publish. Buyers can order any quantity from 1 up to this amount.
+                </p>
+              </div>
+            ) : null}
+          </fieldset>
+        )}
         {listingKind === "auction" && (
           <div>
             <label htmlFor="auctionReserve" className="mb-1 block text-sm font-medium text-zinc-700">
