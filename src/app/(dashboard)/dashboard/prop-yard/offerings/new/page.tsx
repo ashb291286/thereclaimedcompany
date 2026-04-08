@@ -13,10 +13,11 @@ export default async function NewPropRentalOfferingPage({ searchParams }: Props)
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true },
+    select: { role: true, sellerProfile: { select: { id: true } } },
   });
-  if (user?.role !== "reclamation_yard") {
-    redirect("/dashboard");
+  const allowed = user?.role === "reclamation_yard" || !!user?.sellerProfile;
+  if (!user || !allowed) {
+    redirect("/dashboard?error=" + encodeURIComponent("Seller profile required to add hire listings."));
   }
 
   const { error, listingId: listingIdPrefill } = await searchParams;

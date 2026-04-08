@@ -460,6 +460,26 @@ export default async function ListingPage({
               </p>
             )}
           </section>
+          {isOwner &&
+          listing.status === "active" &&
+          listing.listingKind === "sell" &&
+          !listing.freeToCollector &&
+          !listing.propRentalOffer ? (
+            <section className={sectionClass}>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">The Prop Yard</h2>
+              <p className="mt-2 text-sm text-zinc-700">
+                Offer this listing for weekly film/TV hire from the same photos and description — no duplicate item
+                needed.
+              </p>
+              <Link
+                href={`/dashboard/prop-yard/wizard?listingId=${encodeURIComponent(listing.id)}`}
+                className="mt-3 inline-block rounded-lg bg-amber-900 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-950"
+              >
+                Send to Prop Yard
+              </Link>
+            </section>
+          ) : null}
+
           {listing.propRentalOffer?.isActive ? (
             <section className={sectionClass}>
               <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Also in The Prop Yard</h2>

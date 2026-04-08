@@ -84,21 +84,26 @@ async function syncListingMarketplaceVisibilityForOffer(offerId: string) {
   revalidatePath("/prop-yard/dashboard");
 }
 
-async function assertYard() {
+/** Reclamation yards or any user with a seller profile may create and manage prop hire offers for their listings. */
+async function assertPropOfferSeller() {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true },
+    select: { role: true, sellerProfile: { select: { id: true } } },
   });
-  if (user?.role !== "reclamation_yard") {
-    redirect("/dashboard?error=" + encodeURIComponent("The Prop Yard is for reclamation yard accounts only."));
+  const allowed = user?.role === "reclamation_yard" || !!user?.sellerProfile;
+  if (!user || !allowed) {
+    redirect(
+      "/dashboard?error=" +
+        encodeURIComponent("Complete seller onboarding to offer props for hire from your listings.")
+    );
   }
   return session.user.id;
 }
 
 export async function createPropRentalOfferAction(formData: FormData): Promise<void> {
-  const userId = await assertYard();
+  const userId = await assertPropOfferSeller();
   const errBase = safePropYardRedirect(formData.get("_errorReturn"), "/dashboard/prop-yard/offerings/new");
   const okBase = safePropYardRedirect(formData.get("_successReturn"), "/dashboard/prop-yard");
 
@@ -165,7 +170,7 @@ export async function createPropRentalOfferAction(formData: FormData): Promise<v
 }
 
 export async function createPropOnlyListingAndOfferAction(formData: FormData): Promise<void> {
-  const userId = await assertYard();
+  const userId = await assertPropOfferSeller();
   const errBase = safePropYardRedirect(formData.get("_errorReturn"), "/dashboard/prop-yard/props/new");
   const okBase = safePropYardRedirect(formData.get("_successReturn"), "/dashboard/prop-yard");
   const bail = (msg: string) => redirect(errBase + "?error=" + encodeURIComponent(msg));
@@ -272,7 +277,7 @@ export async function createPropOnlyListingAndOfferAction(formData: FormData): P
 }
 
 export async function updatePropRentalBookingStatusAction(formData: FormData): Promise<void> {
-  const userId = await assertYard();
+  const userId = await assertPropOfferSeller();
   const bookingId = String(formData.get("bookingId") ?? "").trim();
   const next = String(formData.get("status") ?? "").trim() as PropRentalBookingStatus;
   if (!bookingId || !YARD_BOOKING_STATUS_VALUES.includes(next)) {
@@ -297,7 +302,7 @@ export async function updatePropRentalBookingStatusAction(formData: FormData): P
 }
 
 export async function togglePropRentalOfferActiveAction(formData: FormData): Promise<void> {
-  const userId = await assertYard();
+  const userId = await assertPropOfferSeller();
   const offerId = String(formData.get("offerId") ?? "").trim();
   const next = String(formData.get("isActive") ?? "") === "true";
   if (!offerId) redirect("/dashboard/prop-yard");
@@ -315,7 +320,7 @@ export async function togglePropRentalOfferActiveAction(formData: FormData): Pro
 }
 
 export async function addPropUnavailabilityAction(formData: FormData): Promise<void> {
-  const userId = await assertYard();
+  const userId = await assertPropOfferSeller();
   const offerId = String(formData.get("offerId") ?? "").trim();
   const startRaw = String(formData.get("startDate") ?? "").trim();
   const endRaw = String(formData.get("endDate") ?? "").trim();

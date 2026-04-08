@@ -13,10 +13,14 @@ export default async function PropListingWizardPage({ searchParams }: Props) {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true },
+    select: { role: true, sellerProfile: { select: { id: true } } },
   });
-  if (user?.role !== "reclamation_yard") {
-    redirect("/dashboard?error=" + encodeURIComponent("The Prop Yard wizard is for reclamation yard accounts."));
+  const allowed = user?.role === "reclamation_yard" || !!user?.sellerProfile;
+  if (!user || !allowed) {
+    redirect(
+      "/dashboard?error=" +
+        encodeURIComponent("Complete seller onboarding to use the Prop Yard listing wizard.")
+    );
   }
 
   const { error, listingId: listingIdParam } = await searchParams;

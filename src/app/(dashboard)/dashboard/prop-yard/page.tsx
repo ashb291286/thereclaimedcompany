@@ -15,10 +15,13 @@ export default async function DashboardPropYardPage({
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true },
+    select: { role: true, sellerProfile: { select: { id: true } } },
   });
-  if (user?.role !== "reclamation_yard") {
-    redirect("/dashboard?error=" + encodeURIComponent("The Prop Yard dashboard is for reclamation yard accounts."));
+  const allowed = user?.role === "reclamation_yard" || !!user?.sellerProfile;
+  if (!user || !allowed) {
+    redirect(
+      "/dashboard?error=" + encodeURIComponent("Seller profile required to manage Prop Yard hire listings.")
+    );
   }
 
   const { wizard, saved } = await searchParams;
