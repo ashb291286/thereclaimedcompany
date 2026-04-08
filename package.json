@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:resolve:listing-visible-rolled-back": "prisma migrate resolve --rolled-back 20260408120000_listing_visible_on_marketplace",
     "db:push": "prisma db push",
     "db:baseline": "node scripts/prisma-baseline.mjs",
     "db:baseline:prop-pending": "node scripts/prisma-baseline.mjs prop-pending",
