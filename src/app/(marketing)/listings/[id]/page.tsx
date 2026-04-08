@@ -67,6 +67,18 @@ export default async function ListingPage({
     include: {
       category: true,
       seller: { include: { sellerProfile: true } },
+      propRentalOffer: {
+        include: {
+          bookings: {
+            where: { status: { in: ["REQUESTED", "CONFIRMED", "OUT_ON_HIRE"] } },
+            select: { id: true },
+          },
+          unavailability: {
+            where: { endDate: { gte: new Date() } },
+            select: { id: true },
+          },
+        },
+      },
     },
   });
   if (!listing) notFound();
@@ -421,6 +433,29 @@ export default async function ListingPage({
               </p>
             )}
           </section>
+          {listing.propRentalOffer?.isActive ? (
+            <section className={sectionClass}>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Also in The Prop Yard</h2>
+              <p className="mt-2 text-sm text-zinc-700">
+                This item can be hired as a prop at £
+                {(listing.propRentalOffer.weeklyHirePence / 100).toFixed(2)}/week.
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Minimum {listing.propRentalOffer.minimumHireWeeks} week
+                {listing.propRentalOffer.minimumHireWeeks === 1 ? "" : "s"} ·{" "}
+                {listing.propRentalOffer.bookings.length} active request
+                {listing.propRentalOffer.bookings.length === 1 ? "" : "s"} ·{" "}
+                {listing.propRentalOffer.unavailability.length} blackout period
+                {listing.propRentalOffer.unavailability.length === 1 ? "" : "s"}.
+              </p>
+              <Link
+                href={`/prop-yard/offers/${listing.propRentalOffer.id}`}
+                className="mt-3 inline-block text-sm font-medium text-amber-900 hover:underline"
+              >
+                Open Prop Yard hire page →
+              </Link>
+            </section>
+          ) : null}
 
           {!isOwner && session?.user?.id && (
             <section className={`${sectionClass} space-y-4`}>

@@ -102,7 +102,7 @@ export default async function DashboardPage({
       where: { sellerId: session.user.id },
       orderBy: { updatedAt: "desc" },
       take: 20,
-      include: { category: true },
+      include: { category: true, propRentalOffer: true },
     }),
     prisma.listing.aggregate({
       where: { sellerId: session.user.id },
@@ -322,7 +322,12 @@ export default async function DashboardPage({
         ) : (
           <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {listings.map((l) => (
-              <li key={l.id} className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+              <li
+                key={l.id}
+                className={`overflow-hidden rounded-xl border border-zinc-200 shadow-sm ${
+                  l.propRentalOffer ? "bg-zinc-50/80" : "bg-white"
+                }`}
+              >
                 <div className="relative aspect-[4/3] bg-zinc-100">
                   {l.images[0] ? (
                     <Image
@@ -336,6 +341,21 @@ export default async function DashboardPage({
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-zinc-500">No image</div>
                   )}
+                  {l.propRentalOffer ? <div className="absolute inset-0 bg-white/45" /> : null}
+                  <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+                    {l.propRentalOffer ? (
+                      <span className="rounded-full bg-amber-900 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        In Prop Yard
+                      </span>
+                    ) : (
+                      <Link
+                        href={`/dashboard/prop-yard/offerings/new?listingId=${encodeURIComponent(l.id)}`}
+                        className="rounded-full bg-zinc-900/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-amber-900"
+                      >
+                        Send to Prop Yard
+                      </Link>
+                    )}
+                  </div>
                 </div>
                 <div className="p-3">
                   <div className="mb-2 flex flex-wrap gap-1">
@@ -408,6 +428,13 @@ export default async function DashboardPage({
                       Stats
                     </Link>
                   </div>
+                  {l.propRentalOffer ? (
+                    <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
+                      Prop hire live · £{(l.propRentalOffer.weeklyHirePence / 100).toFixed(2)}/week · min{" "}
+                      {l.propRentalOffer.minimumHireWeeks} week
+                      {l.propRentalOffer.minimumHireWeeks === 1 ? "" : "s"}.
+                    </div>
+                  ) : null}
                 </div>
               </li>
             ))}

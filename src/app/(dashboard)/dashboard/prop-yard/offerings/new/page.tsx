@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { createPropRentalOfferAction } from "@/lib/actions/prop-yard";
 import { suggestedWeeklyHirePence, PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE } from "@/lib/prop-yard";
 
-type Props = { searchParams: Promise<{ error?: string }> };
+type Props = { searchParams: Promise<{ error?: string; listingId?: string }> };
 
 export default async function NewPropRentalOfferingPage({ searchParams }: Props) {
   const session = await auth();
@@ -19,7 +19,7 @@ export default async function NewPropRentalOfferingPage({ searchParams }: Props)
     redirect("/dashboard");
   }
 
-  const { error } = await searchParams;
+  const { error, listingId: listingIdPrefill } = await searchParams;
 
   const listings = await prisma.listing.findMany({
     where: {
@@ -33,7 +33,7 @@ export default async function NewPropRentalOfferingPage({ searchParams }: Props)
       id: true,
       title: true,
       price: true,
-      propRentalOffer: { select: { id: true } },
+      propRentalOffer: { select: { id: true, minimumHireWeeks: true, weeklyHirePence: true } },
     },
   });
 
@@ -68,8 +68,19 @@ export default async function NewPropRentalOfferingPage({ searchParams }: Props)
             const suggested = suggestedWeeklyHirePence(l.price);
             const gbp = (suggested / 100).toFixed(2);
             const has = !!l.propRentalOffer;
+            const defaultMin = l.propRentalOffer?.minimumHireWeeks ?? 1;
+            const defaultWeekly = l.propRentalOffer?.weeklyHirePence
+              ? (l.propRentalOffer.weeklyHirePence / 100).toFixed(2)
+              : gbp;
             return (
-              <li key={l.id} className="rounded-xl border border-zinc-200 bg-white p-5">
+              <li
+                key={l.id}
+                className={`rounded-xl border p-5 ${
+                  listingIdPrefill && listingIdPrefill === l.id
+                    ? "border-amber-300 bg-amber-50/70"
+                    : "border-zinc-200 bg-white"
+                }`}
+              >
                 <p className="font-medium text-zinc-900">{l.title}</p>
                 <p className="text-xs text-zinc-500">List price £{(l.price / 100).toFixed(2)}</p>
                 <form action={createPropRentalOfferAction} className="mt-4 space-y-3">
@@ -82,10 +93,23 @@ export default async function NewPropRentalOfferingPage({ searchParams }: Props)
                       step="0.01"
                       min="1"
                       required
-                      defaultValue={gbp}
+                      defaultValue={defaultWeekly}
                       className="mt-1 max-w-xs rounded-lg border border-zinc-300 px-3 py-2 text-sm"
                     />
                     <p className="mt-1 text-xs text-zinc-500">Suggested from {pct}% rule: £{gbp}/week</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-700">Minimum hire (weeks)</label>
+                    <input
+                      name="minimumHireWeeks"
+                      type="number"
+                      min="1"
+                      max="52"
+                      step="1"
+                      required
+                      defaultValue={defaultMin}
+                      className="mt-1 max-w-xs rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-zinc-700">

@@ -96,8 +96,9 @@ model User {
 
   stripeCustomerId     String? @unique // platform Customer for saved auction payment method
   bidPaymentMethodId   String? // default PaymentMethod id (card on file for bids)
-  localYardAlerts      ListingLocalYardAlert[] @relation("YardLocalAlerts")
-  propRentalBookingsAsHirer PropRentalBooking[] @relation("PropRentalHirer")
+  localYardAlerts          ListingLocalYardAlert[] @relation("YardLocalAlerts")
+  propRentalBookingsAsHirer PropRentalBooking[]    @relation("PropRentalHirer")
+  propRentalBasketItems    PropRentalBasketItem[]  @relation("PropRentalBasketUser")
 }
 
 model Account {
@@ -273,6 +274,7 @@ model PropRentalOffer {
   id               String   @id @default(cuid())
   listingId        String   @unique
   weeklyHirePence  Int // ex-VAT display; platform T&Cs apply
+  minimumHireWeeks Int      @default(1)
   isActive         Boolean  @default(true)
   yardHireNotes    String?  @db.Text // collection, condition, deposit notes for hirers
   createdAt        DateTime @default(now())
@@ -281,6 +283,7 @@ model PropRentalOffer {
   listing         Listing                  @relation(fields: [listingId], references: [id], onDelete: Cascade)
   bookings        PropRentalBooking[]
   unavailability  PropRentalUnavailability[]
+  basketItems     PropRentalBasketItem[]
 
   @@index([isActive])
 }
@@ -324,6 +327,27 @@ model PropRentalBooking {
   @@index([hirerId])
   @@index([status])
   @@index([hireStart, hireEnd])
+}
+
+model PropRentalBasketItem {
+  id                       String              @id @default(cuid())
+  userId                   String
+  offerId                  String
+  hireStart                DateTime
+  hireEnd                  DateTime
+  fulfillment              PropRentalFulfillment
+  hirerOrgName             String?
+  productionNotes          String?             @db.Text
+  deliveryArrangementNotes String?             @db.Text
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  user  User            @relation("PropRentalBasketUser", fields: [userId], references: [id], onDelete: Cascade)
+  offer PropRentalOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, offerId])
+  @@index([userId])
+  @@index([offerId])
 }
 
 model ListingFavorite {

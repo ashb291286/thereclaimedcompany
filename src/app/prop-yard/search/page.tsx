@@ -43,6 +43,11 @@ export default async function PropYardSearchPage({ searchParams }: Props) {
       <p className="mt-2 max-w-2xl text-sm text-zinc-600">
         Listed by UK reclamation yards for weekly hire. Results are separate from marketplace purchase listings.
       </p>
+      <div className="mt-3">
+        <Link href="/prop-yard/basket" className="text-sm font-medium text-amber-900 underline hover:text-amber-950">
+          Open request basket
+        </Link>
+      </div>
 
       {error ? (
         <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{decodeURIComponent(error)}</p>
@@ -93,6 +98,9 @@ export default async function PropYardSearchPage({ searchParams }: Props) {
                     <h3 className="mt-1 line-clamp-2 font-semibold text-zinc-900">{o.listing.title}</h3>
                     <p className="mt-2 text-sm font-medium text-amber-950">
                       £{(o.weeklyHirePence / 100).toFixed(2)} / week
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Min hire {o.minimumHireWeeks} week{o.minimumHireWeeks === 1 ? "" : "s"}
                     </p>
                     {yard ? (
                       <p className="mt-1 text-xs text-zinc-500">{yard.displayName}</p>

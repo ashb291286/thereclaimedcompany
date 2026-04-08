@@ -12,6 +12,12 @@ export function PropYardNav() {
       <Link href="/prop-yard/search" className={link}>
         Find props
       </Link>
+      <Link href="/prop-yard/basket" className={link}>
+        Basket
+      </Link>
+      <Link href="/prop-yard/dashboard" className={link}>
+        Prop dashboard
+      </Link>
       <Link href="/dashboard/prop-yard" className={link}>
         Yard dashboard
       </Link>

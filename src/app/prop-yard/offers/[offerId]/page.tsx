@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE, PROP_YARD_TERMS_VERSION } from "@/lib/prop-yard";
-import { requestPropRentalBookingAction } from "@/lib/actions/prop-yard";
+import { upsertPropBasketItemAction } from "@/lib/actions/prop-yard";
 
 type Props = {
   params: Promise<{ offerId: string }>;
@@ -28,6 +28,14 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
           category: true,
           seller: { include: { sellerProfile: true } },
         },
+      },
+      bookings: {
+        where: { status: { in: ["REQUESTED", "CONFIRMED", "OUT_ON_HIRE"] } },
+        select: { id: true },
+      },
+      unavailability: {
+        where: { endDate: { gte: new Date() } },
+        select: { id: true },
       },
     },
   });
@@ -90,6 +98,14 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
               Yard list price reference: £{(listPrice / 100).toFixed(2)} — typical suggestion was {pct}% (
               £{(suggested / 100).toFixed(2)}/wk); actual hire rate is as shown.
             </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Minimum hire period: {offer.minimumHireWeeks} week{offer.minimumHireWeeks === 1 ? "" : "s"}.
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Availability cues: {offer.bookings.length} active booking request
+              {offer.bookings.length === 1 ? "" : "s"} · {offer.unavailability.length} blackout period
+              {offer.unavailability.length === 1 ? "" : "s"} on file.
+            </p>
             {offer.yardHireNotes ? (
               <div className="mt-4 rounded-lg bg-amber-50/80 px-3 py-2 text-sm text-zinc-800">
                 <p className="text-xs font-semibold uppercase text-amber-900/80">From the yard</p>
@@ -113,10 +129,10 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
 
           {!isOwner ? (
             <div className="rounded-2xl border border-amber-900/10 bg-white p-6 shadow-sm">
-              <h2 className="text-sm font-semibold text-amber-950">Request hire</h2>
+              <h2 className="text-sm font-semibold text-amber-950">Add to prop request basket</h2>
               <p className="mt-2 text-xs text-zinc-600">
-                Indicative total = weekly rate × billable weeks (minimum one week; partial weeks round up). The yard
-                confirms before payment.
+                Add this prop with dates and logistics, then submit one grouped request from your basket. Requests are
+                split by yard automatically.
               </p>
               {error ? (
                 <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -124,8 +140,10 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
                 </p>
               ) : null}
               {session?.user?.id ? (
-                <form action={requestPropRentalBookingAction} className="mt-4 space-y-4">
+                <>
+                <form action={upsertPropBasketItemAction} className="mt-4 space-y-4">
                   <input type="hidden" name="offerId" value={offer.id} />
+                  <input type="hidden" name="returnTo" value="/prop-yard/basket" />
                   <div>
                     <label className="block text-xs font-medium text-zinc-700">Hire start</label>
                     <input
@@ -195,9 +213,17 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
                     type="submit"
                     className="w-full rounded-lg bg-amber-900 py-3 text-sm font-semibold text-white hover:bg-amber-950"
                   >
-                    Submit hire request
+                    Add to request basket
                   </button>
                 </form>
+                <p className="mt-3 text-xs text-zinc-500">
+                  Already planning more props?{" "}
+                  <Link href="/prop-yard/basket" className="font-medium text-amber-900 underline">
+                    Open basket
+                  </Link>
+                  .
+                </p>
+                </>
               ) : (
                 <p className="mt-4 text-sm text-zinc-600">
                   <Link href={`/auth/signin?callbackUrl=/prop-yard/offers/${offer.id}`} className="font-medium text-amber-900 underline">

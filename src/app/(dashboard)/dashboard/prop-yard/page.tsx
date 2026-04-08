@@ -62,6 +62,9 @@ export default async function DashboardPropYardPage() {
                       {o.listing.status}
                     </span>
                   </p>
+                  <p className="text-xs text-zinc-500">
+                    Minimum {o.minimumHireWeeks} week{o.minimumHireWeeks === 1 ? "" : "s"}
+                  </p>
                   <Link
                     href={`/dashboard/prop-yard/offerings/${o.id}/calendar`}
                     className="mt-1 inline-block text-sm text-brand hover:underline"
