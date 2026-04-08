@@ -351,8 +351,18 @@ export async function addPropUnavailabilityAction(formData: FormData): Promise<v
   redirect(`/dashboard/prop-yard/offerings/${offerId}/calendar`);
 }
 
-async function validateAvailability(offerId: string, hireStart: Date, hireEnd: Date): Promise<void> {
-  const blockingBookings = await prisma.propRentalBooking.findMany({
+type AvailabilityDb = {
+  propRentalBooking: Pick<typeof prisma.propRentalBooking, "findMany">;
+  propRentalUnavailability: Pick<typeof prisma.propRentalUnavailability, "findMany">;
+};
+
+async function validateAvailability(
+  offerId: string,
+  hireStart: Date,
+  hireEnd: Date,
+  db: AvailabilityDb = prisma
+): Promise<void> {
+  const blockingBookings = await db.propRentalBooking.findMany({
     where: { offerId, status: { in: BLOCKING } },
     select: { hireStart: true, hireEnd: true },
   });
@@ -362,7 +372,7 @@ async function validateAvailability(offerId: string, hireStart: Date, hireEnd: D
     }
   }
 
-  const blocks = await prisma.propRentalUnavailability.findMany({
+  const blocks = await db.propRentalUnavailability.findMany({
     where: { offerId },
     select: { startDate: true, endDate: true },
   });
@@ -602,26 +612,44 @@ export async function submitPropSetRequestsAction(formData: FormData): Promise<v
   let created = 0;
   const affectedYards = new Set<string>();
   const batchId = randomUUID();
+  let firstBlocker: string | null = null;
+  const noteBlocker = (message: string) => {
+    if (!firstBlocker) firstBlocker = message;
+  };
 
   await prisma.$transaction(async (tx) => {
     for (const item of items) {
       const offer = item.offer;
+      const listingTitle = item.offer.listing.title.trim().slice(0, 120) || "This prop";
       if (
         !offer.isActive ||
         offer.listing.status !== "active" ||
         offer.listing.listingKind !== "sell" ||
         offer.listing.freeToCollector
       ) {
+        noteBlocker(`"${listingTitle}" is no longer available for hire (inactive or unpublished).`);
         continue;
       }
-      if (offer.listing.sellerId === session.user.id) continue;
+      if (offer.listing.sellerId === session.user.id) {
+        noteBlocker(`"${listingTitle}" is your own listing; remove it from the set to send hire requests.`);
+        continue;
+      }
 
       const weeks = billableWeeksFromRange(item.hireStart, item.hireEnd);
-      if (weeks < offer.minimumHireWeeks) continue;
+      const calendarDays = inclusiveHireDays(item.hireStart, item.hireEnd);
+      if (weeks < offer.minimumHireWeeks) {
+        noteBlocker(
+          `"${listingTitle}" needs at least ${offer.minimumHireWeeks} billable week(s); your dates are ${calendarDays} calendar day(s) (${weeks} billable week(s), weeks round up from days). Extend the hire end date or pick a longer window.`
+        );
+        continue;
+      }
 
       try {
-        await validateAvailability(offer.id, item.hireStart, item.hireEnd);
+        await validateAvailability(offer.id, item.hireStart, item.hireEnd, tx);
       } catch {
+        noteBlocker(
+          `"${listingTitle}" is not available for those dates: they overlap an existing hire request or confirmed booking, or the yard has blocked those days.`
+        );
         continue;
       }
 
@@ -657,7 +685,11 @@ export async function submitPropSetRequestsAction(formData: FormData): Promise<v
 
   if (created === 0) {
     redirect(
-      `/prop-yard/set/${setId}?error=` + encodeURIComponent("No requests were sent. Check dates/minimum periods.")
+      `/prop-yard/set/${setId}?error=` +
+        encodeURIComponent(
+          firstBlocker ??
+            "No hire requests could be sent. Check each line in the set, then try again."
+        )
     );
   }
   redirect(
