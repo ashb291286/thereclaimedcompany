@@ -25,8 +25,8 @@ export function PropYardNav({ showManageOffers }: { showManageOffers?: boolean }
           <Link href="/prop-yard/search" className={linkClass}>
             Find props
           </Link>
-          <Link href="/prop-yard/basket" className={linkClass}>
-            Basket
+          <Link href="/prop-yard/sets" className={linkClass}>
+            My sets
           </Link>
           <Link href="/prop-yard/dashboard" className={linkClass}>
             Prop dashboard

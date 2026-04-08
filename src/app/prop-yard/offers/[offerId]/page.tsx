@@ -4,17 +4,29 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE, PROP_YARD_TERMS_VERSION } from "@/lib/prop-yard";
-import { upsertPropBasketItemAction } from "@/lib/actions/prop-yard";
+import { upsertPropSetItemAction } from "@/lib/actions/prop-yard";
 
 type Props = {
   params: Promise<{ offerId: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; setId?: string }>;
 };
 
 export default async function PropYardOfferPage({ params, searchParams }: Props) {
   const { offerId } = await params;
-  const { error } = await searchParams;
+  const { error, setId: setIdParam } = await searchParams;
   const session = await auth();
+
+  const mySets =
+    session?.user?.id != null
+      ? await prisma.propRentalSet.findMany({
+          where: { userId: session.user.id },
+          orderBy: { updatedAt: "desc" },
+          select: { id: true, name: true },
+        })
+      : [];
+
+  const activeSetId = (setIdParam ?? "").trim();
+  const activeSet = activeSetId ? mySets.find((s) => s.id === activeSetId) : undefined;
 
   const offer = await prisma.propRentalOffer.findFirst({
     where: {
@@ -137,10 +149,10 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
 
           {!isOwner ? (
             <div className="rounded-2xl border border-driven-warm bg-white p-6 shadow-sm">
-              <h2 className="text-sm font-semibold text-driven-ink">Add to prop request basket</h2>
+              <h2 className="text-sm font-semibold text-driven-ink">Add to your set</h2>
               <p className="mt-2 text-xs text-driven-muted">
-                Add this prop with dates and logistics, then submit one grouped request from your basket. Requests are
-                split by yard automatically.
+                Choose which set you are building (or create one first). You&apos;ll confirm hire terms when you send
+                requests from the set builder — requests still group by yard automatically.
               </p>
               {error ? (
                 <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -148,99 +160,136 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
                 </p>
               ) : null}
               {session?.user?.id ? (
-                <>
-                  <form action={upsertPropBasketItemAction} className="mt-4 space-y-4">
-                    <input type="hidden" name="offerId" value={offer.id} />
-                    <input type="hidden" name="returnTo" value="/prop-yard/basket" />
-                    <div>
-                      <label className="block text-xs font-medium text-driven-ink">Hire start</label>
-                      <input
-                        type="date"
-                        name="hireStart"
-                        required
-                        className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-driven-ink">Hire end (inclusive)</label>
-                      <input
-                        type="date"
-                        name="hireEnd"
-                        required
-                        className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-driven-ink">Fulfillment</label>
-                      <select
-                        name="fulfillment"
-                        required
-                        className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                      >
-                        <option value="COLLECT_AND_RETURN">We collect from yard and return after shoot</option>
-                        <option value="YARD_DELIVERS_AND_COLLECTS">Yard delivers and collects</option>
-                        <option value="ARRANGE_SEPARATELY">Arrange separately (note below)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-driven-ink">Production / company name</label>
-                      <input
-                        name="hirerOrgName"
-                        required
-                        placeholder="e.g. Northlight Pictures Ltd"
-                        className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-driven-ink">Production notes (optional)</label>
-                      <textarea
-                        name="productionNotes"
-                        rows={3}
-                        className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                        placeholder="Unit, location, special handling…"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-driven-ink">
-                        Delivery &amp; return notes (optional)
-                      </label>
-                      <textarea
-                        name="deliveryArrangementNotes"
-                        rows={2}
-                        className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <label className="flex gap-2 text-xs text-driven-muted">
-                      <input type="checkbox" name="contractAccepted" value="on" required className="mt-0.5" />
-                      <span>
-                        I accept the Prop Yard hire terms (v{PROP_YARD_TERMS_VERSION}): this is a rental request only;
-                        a separate agreement with the yard may cover deposit, damage, insurance, and cancellation.
-                      </span>
-                    </label>
-                    <button
-                      type="submit"
-                      className="w-full rounded-lg border border-driven-ink bg-driven-ink py-3 font-[family-name:var(--font-driven-mono)] text-xs font-semibold uppercase tracking-wide text-driven-paper hover:bg-driven-accent"
-                    >
-                      Add to request basket
-                    </button>
-                  </form>
-                  <p className="mt-3 text-xs text-driven-muted">
-                    Already planning more props?{" "}
-                    <Link href="/prop-yard/basket" className="font-medium text-driven-accent underline hover:text-driven-ink">
-                      Open basket
-                    </Link>
-                    .
+                mySets.length === 0 ? (
+                  <p className="mt-4 text-sm text-driven-muted">
+                    <Link href="/prop-yard/sets" className="font-medium text-driven-accent underline hover:text-driven-ink">
+                      Create a set
+                    </Link>{" "}
+                    before adding props — e.g. one set per scene or production.
                   </p>
-                </>
+                ) : !activeSet ? (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-xs font-medium text-driven-ink">Select a set to add this prop to:</p>
+                    <ul className="space-y-1.5">
+                      {mySets.map((s) => (
+                        <li key={s.id}>
+                          <Link
+                            href={`/prop-yard/offers/${offer.id}?setId=${encodeURIComponent(s.id)}`}
+                            className="block rounded-lg border border-driven-warm px-3 py-2 text-sm text-driven-ink hover:border-driven-ink hover:bg-driven-accent-light/30"
+                          >
+                            {s.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link href="/prop-yard/sets" className="mt-2 inline-block text-xs text-driven-accent underline">
+                      Manage sets →
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    <p className="mt-3 text-xs text-driven-muted">
+                      Adding to: <strong className="text-driven-ink">{activeSet.name}</strong> ·{" "}
+                      <Link href="/prop-yard/sets" className="text-driven-accent underline">
+                        Change
+                      </Link>
+                    </p>
+                    <form action={upsertPropSetItemAction} className="mt-4 space-y-4">
+                      <input type="hidden" name="offerId" value={offer.id} />
+                      <input type="hidden" name="setId" value={activeSet.id} />
+                      <input
+                        type="hidden"
+                        name="returnTo"
+                        value={`/prop-yard/set/${activeSet.id}`}
+                      />
+                      <div>
+                        <label className="block text-xs font-medium text-driven-ink">Hire start</label>
+                        <input
+                          type="date"
+                          name="hireStart"
+                          required
+                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-driven-ink">Hire end (inclusive)</label>
+                        <input
+                          type="date"
+                          name="hireEnd"
+                          required
+                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-driven-ink">Fulfillment</label>
+                        <select
+                          name="fulfillment"
+                          required
+                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
+                        >
+                          <option value="COLLECT_AND_RETURN">We collect from yard and return after shoot</option>
+                          <option value="YARD_DELIVERS_AND_COLLECTS">Yard delivers and collects</option>
+                          <option value="ARRANGE_SEPARATELY">Arrange separately (note below)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-driven-ink">Production / company name</label>
+                        <input
+                          name="hirerOrgName"
+                          required
+                          placeholder="e.g. Northlight Pictures Ltd"
+                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-driven-ink">Production notes (optional)</label>
+                        <textarea
+                          name="productionNotes"
+                          rows={3}
+                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
+                          placeholder="Unit, location, special handling…"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-driven-ink">
+                          Delivery &amp; return notes (optional)
+                        </label>
+                        <textarea
+                          name="deliveryArrangementNotes"
+                          rows={2}
+                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <p className="text-[11px] text-driven-muted">
+                        Hire terms (v{PROP_YARD_TERMS_VERSION}) are confirmed when you send requests from the set
+                        builder.
+                      </p>
+                      <button
+                        type="submit"
+                        className="w-full rounded-lg border border-driven-ink bg-driven-ink py-3 font-[family-name:var(--font-driven-mono)] text-xs font-semibold uppercase tracking-wide text-driven-paper hover:bg-driven-accent"
+                      >
+                        Add to set
+                      </button>
+                    </form>
+                    <p className="mt-3 text-xs text-driven-muted">
+                      <Link
+                        href={`/prop-yard/set/${activeSet.id}`}
+                        className="font-medium text-driven-accent underline hover:text-driven-ink"
+                      >
+                        Open set builder
+                      </Link>
+                    </p>
+                  </>
+                )
               ) : (
                 <p className="mt-4 text-sm text-driven-muted">
                   <Link
-                    href={`/auth/signin?callbackUrl=/prop-yard/offers/${offer.id}`}
+                    href={`/auth/signin?callbackUrl=${encodeURIComponent(`/prop-yard/offers/${offer.id}${activeSetId ? `?setId=${activeSetId}` : ""}`)}`}
                     className="font-medium text-driven-accent underline hover:text-driven-ink"
                   >
                     Sign in
                   </Link>{" "}
-                  to request a hire.
+                  to build a set and request hires.
                 </p>
               )}
             </div>

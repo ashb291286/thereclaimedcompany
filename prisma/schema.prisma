@@ -97,8 +97,8 @@ model User {
   stripeCustomerId     String? @unique // platform Customer for saved auction payment method
   bidPaymentMethodId   String? // default PaymentMethod id (card on file for bids)
   localYardAlerts          ListingLocalYardAlert[] @relation("YardLocalAlerts")
-  propRentalBookingsAsHirer PropRentalBooking[]    @relation("PropRentalHirer")
-  propRentalBasketItems    PropRentalBasketItem[]  @relation("PropRentalBasketUser")
+  propRentalBookingsAsHirer PropRentalBooking[] @relation("PropRentalHirer")
+  propRentalSets            PropRentalSet[]
 }
 
 model Account {
@@ -285,9 +285,44 @@ model PropRentalOffer {
   listing         Listing                  @relation(fields: [listingId], references: [id], onDelete: Cascade)
   bookings        PropRentalBooking[]
   unavailability  PropRentalUnavailability[]
-  basketItems     PropRentalBasketItem[]
+  setItems PropRentalSetItem[]
 
   @@index([isActive])
+}
+
+/// Production / art-department "set" — a hirer builds a list of props before sending hire requests.
+model PropRentalSet {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String   @default("Untitled set")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items PropRentalSetItem[]
+
+  @@index([userId])
+}
+
+model PropRentalSetItem {
+  id                       String              @id @default(cuid())
+  setId                    String
+  offerId                  String
+  hireStart                DateTime
+  hireEnd                  DateTime
+  fulfillment              PropRentalFulfillment
+  hirerOrgName             String?
+  productionNotes          String?             @db.Text
+  deliveryArrangementNotes String?             @db.Text
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  set   PropRentalSet   @relation(fields: [setId], references: [id], onDelete: Cascade)
+  offer PropRentalOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@unique([setId, offerId])
+  @@index([setId])
+  @@index([offerId])
 }
 
 /// Yard-maintained blackout dates (maintenance, private hire, etc.).
@@ -329,27 +364,6 @@ model PropRentalBooking {
   @@index([hirerId])
   @@index([status])
   @@index([hireStart, hireEnd])
-}
-
-model PropRentalBasketItem {
-  id                       String              @id @default(cuid())
-  userId                   String
-  offerId                  String
-  hireStart                DateTime
-  hireEnd                  DateTime
-  fulfillment              PropRentalFulfillment
-  hirerOrgName             String?
-  productionNotes          String?             @db.Text
-  deliveryArrangementNotes String?             @db.Text
-  createdAt                DateTime            @default(now())
-  updatedAt                DateTime            @updatedAt
-
-  user  User            @relation("PropRentalBasketUser", fields: [userId], references: [id], onDelete: Cascade)
-  offer PropRentalOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, offerId])
-  @@index([userId])
-  @@index([offerId])
 }
 
 model ListingFavorite {

@@ -2,11 +2,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db";
 
-type Props = { searchParams: Promise<{ q?: string; error?: string }> };
+type Props = { searchParams: Promise<{ q?: string; error?: string; setId?: string }> };
 
 export default async function PropYardSearchPage({ searchParams }: Props) {
-  const { q, error } = await searchParams;
+  const { q, error, setId: setIdParam } = await searchParams;
   const term = (q ?? "").trim();
+  const setId = (setIdParam ?? "").trim();
+  const offerQuery = setId ? `?setId=${encodeURIComponent(setId)}` : "";
 
   const offers = await prisma.propRentalOffer.findMany({
     where: {
@@ -47,11 +49,16 @@ export default async function PropYardSearchPage({ searchParams }: Props) {
       </p>
       <div className="mt-3">
         <Link
-          href="/prop-yard/basket"
+          href="/prop-yard/sets"
           className="text-sm font-medium text-driven-accent underline hover:text-driven-ink"
         >
-          Open request basket
+          My sets &amp; set builder
         </Link>
+        {setId ? (
+          <p className="mt-2 text-xs text-driven-muted">
+            Browsing with an active set — offer links will add to that set when you open them.
+          </p>
+        ) : null}
       </div>
 
       {error ? (
@@ -85,7 +92,7 @@ export default async function PropYardSearchPage({ searchParams }: Props) {
             const yard = o.listing.seller.sellerProfile;
             return (
               <li key={o.id} className="overflow-hidden rounded-xl border border-driven-warm bg-white shadow-sm">
-                <Link href={`/prop-yard/offers/${o.id}`} className="block">
+                <Link href={`/prop-yard/offers/${o.id}${offerQuery}`} className="block">
                   <div className="relative aspect-[4/3] bg-driven-warm">
                     {img ? (
                       <Image src={img} alt="" fill className="object-cover" unoptimized />

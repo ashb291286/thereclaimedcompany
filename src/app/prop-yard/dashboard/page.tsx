@@ -8,8 +8,8 @@ export default async function PropYardUserDashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/prop-yard/dashboard");
 
-  const [basketCount, myRequests, asYardOffers, me, sellerProfile, listings] = await Promise.all([
-    prisma.propRentalBasketItem.count({ where: { userId: session.user.id } }),
+  const [setItemCount, myRequests, asYardOffers, me, sellerProfile, listings] = await Promise.all([
+    prisma.propRentalSetItem.count({ where: { set: { userId: session.user.id } } }),
     prisma.propRentalBooking.findMany({
       where: { hirerId: session.user.id },
       include: { offer: { include: { listing: true } } },
@@ -36,20 +36,20 @@ export default async function PropYardUserDashboardPage() {
         Prop Yard dashboard
       </h2>
       <p className="mt-2 text-sm text-driven-muted">
-        Hire requests and basket for productions; {isSellerOrYard ? "your marketplace listings and prop hire below." : "open a seller profile on the marketplace to list props."}
+        Hire requests and set builder for productions; {isSellerOrYard ? "your marketplace listings and prop hire below." : "open a seller profile on the marketplace to list props."}
       </p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-driven-warm bg-white p-4">
           <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide text-driven-muted">
-            Basket
+            Items in your sets
           </p>
-          <p className="mt-1 text-2xl font-semibold text-driven-ink">{basketCount}</p>
+          <p className="mt-1 text-2xl font-semibold text-driven-ink">{setItemCount}</p>
           <Link
-            href="/prop-yard/basket"
+            href="/prop-yard/sets"
             className="mt-2 inline-block text-sm font-medium text-driven-accent underline hover:text-driven-ink"
           >
-            Open basket
+            My sets &amp; set builder
           </Link>
         </div>
         <div className="rounded-xl border border-driven-warm bg-white p-4">

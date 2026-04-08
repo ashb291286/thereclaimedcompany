@@ -18,6 +18,17 @@ execSync("npx prisma generate", { stdio: "inherit", shell: true, env });
 
 const first = runCaptured("npx prisma migrate deploy");
 if (first.code !== 0) {
+  if (
+    first.out.includes("P1002") ||
+    first.out.includes("advisory lock") ||
+    first.out.includes("pg_advisory_lock")
+  ) {
+    console.error(
+      "\n[vercel-build] Migrate failed waiting for Postgres advisory lock (often Neon pooler + 10s timeout).\n" +
+        "Add DIRECT_URL (or DATABASE_URL_UNPOOLED / PRISMA_MIGRATE_DATABASE_URL) in Vercel with your non-pooler\n" +
+        "Neon connection string. prisma.config.ts uses that for migrate; DATABASE_URL can stay pooled for the app.\n\n",
+    );
+  }
   if (!first.out.includes("P3005")) {
     console.error(first.out);
     process.exit(first.code ?? 1);

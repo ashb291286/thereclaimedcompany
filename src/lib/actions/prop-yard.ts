@@ -269,10 +269,46 @@ async function validateAvailability(offerId: string, hireStart: Date, hireEnd: D
   }
 }
 
-export async function upsertPropBasketItemAction(formData: FormData): Promise<void> {
+export async function createPropRentalSetAction(formData: FormData): Promise<void> {
   const session = await auth();
-  if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/prop-yard");
+  if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/prop-yard/sets");
+  const rawName = String(formData.get("name") ?? "").trim();
+  const name = rawName.slice(0, 120) || "Untitled set";
+  const set = await prisma.propRentalSet.create({
+    data: { userId: session.user.id, name },
+  });
+  redirect(`/prop-yard/set/${set.id}`);
+}
 
+export async function updatePropRentalSetNameAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/auth/signin");
+  const setId = String(formData.get("setId") ?? "").trim();
+  const rawName = String(formData.get("name") ?? "").trim();
+  if (!setId || !rawName) redirect("/prop-yard/sets");
+  await prisma.propRentalSet.updateMany({
+    where: { id: setId, userId: session.user.id },
+    data: { name: rawName.slice(0, 120) },
+  });
+  redirect(`/prop-yard/set/${setId}`);
+}
+
+export async function deletePropRentalSetAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/auth/signin");
+  const setId = String(formData.get("setId") ?? "").trim();
+  if (!setId) redirect("/prop-yard/sets");
+  await prisma.propRentalSet.deleteMany({
+    where: { id: setId, userId: session.user.id },
+  });
+  redirect("/prop-yard/sets");
+}
+
+export async function upsertPropSetItemAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/prop-yard/sets");
+
+  const setId = String(formData.get("setId") ?? "").trim();
   const offerId = String(formData.get("offerId") ?? "").trim();
   const startRaw = String(formData.get("hireStart") ?? "").trim();
   const endRaw = String(formData.get("hireEnd") ?? "").trim();
@@ -280,20 +316,31 @@ export async function upsertPropBasketItemAction(formData: FormData): Promise<vo
   const hirerOrgName = String(formData.get("hirerOrgName") ?? "").trim() || null;
   const productionNotes = String(formData.get("productionNotes") ?? "").trim() || null;
   const deliveryArrangementNotes = String(formData.get("deliveryArrangementNotes") ?? "").trim() || null;
-  const returnTo = String(formData.get("returnTo") ?? "/prop-yard/basket");
+  const returnTo = String(formData.get("returnTo") ?? `/prop-yard/set/${setId}`);
 
-  if (!offerId || !FULFILLMENTS.includes(fulfillment)) {
-    redirect(`/prop-yard/offers/${offerId}?error=` + encodeURIComponent("Complete all required fields."));
+  if (!setId || !offerId || !FULFILLMENTS.includes(fulfillment)) {
+    redirect(
+      `/prop-yard/offers/${offerId}?setId=${encodeURIComponent(setId)}&error=` +
+        encodeURIComponent("Complete all required fields.")
+    );
+  }
+
+  const set = await prisma.propRentalSet.findFirst({
+    where: { id: setId, userId: session.user.id },
+    select: { id: true },
+  });
+  if (!set) {
+    redirect("/prop-yard/sets?error=" + encodeURIComponent("That set was not found or you do not have access."));
   }
 
   const hireStart = startOfUtcDay(new Date(startRaw));
   const hireEnd = startOfUtcDay(new Date(endRaw));
   if (Number.isNaN(hireStart.getTime()) || Number.isNaN(hireEnd.getTime()) || hireEnd < hireStart) {
-    redirect(`/prop-yard/offers/${offerId}?error=` + encodeURIComponent("Choose valid hire dates."));
+    redirect(`/prop-yard/offers/${offerId}?setId=${encodeURIComponent(setId)}&error=` + encodeURIComponent("Choose valid hire dates."));
   }
   const days = inclusiveHireDays(hireStart, hireEnd);
   if (days > 365) {
-    redirect(`/prop-yard/offers/${offerId}?error=` + encodeURIComponent("Maximum hire window is 365 days."));
+    redirect(`/prop-yard/offers/${offerId}?setId=${encodeURIComponent(setId)}&error=` + encodeURIComponent("Maximum hire window is 365 days."));
   }
 
   const offer = await prisma.propRentalOffer.findFirst({
@@ -308,20 +355,20 @@ export async function upsertPropBasketItemAction(formData: FormData): Promise<vo
     redirect("/prop-yard/search?error=" + encodeURIComponent("This prop is no longer available for hire."));
   }
   if (offer.listing.sellerId === session.user.id) {
-    redirect(`/prop-yard/offers/${offerId}?error=` + encodeURIComponent("You cannot hire your own stock."));
+    redirect(`/prop-yard/offers/${offerId}?setId=${encodeURIComponent(setId)}&error=` + encodeURIComponent("You cannot hire your own stock."));
   }
   const weeks = billableWeeksFromRange(hireStart, hireEnd);
   if (weeks < offer.minimumHireWeeks) {
     redirect(
-      `/prop-yard/offers/${offerId}?error=` +
+      `/prop-yard/offers/${offerId}?setId=${encodeURIComponent(setId)}&error=` +
         encodeURIComponent(`Minimum hire is ${offer.minimumHireWeeks} week(s) for this prop.`)
     );
   }
 
-  await prisma.propRentalBasketItem.upsert({
-    where: { userId_offerId: { userId: session.user.id, offerId } },
+  await prisma.propRentalSetItem.upsert({
+    where: { setId_offerId: { setId, offerId } },
     create: {
-      userId: session.user.id,
+      setId,
       offerId,
       hireStart,
       hireEnd,
@@ -343,33 +390,47 @@ export async function upsertPropBasketItemAction(formData: FormData): Promise<vo
   redirect(returnTo);
 }
 
-export async function removePropBasketItemAction(formData: FormData): Promise<void> {
+export async function removePropSetItemAction(formData: FormData): Promise<void> {
   const session = await auth();
-  if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/prop-yard/basket");
-  const basketItemId = String(formData.get("basketItemId") ?? "").trim();
-  if (!basketItemId) redirect("/prop-yard/basket");
-  await prisma.propRentalBasketItem.deleteMany({
-    where: { id: basketItemId, userId: session.user.id },
+  if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/prop-yard/sets");
+  const setItemId = String(formData.get("setItemId") ?? "").trim();
+  const setId = String(formData.get("setId") ?? "").trim();
+  if (!setItemId || !setId) redirect("/prop-yard/sets");
+  await prisma.propRentalSetItem.deleteMany({
+    where: {
+      id: setItemId,
+      set: { id: setId, userId: session.user.id },
+    },
   });
-  redirect("/prop-yard/basket");
+  redirect(`/prop-yard/set/${setId}`);
 }
 
-export async function submitPropBasketRequestsAction(formData: FormData): Promise<void> {
+export async function submitPropSetRequestsAction(formData: FormData): Promise<void> {
   const session = await auth();
-  if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/prop-yard/basket");
+  if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/prop-yard/sets");
+  const setId = String(formData.get("setId") ?? "").trim();
   const contractOk = formData.get("contractAccepted") === "on";
+  if (!setId) redirect("/prop-yard/sets?error=" + encodeURIComponent("Missing set."));
   if (!contractOk) {
-    redirect("/prop-yard/basket?error=" + encodeURIComponent("You must accept the Prop Yard hire terms."));
+    redirect(`/prop-yard/set/${setId}?error=` + encodeURIComponent("You must accept the Prop Yard hire terms."));
   }
 
-  const items = await prisma.propRentalBasketItem.findMany({
-    where: { userId: session.user.id },
+  const set = await prisma.propRentalSet.findFirst({
+    where: { id: setId, userId: session.user.id },
+    select: { id: true },
+  });
+  if (!set) redirect("/prop-yard/sets?error=" + encodeURIComponent("Set not found."));
+
+  const items = await prisma.propRentalSetItem.findMany({
+    where: { setId },
     include: {
       offer: { include: { listing: true } },
     },
     orderBy: { createdAt: "asc" },
   });
-  if (items.length === 0) redirect("/prop-yard/basket?error=" + encodeURIComponent("Your basket is empty."));
+  if (items.length === 0) {
+    redirect(`/prop-yard/set/${setId}?error=` + encodeURIComponent("This set has no props yet."));
+  }
 
   let created = 0;
   const affectedYards = new Set<string>();
@@ -416,15 +477,15 @@ export async function submitPropBasketRequestsAction(formData: FormData): Promis
       created += 1;
     }
 
-    await tx.propRentalBasketItem.deleteMany({
-      where: { userId: session.user.id },
+    await tx.propRentalSetItem.deleteMany({
+      where: { setId },
     });
   });
 
   if (created === 0) {
-    redirect("/prop-yard/basket?error=" + encodeURIComponent("No requests were sent. Check dates/minimum periods."));
+    redirect(
+      `/prop-yard/set/${setId}?error=` + encodeURIComponent("No requests were sent. Check dates/minimum periods.")
+    );
   }
-  redirect(
-    `/prop-yard/hires/success?sent=${created}&yards=${affectedYards.size}`
-  );
+  redirect(`/prop-yard/hires/success?sent=${created}&yards=${affectedYards.size}`);
 }

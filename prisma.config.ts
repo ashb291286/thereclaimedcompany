@@ -3,12 +3,28 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+/**
+ * Connection URL for Prisma CLI (`migrate deploy`, introspect, etc.).
+ * On Neon (and similar), the pooled `DATABASE_URL` host contains `-pooler`; using it for
+ * migrations often hits P1002 / advisory-lock timeouts. Use a direct (non-pooler) URL here.
+ * Runtime app code still uses `DATABASE_URL` in `src/lib/db.ts`.
+ */
+function prismaCliDatabaseUrl(): string {
+  return (
+    process.env["DIRECT_URL"] ??
+    process.env["DATABASE_URL_UNPOOLED"] ??
+    process.env["PRISMA_MIGRATE_DATABASE_URL"] ??
+    process.env["DATABASE_URL"] ??
+    ""
+  );
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: prismaCliDatabaseUrl(),
   },
 });

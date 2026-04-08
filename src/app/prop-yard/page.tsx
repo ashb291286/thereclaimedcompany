@@ -52,10 +52,10 @@ export default async function PropYardHomePage() {
             Prop dashboard
           </Link>
           <Link
-            href="/prop-yard/basket"
+            href="/prop-yard/sets"
             className="border border-driven-warm px-6 py-3 font-[family-name:var(--font-driven-mono)] text-xs uppercase tracking-wide text-driven-ink hover:border-driven-ink"
           >
-            Request basket
+            My sets
           </Link>
         </div>
       </section>
@@ -101,7 +101,7 @@ export default async function PropYardHomePage() {
         <div className="border border-driven-warm bg-white px-6 py-8">
           <h3 className="font-[family-name:var(--font-driven-display)] text-lg text-driven-ink">For productions</h3>
           <p className="mt-3 text-sm leading-relaxed text-driven-muted">
-            Search props, add them to a request basket, and send hire enquiries grouped by yard. Each request is a{" "}
+            Create a set, search props, add lines to your set, then send hire enquiries grouped by yard. Each request is a{" "}
             <strong className="text-driven-ink">rental</strong> with agreed dates, fulfillment (collection / delivery /
             return), and acceptance of hire terms (v{PROP_YARD_TERMS_VERSION}) — separate from the sale marketplace.
           </p>
