@@ -7,15 +7,17 @@
  * P3009 (failed migration in DB): set env `PRISMA_RESOLVE_ROLLED_BACK` to the migration
  * folder name for one build, or run `npm run db:migrate:resolve:listing-visible-rolled-back`
  * locally. For the historical duplicate-column failure on
- * `20260408120000_listing_visible_on_marketplace`, we auto-resolve once and retry deploy
- * (migration SQL is `IF NOT EXISTS`).
+ * Known idempotent migrations below: we auto `migrate resolve --rolled-back` when P3009
+ * mentions one of them, then retry `migrate deploy`.
  */
 import { execSync, spawnSync } from "node:child_process";
 
 const env = process.env;
 
-/** Stuck on production after duplicate column error; current SQL is idempotent. */
-const AUTO_RESOLVE_ROLLED_BACK_IF_P3009 = "20260408120000_listing_visible_on_marketplace";
+const AUTO_RESOLVE_P3009_MIGRATIONS = [
+  "20260408120000_listing_visible_on_marketplace",
+  "20260408140000_prop_rental_set_builder",
+];
 
 function runCaptured(cmd) {
   const r = spawnSync(cmd, { shell: true, encoding: "utf8", env });
@@ -63,20 +65,19 @@ if (deploy.code !== 0) {
       env,
     });
     deploy = runCaptured("npx prisma migrate deploy");
-  } else if (
-    p3009 &&
-    deploy.out.includes(AUTO_RESOLVE_ROLLED_BACK_IF_P3009) &&
-    process.env.VERCEL_SKIP_AUTO_MIGRATE_RESOLVE !== "1"
-  ) {
-    console.error(
-      `\n[vercel-build] P3009: auto-resolve rolled-back for ${AUTO_RESOLVE_ROLLED_BACK_IF_P3009} (known stuck migration), then retry migrate deploy…\n`,
-    );
-    execSync(`npx prisma migrate resolve --rolled-back "${AUTO_RESOLVE_ROLLED_BACK_IF_P3009}"`, {
-      stdio: "inherit",
-      shell: true,
-      env,
-    });
-    deploy = runCaptured("npx prisma migrate deploy");
+  } else if (p3009 && process.env.VERCEL_SKIP_AUTO_MIGRATE_RESOLVE !== "1") {
+    const stuck = AUTO_RESOLVE_P3009_MIGRATIONS.find((n) => deploy.out.includes(n));
+    if (stuck) {
+      console.error(
+        `\n[vercel-build] P3009: auto-resolve rolled-back for ${stuck} (known stuck / idempotent migration), then retry migrate deploy…\n`,
+      );
+      execSync(`npx prisma migrate resolve --rolled-back "${stuck}"`, {
+        stdio: "inherit",
+        shell: true,
+        env,
+      });
+      deploy = runCaptured("npx prisma migrate deploy");
+    }
   }
 
   if (deploy.code === 0) {
