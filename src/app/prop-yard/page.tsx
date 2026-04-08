@@ -34,8 +34,9 @@ export default async function PropYardHomePage() {
           The Prop Yard
         </h1>
         <p className="mt-6 max-w-xl font-[family-name:var(--font-driven-body)] text-lg text-driven-muted">
-          Business-to-business hire of yard stock for film and TV — layered on your marketplace listings, not a second
-          shopfront.
+          For art departments, prop buyers, and productions: hire authentic reclaimed pieces from real UK yards — by the
+          week, with dates and collection or delivery agreed directly with each supplier. Separate from buying on our
+          marketplace, built for how shoots actually run.
         </p>
         <div className="mt-10 flex flex-wrap gap-4">
           <Link
@@ -64,17 +65,17 @@ export default async function PropYardHomePage() {
           Featured props for hire
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-driven-muted">
-          Drawn from real reclamation-yard inventory. Hire is separate from buying on the main marketplace — weekly
-          rates, dates, and logistics agreed with each yard.
+          Curated from live yard stock — not generic prop-house catalogues. Check weekly rates, minimum hire, and open
+          the listing to add dates to your basket; each yard handles logistics and confirmation with you.
         </p>
         {featured.length === 0 ? (
           <div className="mt-8 border border-driven-warm bg-white p-8 text-center text-sm text-driven-muted">
-            <p>No active prop listings yet.</p>
-            <p className="mt-3">
+            <p>No props available for hire yet — yards are still opting in. Try a search or check back soon.</p>
+            <p className="mt-3 text-xs">
+              Supplying a yard?{" "}
               <Link href="/prop-yard/dashboard" className="text-driven-accent underline">
-                Open the prop dashboard
-              </Link>{" "}
-              to list from your marketplace inventory.
+                Prop dashboard
+              </Link>
             </p>
           </div>
         ) : (
