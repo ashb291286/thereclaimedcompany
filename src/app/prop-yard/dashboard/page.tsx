@@ -129,6 +129,11 @@ export default async function PropYardUserDashboardPage() {
                     )}
                     {l.propRentalOffer ? <div className="absolute inset-0 bg-white/45" /> : null}
                     <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+                      {!l.visibleOnMarketplace ? (
+                        <span className="rounded-full bg-driven-muted px-2 py-1 font-[family-name:var(--font-driven-mono)] text-[10px] font-semibold uppercase tracking-wide text-white">
+                          Hire-only
+                        </span>
+                      ) : null}
                       {l.propRentalOffer ? (
                         <span className="rounded-full bg-driven-ink px-2 py-1 font-[family-name:var(--font-driven-mono)] text-[10px] font-semibold uppercase tracking-wide text-driven-paper">
                           In Prop Yard

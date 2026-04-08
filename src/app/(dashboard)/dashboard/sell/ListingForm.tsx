@@ -112,12 +112,14 @@ export function ListingForm({
   listing,
   sellerDisplayName,
   materialOptions,
+  isReclamationYard = false,
 }: {
   categories: Category[];
   defaultPostcode: string;
   listing?: ListingWithCategory;
   sellerDisplayName?: string;
   materialOptions: MaterialOption[];
+  isReclamationYard?: boolean;
 }) {
   const [imageUrls, setImageUrls] = useState<string[]>(listing?.images ?? []);
   const [uploading, setUploading] = useState(false);
@@ -487,6 +489,24 @@ export function ListingForm({
             </span>
           </label>
         )}
+        {listingKind === "sell" && !freeToCollector && isReclamationYard ? (
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-800">
+            <input
+              type="checkbox"
+              name="visibleOnMarketplace"
+              value="on"
+              defaultChecked={listing?.visibleOnMarketplace ?? true}
+              className="rounded border-zinc-300 text-brand"
+            />
+            <span>
+              <span className="font-medium">Show on main marketplace</span>
+              <span className="mt-0.5 block text-xs text-zinc-600">
+                Untick for <strong>hire-only</strong> stock: hidden from browse, search, and your public yard shop —
+                list it on The Prop Yard separately (or use &quot;Add hire-only prop&quot; in the yard dashboard).
+              </span>
+            </span>
+          </label>
+        ) : null}
         {listingKind === "auction" && (
           <div className="space-y-3">
             <div>

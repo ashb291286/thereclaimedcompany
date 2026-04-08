@@ -38,6 +38,7 @@ export async function POST(req: Request) {
   const listings = await prisma.listing.findMany({
     where: {
       status: "active",
+      visibleOnMarketplace: true,
       NOT: { images: { equals: [] } },
     },
     select: { id: true, images: true },

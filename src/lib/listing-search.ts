@@ -22,7 +22,7 @@ export type ListingSearchParams = {
 function buildBaseWhere(
   params: Pick<ListingSearchParams, "q" | "categoryId" | "condition" | "sellerType">
 ): Prisma.ListingWhereInput {
-  const where: Prisma.ListingWhereInput = { status: "active" };
+  const where: Prisma.ListingWhereInput = { status: "active", visibleOnMarketplace: true };
   if (params.q?.trim()) {
     where.OR = [
       { title: { contains: params.q.trim(), mode: "insensitive" } },

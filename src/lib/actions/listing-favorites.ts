@@ -14,6 +14,7 @@ export async function toggleListingFavorite(listingId: string) {
     where: {
       id: listingId,
       status: { in: ["active", "payment_pending"] },
+      visibleOnMarketplace: true,
     },
     select: { id: true },
   });

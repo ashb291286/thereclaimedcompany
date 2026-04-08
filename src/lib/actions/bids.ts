@@ -17,6 +17,9 @@ export async function placeBid(listingId: string, bidPounds: number) {
     where: { id: listingId, status: "active" },
   });
   if (!listing) return { ok: false as const, error: "Listing not available." };
+  if (!listing.visibleOnMarketplace) {
+    return { ok: false as const, error: "This auction is not available." };
+  }
   if (listing.listingKind !== "auction") {
     return { ok: false as const, error: "This listing is not an auction." };
   }

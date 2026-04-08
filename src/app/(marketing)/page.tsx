@@ -7,7 +7,7 @@ import { CarbonBadge } from "@/components/CarbonBadge";
 
 export default async function HomePage() {
   const listings = await prisma.listing.findMany({
-    where: { status: "active" },
+    where: { status: "active", visibleOnMarketplace: true },
     orderBy: [{ boostedUntil: "desc" }, { createdAt: "desc" }],
     take: 12,
     include: { category: true },

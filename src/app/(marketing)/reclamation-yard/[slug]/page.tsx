@@ -75,7 +75,7 @@ export default async function ReclamationYardPublicPage({ params }: Props) {
       user: {
         include: {
           listings: {
-            where: { status: "active" },
+            where: { status: "active", visibleOnMarketplace: true },
             orderBy: { updatedAt: "desc" },
             include: { category: true },
           },

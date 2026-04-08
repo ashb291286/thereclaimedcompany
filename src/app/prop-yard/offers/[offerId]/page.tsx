@@ -121,12 +121,18 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
                 {offer.listing.postcode ? ` · ${offer.listing.postcode}` : ""}
               </p>
             ) : null}
-            <Link
-              href={`/listings/${offer.listing.id}`}
-              className="mt-3 inline-block text-sm font-medium text-driven-accent underline hover:text-driven-ink"
-            >
-              View marketplace listing (purchase separately)
-            </Link>
+            {offer.listing.visibleOnMarketplace ? (
+              <Link
+                href={`/listings/${offer.listing.id}`}
+                className="mt-3 inline-block text-sm font-medium text-driven-accent underline hover:text-driven-ink"
+              >
+                View marketplace listing (purchase separately)
+              </Link>
+            ) : (
+              <p className="mt-3 text-xs text-driven-muted">
+                This prop is <strong>hire-only</strong> — not listed for sale on the marketplace.
+              </p>
+            )}
           </div>
 
           {!isOwner ? (

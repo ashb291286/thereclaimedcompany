@@ -16,7 +16,7 @@ export default async function SellerPage({
     include: {
       sellerProfile: true,
       listings: {
-        where: { status: "active" },
+        where: { status: "active", visibleOnMarketplace: true },
         orderBy: { updatedAt: "desc" },
         include: { category: true },
       },

@@ -26,6 +26,11 @@ export default async function EditListingPage({
     where: { userId: session.user.id },
   });
 
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
   const [categories, materialOpts] = await Promise.all([
     prisma.category.findMany({
       where: { parentId: null },
@@ -48,6 +53,7 @@ export default async function EditListingPage({
         listing={listing}
         sellerDisplayName={sellerProfile?.displayName}
         materialOptions={materialOptions}
+        isReclamationYard={dbUser?.role === "reclamation_yard"}
       />
     </div>
   );

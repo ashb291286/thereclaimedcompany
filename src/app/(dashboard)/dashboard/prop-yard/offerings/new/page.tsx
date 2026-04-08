@@ -33,6 +33,7 @@ export default async function NewPropRentalOfferingPage({ searchParams }: Props)
       id: true,
       title: true,
       price: true,
+      visibleOnMarketplace: true,
       propRentalOffer: { select: { id: true, minimumHireWeeks: true, weeklyHirePence: true } },
     },
   });
@@ -46,8 +47,13 @@ export default async function NewPropRentalOfferingPage({ searchParams }: Props)
       </Link>
       <h1 className="mt-4 text-2xl font-semibold text-zinc-900">Add listing for hire</h1>
       <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-        Pick an <strong>active fixed-price</strong> listing. Default weekly hire is <strong>{pct}%</strong> of your
-        current list price — edit before saving. One Prop Yard offer per listing (updates replace the previous).
+        Pick an <strong>active fixed-price</strong> listing (including hire-only items). Default weekly hire is{" "}
+        <strong>{pct}%</strong> of your reference list price — edit before saving. For new stock that isn&apos;t on
+        the marketplace, use{" "}
+        <Link href="/dashboard/prop-yard/props/new" className="font-medium text-brand underline">
+          Add hire-only prop
+        </Link>
+        .
       </p>
 
       {error ? (
@@ -56,11 +62,15 @@ export default async function NewPropRentalOfferingPage({ searchParams }: Props)
 
       {listings.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-600">
-          You need at least one active buy-now listing.{" "}
-          <Link href="/dashboard/sell" className="font-medium text-brand underline">
-            List an item
+          You need at least one active fixed-price item.{" "}
+          <Link href="/dashboard/prop-yard/props/new" className="font-medium text-brand underline">
+            Add hire-only prop
           </Link>{" "}
-          first.
+          or{" "}
+          <Link href="/dashboard/sell" className="font-medium text-brand underline">
+            list on the marketplace
+          </Link>
+          .
         </p>
       ) : (
         <ul className="mt-8 space-y-6">
@@ -82,7 +92,14 @@ export default async function NewPropRentalOfferingPage({ searchParams }: Props)
                 }`}
               >
                 <p className="font-medium text-zinc-900">{l.title}</p>
-                <p className="text-xs text-zinc-500">List price £{(l.price / 100).toFixed(2)}</p>
+                <p className="text-xs text-zinc-500">
+                  List price £{(l.price / 100).toFixed(2)}
+                  {!l.visibleOnMarketplace ? (
+                    <span className="ml-2 rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-700">
+                      Hire-only
+                    </span>
+                  ) : null}
+                </p>
                 <form action={createPropRentalOfferAction} className="mt-4 space-y-3">
                   <input type="hidden" name="listingId" value={l.id} />
                   <div>

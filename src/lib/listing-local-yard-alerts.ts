@@ -15,6 +15,7 @@ export async function syncListingLocalYardAlerts(listingId: string): Promise<voi
       listingKind: true,
       freeToCollector: true,
       notifyLocalYards: true,
+      visibleOnMarketplace: true,
       lat: true,
       lng: true,
       title: true,
@@ -24,6 +25,7 @@ export async function syncListingLocalYardAlerts(listingId: string): Promise<voi
 
   const eligible =
     listing.status === "active" &&
+    listing.visibleOnMarketplace &&
     listing.notifyLocalYards &&
     listing.listingKind === "sell" &&
     !listing.freeToCollector &&

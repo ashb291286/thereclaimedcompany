@@ -275,6 +275,11 @@ export async function createListing(formData: FormData) {
   });
   if (!sellerProfile) redirect("/dashboard/onboarding");
 
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
   const condition = formData.get("condition") as Condition;
@@ -301,6 +306,11 @@ export async function createListing(formData: FormData) {
     redirect("/dashboard/sell?error=" + encodeURIComponent(parsed.message));
   }
   const { listingKind, freeToCollector, price, auctionEndsAt, auctionReservePence } = parsed.data;
+
+  const visibleOnMarketplace =
+    dbUser?.role === "reclamation_yard" && listingKind === "sell" && !freeToCollector
+      ? formData.get("visibleOnMarketplace") === "on"
+      : true;
 
   const pricingParsed = parseListingPricing(formData, { listingKind, freeToCollector, publish });
   if (!pricingParsed.ok) {
@@ -361,6 +371,7 @@ export async function createListing(formData: FormData) {
       listingKind,
       freeToCollector,
       notifyLocalYards,
+      visibleOnMarketplace,
       offersDelivery,
       deliveryNotes,
       deliveryCostPence,
@@ -395,6 +406,11 @@ export async function updateListing(id: string, formData: FormData) {
     where: { id, sellerId: session.user.id },
   });
   if (!listing) redirect("/dashboard?error=Listing+not+found");
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
 
   const editUrl = `/dashboard/listings/${id}/edit`;
   const title = formData.get("title") as string;
@@ -488,6 +504,7 @@ export async function updateListing(id: string, formData: FormData) {
       listingKind,
       freeToCollector,
       notifyLocalYards,
+      visibleOnMarketplace,
       offersDelivery,
       deliveryNotes,
       deliveryCostPence,

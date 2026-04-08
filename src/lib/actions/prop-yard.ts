@@ -3,6 +3,11 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { slugifyCategoryName } from "@/lib/category-suggest";
+import { lookupUkPostcode } from "@/lib/postcode-uk";
+import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
+import { syncListingLocalYardAlerts } from "@/lib/listing-local-yard-alerts";
+import { ListingPricingMode, ListingStatus, type Condition } from "@/generated/prisma/client";
 import {
   billableWeeksFromRange,
   inclusiveHireDays,
@@ -16,6 +21,16 @@ const FULFILLMENTS: PropRentalFulfillment[] = [
   "COLLECT_AND_RETURN",
   "YARD_DELIVERS_AND_COLLECTS",
   "ARRANGE_SEPARATELY",
+];
+
+const PROP_ONLY_CONDITIONS: Condition[] = [
+  "like_new",
+  "used",
+  "worn",
+  "parts_not_working",
+  "refurbished",
+  "upcycled",
+  "collectable",
 ];
 
 async function assertYard() {
@@ -81,6 +96,107 @@ export async function createPropRentalOfferAction(formData: FormData): Promise<v
     },
   });
 
+  redirect("/dashboard/prop-yard");
+}
+
+export async function createPropOnlyListingAndOfferAction(formData: FormData): Promise<void> {
+  const userId = await assertYard();
+  const bail = (msg: string) =>
+    redirect("/dashboard/prop-yard/props/new?error=" + encodeURIComponent(msg));
+
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const condition = String(formData.get("condition") ?? "").trim() as Condition;
+  if (!title || !description) bail("Title and description are required.");
+  if (!PROP_ONLY_CONDITIONS.includes(condition)) bail("Choose a valid condition.");
+
+  const newCategoryName = String(formData.get("newCategoryName") ?? "").trim();
+  let categoryId = String(formData.get("categoryId") ?? "").trim();
+  if (newCategoryName.length > 0) {
+    const slug = slugifyCategoryName(newCategoryName);
+    if (!slug) bail("Suggested category name is not valid.");
+    const cat = await prisma.category.upsert({
+      where: { slug },
+      create: { name: newCategoryName.slice(0, 120), slug },
+      update: { name: newCategoryName.slice(0, 120) },
+    });
+    categoryId = cat.id;
+  } else if (!categoryId) {
+    bail("Category is required.");
+  } else {
+    const exists = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!exists) bail("Invalid category.");
+  }
+
+  const postcodeRaw = String(formData.get("postcode") ?? "").trim();
+  if (!postcodeRaw) bail("Postcode is required.");
+  const resolvedPostcode = await lookupUkPostcode(postcodeRaw);
+  if (!resolvedPostcode) bail("Use a full valid UK postcode.");
+
+  const imagesStr = String(formData.get("images") ?? "").trim();
+  const images = imagesStr ? imagesStr.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  if (images.length === 0) bail("Add at least one image URL (upload on List an item, then paste URLs).");
+
+  const listPriceGbp = parseFloat(String(formData.get("listPriceGbp") ?? "").trim());
+  const listPricePence = Math.round(listPriceGbp * 100);
+  if (!Number.isFinite(listPriceGbp) || listPricePence < STRIPE_MIN_AMOUNT_PENCE) {
+    bail(
+      `Reference list price must be at least £${(STRIPE_MIN_AMOUNT_PENCE / 100).toFixed(2)} (used for hire suggestions, not a live checkout price).`
+    );
+  }
+
+  const weeklyGbp = parseFloat(String(formData.get("weeklyHireGbp") ?? "").trim());
+  const weeklyPence = Math.round(weeklyGbp * 100);
+  const minimumHireWeeks = parseInt(String(formData.get("minimumHireWeeks") ?? "1"), 10);
+  const yardHireNotes = String(formData.get("yardHireNotes") ?? "").trim() || null;
+
+  if (
+    !Number.isFinite(weeklyGbp) ||
+    weeklyPence < 100 ||
+    !Number.isFinite(minimumHireWeeks) ||
+    minimumHireWeeks < 1 ||
+    minimumHireWeeks > 52
+  ) {
+    bail("Weekly hire must be at least £1 and minimum weeks between 1 and 52.");
+  }
+
+  const listing = await prisma.$transaction(async (tx) => {
+    const l = await tx.listing.create({
+      data: {
+        sellerId: userId,
+        title,
+        description,
+        price: listPricePence,
+        condition,
+        categoryId,
+        postcode: resolvedPostcode.postcode,
+        lat: resolvedPostcode.lat,
+        lng: resolvedPostcode.lng,
+        adminDistrict: resolvedPostcode.adminDistrict,
+        region: resolvedPostcode.region,
+        images,
+        status: ListingStatus.active,
+        listingKind: "sell",
+        freeToCollector: false,
+        visibleOnMarketplace: false,
+        notifyLocalYards: false,
+        offersDelivery: false,
+        pricingMode: ListingPricingMode.LOT,
+      },
+    });
+    await tx.propRentalOffer.create({
+      data: {
+        listingId: l.id,
+        weeklyHirePence: weeklyPence,
+        minimumHireWeeks,
+        yardHireNotes,
+        isActive: true,
+      },
+    });
+    return l;
+  });
+
+  await syncListingLocalYardAlerts(listing.id);
   redirect("/dashboard/prop-yard");
 }
 

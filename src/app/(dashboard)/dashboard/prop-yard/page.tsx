@@ -31,16 +31,25 @@ export default async function DashboardPropYardPage() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">The Prop Yard</h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-            Offer items from your <strong>existing marketplace listings</strong> for weekly film/TV hire. We suggest{" "}
-            <strong>{pct}% of list price per week</strong> as a starting rate — you set the final figure.
+            Offer items from your <strong>marketplace listings</strong> for weekly film/TV hire, or add{" "}
+            <strong>hire-only</strong> stock that never appears in marketplace search. We suggest{" "}
+            <strong>{pct}% of reference list price per week</strong> as a starting rate — you set the final figure.
           </p>
         </div>
-        <Link
-          href="/dashboard/prop-yard/offerings/new"
-          className="rounded-lg bg-amber-900 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-950"
-        >
-          Add listing to Prop Yard
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/dashboard/prop-yard/props/new"
+            className="rounded-lg border border-amber-900 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-50"
+          >
+            Add hire-only prop
+          </Link>
+          <Link
+            href="/dashboard/prop-yard/offerings/new"
+            className="rounded-lg bg-amber-900 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-950"
+          >
+            List existing item for hire
+          </Link>
+        </div>
       </div>
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-6">
@@ -61,6 +70,11 @@ export default async function DashboardPropYardPage() {
                     <span className={o.listing.status === "active" ? "text-emerald-700" : "text-amber-800"}>
                       {o.listing.status}
                     </span>
+                    {!o.listing.visibleOnMarketplace ? (
+                      <span className="ml-2 rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-700">
+                        Hire-only
+                      </span>
+                    ) : null}
                   </p>
                   <p className="text-xs text-zinc-500">
                     Minimum {o.minimumHireWeeks} week{o.minimumHireWeeks === 1 ? "" : "s"}

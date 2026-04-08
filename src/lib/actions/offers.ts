@@ -17,6 +17,9 @@ export async function submitOffer(listingId: string, offeredPricePounds: number,
     include: { seller: true },
   });
   if (!listing) return { ok: false as const, error: "Listing not available." };
+  if (!listing.visibleOnMarketplace) {
+    return { ok: false as const, error: "This item is not open to offers on the marketplace." };
+  }
   if (listing.sellerId === session.user.id) {
     return { ok: false as const, error: "You cannot offer on your own listing." };
   }

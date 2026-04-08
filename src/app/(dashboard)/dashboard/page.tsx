@@ -343,6 +343,11 @@ export default async function DashboardPage({
                   )}
                   {l.propRentalOffer ? <div className="absolute inset-0 bg-white/45" /> : null}
                   <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+                    {!l.visibleOnMarketplace ? (
+                      <span className="rounded-full bg-zinc-700 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        Hire-only
+                      </span>
+                    ) : null}
                     {l.propRentalOffer ? (
                       <span className="rounded-full bg-amber-900 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
                         In Prop Yard

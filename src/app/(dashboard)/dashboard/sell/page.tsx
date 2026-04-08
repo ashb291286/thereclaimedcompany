@@ -20,6 +20,11 @@ export default async function SellPage({
   });
   if (!sellerProfile) redirect("/dashboard/onboarding");
 
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
   const [categories, materialOpts] = await Promise.all([
     prisma.category.findMany({
       where: { parentId: null },
@@ -57,6 +62,7 @@ export default async function SellPage({
         defaultPostcode={sellerProfile.postcode}
         sellerDisplayName={sellerProfile.displayName}
         materialOptions={materialOptions}
+        isReclamationYard={dbUser?.role === "reclamation_yard"}
       />
     </div>
   );

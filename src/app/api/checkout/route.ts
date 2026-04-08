@@ -46,6 +46,12 @@ export async function POST(req: Request) {
   if (!listing) {
     return NextResponse.json({ error: "Listing not found or not available" }, { status: 404 });
   }
+  if (!listing.visibleOnMarketplace) {
+    return NextResponse.json(
+      { error: "This item is not for sale on the marketplace — hire it via The Prop Yard if available." },
+      { status: 400 }
+    );
+  }
   if (listing.sellerId === session.user.id) {
     return NextResponse.json({ error: "Cannot buy your own listing" }, { status: 400 });
   }

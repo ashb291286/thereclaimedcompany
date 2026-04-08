@@ -34,9 +34,22 @@ export async function generateMetadata({
   const { id } = await params;
   const listing = await prisma.listing.findUnique({
     where: { id, status: "active" },
-    select: { title: true, description: true, carbonImpactJson: true, carbonSavedKg: true },
+    select: {
+      title: true,
+      description: true,
+      carbonImpactJson: true,
+      carbonSavedKg: true,
+      visibleOnMarketplace: true,
+    },
   });
   if (!listing) return { title: "Listing" };
+  if (!listing.visibleOnMarketplace) {
+    return {
+      title: listing.title,
+      description: "Hire-only listing — not indexed for marketplace search.",
+      robots: { index: false, follow: false },
+    };
+  }
   const carbonMeta = parseStoredCarbonImpact(listing);
   const desc =
     carbonMeta != null
@@ -84,6 +97,9 @@ export default async function ListingPage({
   if (!listing) notFound();
 
   const isOwner = session?.user?.id === listing.sellerId;
+  if (!listing.visibleOnMarketplace && !isOwner) {
+    notFound();
+  }
 
   const topBid = await prisma.bid.findFirst({
     where: { listingId: id },
@@ -226,6 +242,16 @@ export default async function ListingPage({
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:max-w-7xl lg:py-10">
+      {isOwner && !listing.visibleOnMarketplace ? (
+        <p className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <strong>Hire-only</strong> — this item is hidden from marketplace search and your public yard shop.
+          Productions find it through{" "}
+          <Link href="/prop-yard/search" className="font-medium text-amber-900 underline">
+            The Prop Yard
+          </Link>
+          .
+        </p>
+      ) : null}
       <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-500">
         <Link href="/" className="hover:text-zinc-800">
           Home
