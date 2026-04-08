@@ -8,6 +8,7 @@ import { yardSocialFromForm } from "@/lib/yard-social";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
+import { lookupUkPostcode } from "@/lib/postcode-uk";
 
 function normalizeWebsiteUrl(raw: string | null | undefined): string | null {
   const t = raw?.trim();
@@ -36,6 +37,18 @@ export async function updateYardProfileAction(formData: FormData): Promise<void>
   const slugResult = await resolveYardSlugForUpdate(prisma, slugRaw ?? "", session.user.id);
   if (!slugResult.ok) {
     redirect("/dashboard/seller-profile?error=" + encodeURIComponent(slugResult.error));
+  }
+
+  const postcodeRaw = String(formData.get("postcode") ?? "").trim();
+  if (!postcodeRaw) {
+    redirect("/dashboard/seller-profile?error=" + encodeURIComponent("UK postcode is required so buyers and search can find your yard."));
+  }
+  const resolvedPostcode = await lookupUkPostcode(postcodeRaw);
+  if (!resolvedPostcode) {
+    redirect(
+      "/dashboard/seller-profile?error=" +
+        encodeURIComponent("Enter a full valid UK postcode (e.g. SW1A 1AA).")
+    );
   }
 
   const scheduleRaw = formData.get("openingHoursSchedule") as string | null;
@@ -72,6 +85,11 @@ export async function updateYardProfileAction(formData: FormData): Promise<void>
     data: {
       displayName,
       businessName: (formData.get("businessName") as string)?.trim() || null,
+      postcode: resolvedPostcode.postcode,
+      lat: resolvedPostcode.lat,
+      lng: resolvedPostcode.lng,
+      adminDistrict: resolvedPostcode.adminDistrict,
+      region: resolvedPostcode.region,
       yardSlug: slugResult.slug,
       yardTagline,
       yardAbout,

@@ -9,6 +9,7 @@ import { scheduleFromDbField } from "@/lib/opening-hours";
 import { parseYardSocialJson } from "@/lib/yard-social";
 import { publicSellerPath } from "@/lib/yard-public-path";
 import { getSiteUrl } from "@/lib/yard-json-ld";
+import { PostcodeLookupField } from "@/components/PostcodeLookupField";
 
 export default async function SellerProfileSettingsPage({
   searchParams,
@@ -43,8 +44,8 @@ export default async function SellerProfileSettingsPage({
       </Link>
       <h1 className="mt-4 text-2xl font-semibold text-zinc-900">Yard profile</h1>
       <p className="mt-1 text-sm text-zinc-600">
-        Your public page is optimised for search engines and buyers. Set a URL, add images, and keep
-        hours and contact details up to date.
+        Your public page is optimised for search engines and buyers. Set your <strong>location</strong>, URL,
+        images, and keep hours and contact details up to date.
       </p>
       {saved === "1" ? (
         <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Saved.</p>
@@ -113,6 +114,28 @@ export default async function SellerProfileSettingsPage({
               />
             </div>
           </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-zinc-900">Location</h2>
+          <p className="text-xs text-zinc-500">
+            Your yard&apos;s postcode is used on your public page, in search and maps-style features, and in SEO
+            (title, description, structured data). We resolve it to area and coordinates automatically.
+          </p>
+          <PostcodeLookupField
+            id="yard-postcode"
+            name="postcode"
+            defaultValue={profile.postcode}
+            required
+            placeholder="e.g. M1 1AE"
+          />
+          {(profile.adminDistrict || profile.region) && (
+            <p className="text-xs text-zinc-600">
+              <span className="font-medium text-zinc-800">Shown to visitors:</span>{" "}
+              {[profile.adminDistrict, profile.region].filter(Boolean).join(" · ")}
+              {profile.postcode ? ` · ${profile.postcode}` : ""}
+            </p>
+          )}
         </section>
 
         <section className="space-y-4">
