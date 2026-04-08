@@ -292,5 +292,5 @@ export async function buyerRespondToCounterOffer(offerId: string, action: "accep
   revalidatePath(`/listings/${offer.listingId}`);
   revalidatePath("/dashboard/offers");
   revalidatePath("/dashboard/nearby-stock");
-  return { ok: true as const };
+  return { ok: true as const, listingId: offer.listingId };
 }

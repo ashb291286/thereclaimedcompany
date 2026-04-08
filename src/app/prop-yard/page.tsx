@@ -97,7 +97,7 @@ export default async function PropYardHomePage() {
         )}
       </section>
 
-      <section className="mt-12 grid gap-6 md:grid-cols-2">
+      <section id="hire-terms" className="mt-12 scroll-mt-24 grid gap-6 md:grid-cols-2">
         <div className="border border-driven-warm bg-white px-6 py-8">
           <h3 className="font-[family-name:var(--font-driven-display)] text-lg text-driven-ink">For productions</h3>
           <p className="mt-3 text-sm leading-relaxed text-driven-muted">

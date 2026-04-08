@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { createPropRentalSetAction, deletePropRentalSetAction } from "@/lib/actions/prop-yard";
+import { billableWeeksFromRange } from "@/lib/prop-yard";
 
 type Props = { searchParams: Promise<{ error?: string }> };
 
@@ -16,6 +17,13 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
     orderBy: { updatedAt: "desc" },
     include: {
       _count: { select: { items: true } },
+      items: {
+        select: {
+          hireStart: true,
+          hireEnd: true,
+          offer: { select: { weeklyHirePence: true } },
+        },
+      },
     },
   });
 
@@ -61,7 +69,12 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
           <p className="mt-4 text-sm text-driven-muted">No sets yet — name one above to start building.</p>
         ) : (
           <ul className="mt-4 divide-y divide-driven-warm border border-driven-warm bg-white">
-            {sets.map((s) => (
+            {sets.map((s) => {
+              const indicativePence = s.items.reduce((sum, it) => {
+                const w = billableWeeksFromRange(it.hireStart, it.hireEnd);
+                return sum + w * it.offer.weeklyHirePence;
+              }, 0);
+              return (
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
                 <div>
                   <Link
@@ -71,8 +84,14 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
                     {s.name}
                   </Link>
                   <p className="mt-1 text-xs text-driven-muted">
-                    {s._count.items} prop{s._count.items === 1 ? "" : "s"} · updated{" "}
-                    {s.updatedAt.toLocaleDateString("en-GB")}
+                    {s._count.items} prop{s._count.items === 1 ? "" : "s"}
+                    {s._count.items > 0 ? (
+                      <>
+                        {" "}
+                        · indicative <span className="font-medium text-driven-ink">£{(indicativePence / 100).toFixed(2)}</span>
+                      </>
+                    ) : null}{" "}
+                    · updated {s.updatedAt.toLocaleDateString("en-GB")}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -99,7 +118,8 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
                   </form>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>

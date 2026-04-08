@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { addPropUnavailabilityAction } from "@/lib/actions/prop-yard";
+import { addPropUnavailabilityAction, updatePropRentalBookingStatusAction } from "@/lib/actions/prop-yard";
 
 type Props = {
   params: Promise<{ offerId: string }>;
@@ -60,6 +60,34 @@ export default async function PropOfferCalendarPage({ params, searchParams }: Pr
                 <p className="text-xs text-zinc-500">
                   {b.hirerOrgName} · {b.hirer.email ?? b.hirer.name ?? b.hirerId}
                 </p>
+                <form action={updatePropRentalBookingStatusAction} className="mt-2 flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="bookingId" value={b.id} />
+                  <label className="text-xs text-zinc-500">Status</label>
+                  <select
+                    name="status"
+                    defaultValue={b.status}
+                    className="rounded-lg border border-zinc-300 px-2 py-1 text-xs"
+                  >
+                    <option value="REQUESTED">Requested</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="OUT_ON_HIRE">Out on hire</option>
+                    <option value="RETURNED">Returned</option>
+                    <option value="CANCELLED">Cancelled</option>
+                    <option value="DECLINED">Declined</option>
+                  </select>
+                  <button
+                    type="submit"
+                    className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium hover:bg-zinc-50"
+                  >
+                    Update
+                  </button>
+                </form>
+                {b.status === "OUT_ON_HIRE" ? (
+                  <p className="mt-1 text-xs text-amber-800">
+                    If this listing was on the marketplace, it stays hidden from browse until no bookings are{" "}
+                    <strong>Out on hire</strong>.
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>

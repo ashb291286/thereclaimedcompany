@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { slugifyCategoryName } from "@/lib/category-suggest";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
@@ -33,6 +34,56 @@ const PROP_ONLY_CONDITIONS: Condition[] = [
   "collectable",
 ];
 
+const YARD_BOOKING_STATUS_VALUES: PropRentalBookingStatus[] = [
+  "REQUESTED",
+  "CONFIRMED",
+  "OUT_ON_HIRE",
+  "RETURNED",
+  "CANCELLED",
+  "DECLINED",
+];
+
+function safePropYardRedirect(raw: unknown, fallback: string): string {
+  const s = typeof raw === "string" ? raw.trim() : "";
+  if (!s.startsWith("/dashboard/prop-yard") || s.startsWith("//")) return fallback;
+  return s;
+}
+
+/** Hide marketplace listing while at least one booking is OUT_ON_HIRE; restore when none remain. */
+async function syncListingMarketplaceVisibilityForOffer(offerId: string) {
+  const offer = await prisma.propRentalOffer.findUnique({
+    where: { id: offerId },
+    select: { id: true, listingId: true },
+  });
+  if (!offer) return;
+
+  const listing = await prisma.listing.findUnique({ where: { id: offer.listingId } });
+  if (!listing) return;
+
+  const outOnHireCount = await prisma.propRentalBooking.count({
+    where: { offerId: offer.id, status: "OUT_ON_HIRE" },
+  });
+
+  if (outOnHireCount > 0) {
+    if (listing.visibleOnMarketplace) {
+      await prisma.listing.update({
+        where: { id: listing.id },
+        data: { visibleOnMarketplace: false, marketplaceVisibleBeforePropHirePause: true },
+      });
+    }
+  } else if (listing.marketplaceVisibleBeforePropHirePause === true) {
+    await prisma.listing.update({
+      where: { id: listing.id },
+      data: { visibleOnMarketplace: true, marketplaceVisibleBeforePropHirePause: null },
+    });
+  }
+
+  revalidatePath(`/listings/${listing.id}`);
+  revalidatePath("/prop-yard/search");
+  revalidatePath("/dashboard/prop-yard");
+  revalidatePath("/prop-yard/dashboard");
+}
+
 async function assertYard() {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
@@ -48,11 +99,17 @@ async function assertYard() {
 
 export async function createPropRentalOfferAction(formData: FormData): Promise<void> {
   const userId = await assertYard();
+  const errBase = safePropYardRedirect(formData.get("_errorReturn"), "/dashboard/prop-yard/offerings/new");
+  const okBase = safePropYardRedirect(formData.get("_successReturn"), "/dashboard/prop-yard");
+
   const listingId = String(formData.get("listingId") ?? "").trim();
   const weeklyGbp = parseFloat(String(formData.get("weeklyHireGbp") ?? "").trim());
   const weeklyPence = Math.round(weeklyGbp * 100);
   const minimumHireWeeks = parseInt(String(formData.get("minimumHireWeeks") ?? "1"), 10);
   const yardHireNotes = String(formData.get("yardHireNotes") ?? "").trim() || null;
+  const offersDelivery =
+    formData.get("offersDelivery") === "on" || formData.get("offersDelivery") === "true";
+  const deliveryNotes = String(formData.get("deliveryNotes") ?? "").trim() || null;
 
   if (
     !listingId ||
@@ -63,7 +120,7 @@ export async function createPropRentalOfferAction(formData: FormData): Promise<v
     minimumHireWeeks < 1 ||
     minimumHireWeeks > 52
   ) {
-    redirect("/dashboard/prop-yard/offerings/new?error=" + encodeURIComponent("Choose a listing and a weekly hire of at least £1."));
+    redirect(errBase + "?error=" + encodeURIComponent("Choose a listing and a weekly hire of at least £1."));
   }
 
   const listing = await prisma.listing.findFirst({
@@ -76,33 +133,42 @@ export async function createPropRentalOfferAction(formData: FormData): Promise<v
     },
   });
   if (!listing) {
-    redirect("/dashboard/prop-yard/offerings/new?error=" + encodeURIComponent("Only your active fixed-price listings can be offered for hire."));
+    redirect(errBase + "?error=" + encodeURIComponent("Only your active fixed-price listings can be offered for hire."));
   }
 
-  await prisma.propRentalOffer.upsert({
-    where: { listingId },
-    create: {
-      listingId,
-      weeklyHirePence: weeklyPence,
-      minimumHireWeeks,
-      yardHireNotes,
-      isActive: true,
-    },
-    update: {
-      weeklyHirePence: weeklyPence,
-      minimumHireWeeks,
-      yardHireNotes,
-      isActive: true,
-    },
-  });
+  await prisma.$transaction([
+    prisma.propRentalOffer.upsert({
+      where: { listingId },
+      create: {
+        listingId,
+        weeklyHirePence: weeklyPence,
+        minimumHireWeeks,
+        yardHireNotes,
+        isActive: true,
+      },
+      update: {
+        weeklyHirePence: weeklyPence,
+        minimumHireWeeks,
+        yardHireNotes,
+        isActive: true,
+      },
+    }),
+    prisma.listing.update({
+      where: { id: listingId },
+      data: { offersDelivery, deliveryNotes },
+    }),
+  ]);
 
-  redirect("/dashboard/prop-yard");
+  revalidatePath(`/listings/${listingId}`);
+
+  redirect(okBase.includes("?") ? `${okBase}&saved=1` : `${okBase}?saved=1`);
 }
 
 export async function createPropOnlyListingAndOfferAction(formData: FormData): Promise<void> {
   const userId = await assertYard();
-  const bail = (msg: string) =>
-    redirect("/dashboard/prop-yard/props/new?error=" + encodeURIComponent(msg));
+  const errBase = safePropYardRedirect(formData.get("_errorReturn"), "/dashboard/prop-yard/props/new");
+  const okBase = safePropYardRedirect(formData.get("_successReturn"), "/dashboard/prop-yard");
+  const bail = (msg: string) => redirect(errBase + "?error=" + encodeURIComponent(msg));
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
@@ -149,6 +215,9 @@ export async function createPropOnlyListingAndOfferAction(formData: FormData): P
   const weeklyPence = Math.round(weeklyGbp * 100);
   const minimumHireWeeks = parseInt(String(formData.get("minimumHireWeeks") ?? "1"), 10);
   const yardHireNotes = String(formData.get("yardHireNotes") ?? "").trim() || null;
+  const offersDelivery =
+    formData.get("offersDelivery") === "on" || formData.get("offersDelivery") === "true";
+  const deliveryNotes = String(formData.get("deliveryNotes") ?? "").trim() || null;
 
   if (
     !Number.isFinite(weeklyGbp) ||
@@ -181,7 +250,8 @@ export async function createPropOnlyListingAndOfferAction(formData: FormData): P
         freeToCollector: false,
         visibleOnMarketplace: false,
         notifyLocalYards: false,
-        offersDelivery: false,
+        offersDelivery,
+        deliveryNotes,
         pricingMode: ListingPricingMode.LOT,
       },
     });
@@ -198,7 +268,32 @@ export async function createPropOnlyListingAndOfferAction(formData: FormData): P
   });
 
   await syncListingLocalYardAlerts(listing.id);
-  redirect("/dashboard/prop-yard");
+  redirect(okBase.includes("?") ? `${okBase}&saved=1` : `${okBase}?saved=1`);
+}
+
+export async function updatePropRentalBookingStatusAction(formData: FormData): Promise<void> {
+  const userId = await assertYard();
+  const bookingId = String(formData.get("bookingId") ?? "").trim();
+  const next = String(formData.get("status") ?? "").trim() as PropRentalBookingStatus;
+  if (!bookingId || !YARD_BOOKING_STATUS_VALUES.includes(next)) {
+    redirect("/dashboard/prop-yard?error=" + encodeURIComponent("Invalid status change."));
+  }
+
+  const booking = await prisma.propRentalBooking.findFirst({
+    where: { id: bookingId },
+    include: { offer: { include: { listing: true } } },
+  });
+  if (!booking || booking.offer.listing.sellerId !== userId) {
+    redirect("/dashboard/prop-yard?error=" + encodeURIComponent("Booking not found."));
+  }
+
+  await prisma.propRentalBooking.update({
+    where: { id: bookingId },
+    data: { status: next },
+  });
+  await syncListingMarketplaceVisibilityForOffer(booking.offerId);
+
+  redirect(`/dashboard/prop-yard/offerings/${booking.offerId}/calendar`);
 }
 
 export async function togglePropRentalOfferActiveAction(formData: FormData): Promise<void> {

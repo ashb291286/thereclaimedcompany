@@ -225,6 +225,8 @@ model Listing {
   notifyLocalYards     Boolean   @default(false) // ping reclamation yards within radius when published (fixed-price sell)
   /// When false, listing is omitted from marketplace browse/search; yards may use for Prop Yard hire only.
   visibleOnMarketplace Boolean   @default(true)
+  /// When true, marketplace visibility was turned off automatically because the item was OUT_ON_HIRE; restore when no longer on hire.
+  marketplaceVisibleBeforePropHirePause Boolean?
   // Material / carbon (optional; ICE-based estimates when provided)
   materialType           String? // matches CarbonFactor.materialType
   materialQuantity       Float?

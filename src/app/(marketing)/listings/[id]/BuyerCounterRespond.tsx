@@ -2,16 +2,30 @@
 
 import { useState } from "react";
 import { buyerRespondToCounterOffer } from "@/lib/actions/offers";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export function BuyerCounterRespond({ offerId }: { offerId: string }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [busy, setBusy] = useState(false);
 
   async function go(action: "accept" | "decline") {
     setBusy(true);
-    await buyerRespondToCounterOffer(offerId, action);
+    const result = await buyerRespondToCounterOffer(offerId, action);
     setBusy(false);
+    if (!result.ok) {
+      router.refresh();
+      return;
+    }
+    if (action === "accept" && "listingId" in result) {
+      const href = `/listings/${result.listingId}`;
+      if (pathname === href) {
+        router.refresh();
+      } else {
+        router.push(href);
+      }
+      return;
+    }
     router.refresh();
   }
 

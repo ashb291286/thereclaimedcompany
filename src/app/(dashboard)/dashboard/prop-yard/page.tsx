@@ -5,7 +5,11 @@ import { prisma } from "@/lib/db";
 import { togglePropRentalOfferActiveAction } from "@/lib/actions/prop-yard";
 import { PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE } from "@/lib/prop-yard";
 
-export default async function DashboardPropYardPage() {
+export default async function DashboardPropYardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ wizard?: string; saved?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
 
@@ -16,6 +20,8 @@ export default async function DashboardPropYardPage() {
   if (user?.role !== "reclamation_yard") {
     redirect("/dashboard?error=" + encodeURIComponent("The Prop Yard dashboard is for reclamation yard accounts."));
   }
+
+  const { wizard, saved } = await searchParams;
 
   const offers = await prisma.propRentalOffer.findMany({
     where: { listing: { sellerId: session.user.id } },
@@ -40,19 +46,32 @@ export default async function DashboardPropYardPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
+            href="/dashboard/prop-yard/wizard"
+            className="rounded-lg bg-amber-900 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-950"
+          >
+            Create prop listing
+          </Link>
+          <Link
             href="/dashboard/prop-yard/props/new"
             className="rounded-lg border border-amber-900 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-50"
           >
-            Add hire-only prop
+            Hire-only short form
           </Link>
           <Link
             href="/dashboard/prop-yard/offerings/new"
-            className="rounded-lg bg-amber-900 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-950"
+            className="rounded-lg border border-amber-900 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-50"
           >
-            List existing item for hire
+            Update several listings
           </Link>
         </div>
       </div>
+
+      {wizard && saved ? (
+        <p className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Prop listing saved. Open an offer below for <strong>Availability &amp; bookings</strong> — mark a hire as{" "}
+          <strong>Out on hire</strong> to pause marketplace visibility until it&apos;s returned.
+        </p>
+      ) : null}
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Your prop offers</h2>

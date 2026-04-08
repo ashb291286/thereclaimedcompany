@@ -385,7 +385,7 @@ export default async function DashboardPage({
                       </span>
                     ) : (
                       <Link
-                        href={`/dashboard/prop-yard/offerings/new?listingId=${encodeURIComponent(l.id)}`}
+                        href={`/dashboard/prop-yard/wizard?listingId=${encodeURIComponent(l.id)}`}
                         className="rounded-full bg-zinc-900/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-amber-900"
                       >
                         Send to Prop Yard

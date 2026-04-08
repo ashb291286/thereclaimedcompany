@@ -94,13 +94,32 @@ export default async function PropYardUserDashboardPage() {
                 Send a listing to The Prop Yard to set weekly hire, minimum weeks, and availability.
               </p>
             </div>
-            <Link
-              href="/dashboard/sell"
-              className="inline-flex shrink-0 border border-driven-ink bg-driven-ink px-4 py-2 font-[family-name:var(--font-driven-mono)] text-xs uppercase tracking-wide text-driven-paper hover:bg-driven-accent"
-            >
-              New listing
-            </Link>
+            {isYard ? (
+              <Link
+                href="/dashboard/prop-yard/wizard"
+                className="inline-flex shrink-0 border border-driven-ink bg-driven-ink px-4 py-2 font-[family-name:var(--font-driven-mono)] text-xs uppercase tracking-wide text-driven-paper hover:bg-driven-accent"
+              >
+                Add prop for hire
+              </Link>
+            ) : (
+              <Link
+                href="/dashboard/sell"
+                className="inline-flex shrink-0 border border-driven-ink bg-driven-ink px-4 py-2 font-[family-name:var(--font-driven-mono)] text-xs uppercase tracking-wide text-driven-paper hover:bg-driven-accent"
+              >
+                New listing
+              </Link>
+            )}
           </div>
+          {isYard ? (
+            <p className="text-xs text-driven-muted">
+              Need a buy-now listing first?{" "}
+              <Link href="/dashboard/sell" className="text-driven-accent underline hover:text-driven-ink">
+                List on the marketplace
+              </Link>{" "}
+              — then use <strong className="text-driven-ink">Add prop for hire</strong> to attach hire pricing without
+              duplicating the item.
+            </p>
+          ) : null}
           {listings.length === 0 ? (
             <p className="mt-6 text-sm text-driven-muted">No listings yet — create one on the marketplace first.</p>
           ) : (
@@ -140,7 +159,7 @@ export default async function PropYardUserDashboardPage() {
                         </span>
                       ) : (
                         <Link
-                          href={`/dashboard/prop-yard/offerings/new?listingId=${encodeURIComponent(l.id)}`}
+                          href={`/dashboard/prop-yard/wizard?listingId=${encodeURIComponent(l.id)}`}
                           className="rounded-full bg-driven-ink/90 px-2 py-1 font-[family-name:var(--font-driven-mono)] text-[10px] font-semibold uppercase tracking-wide text-driven-paper hover:bg-driven-accent"
                         >
                           Send to Prop Yard
