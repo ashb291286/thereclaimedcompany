@@ -6,18 +6,23 @@
  *
  * P3009 (failed migration in DB): set env `PRISMA_RESOLVE_ROLLED_BACK` to the migration
  * folder name for one build, or run `npm run db:migrate:resolve:listing-visible-rolled-back`
- * locally. For the historical duplicate-column failure on
- * Known idempotent migrations below: we auto `migrate resolve --rolled-back` when P3009
+ * locally. For known idempotent migrations, we auto `migrate resolve --rolled-back` when P3009
  * mentions one of them, then retry `migrate deploy`.
+ *
+ * P3018 (apply failed, e.g. duplicate column when the DB was synced with db push): for the same
+ * idempotent migrations, if Postgres reports duplicate object (42701 / already exists),
+ * we `migrate resolve --applied` and retry `migrate deploy`.
  */
 import { execSync, spawnSync } from "node:child_process";
 
 const env = process.env;
 
-const AUTO_RESOLVE_P3009_MIGRATIONS = [
+const IDEMPOTENT_MIGRATION_NAMES = [
   "20260408120000_listing_visible_on_marketplace",
   "20260408140000_prop_rental_set_builder",
   "20260408150000_offer_from_seller_counter",
+  "20260408183000_prop_rental_set_default_hire_dates",
+  "20260408200000_prop_booking_set_batch_payment",
 ];
 
 function runCaptured(cmd) {
@@ -54,9 +59,29 @@ if (deploy.code !== 0) {
     printAdvisoryLockHint();
   }
 
+  // P3018 + duplicate object: schema already matches; mark migration applied and retry.
+  if (
+    deploy.out.includes("P3018") &&
+    process.env.VERCEL_SKIP_AUTO_MIGRATE_RESOLVE !== "1" &&
+    (deploy.out.includes("already exists") || deploy.out.includes("42701"))
+  ) {
+    const stuck = IDEMPOTENT_MIGRATION_NAMES.find((n) => deploy.out.includes(n));
+    if (stuck) {
+      console.error(
+        `\n[vercel-build] P3018: ${stuck} — duplicate object; marking applied and retrying migrate deploy…\n`,
+      );
+      const resolved = runCaptured(`npx prisma migrate resolve --applied "${stuck}"`);
+      if (resolved.code === 0) {
+        deploy = runCaptured("npx prisma migrate deploy");
+      } else {
+        console.error(resolved.out);
+      }
+    }
+  }
+
   const p3009 = deploy.out.includes("P3009");
   const resolveName = (process.env.PRISMA_RESOLVE_ROLLED_BACK ?? "").trim();
-  if (p3009 && resolveName && deploy.out.includes(resolveName)) {
+  if (deploy.code !== 0 && p3009 && resolveName && deploy.out.includes(resolveName)) {
     console.error(
       `\n[vercel-build] P3009: PRISMA_RESOLVE_ROLLED_BACK=${resolveName} — marking rolled back and retrying migrate deploy…\n`,
     );
@@ -66,8 +91,8 @@ if (deploy.code !== 0) {
       env,
     });
     deploy = runCaptured("npx prisma migrate deploy");
-  } else if (p3009 && process.env.VERCEL_SKIP_AUTO_MIGRATE_RESOLVE !== "1") {
-    const stuck = AUTO_RESOLVE_P3009_MIGRATIONS.find((n) => deploy.out.includes(n));
+  } else if (deploy.code !== 0 && p3009 && process.env.VERCEL_SKIP_AUTO_MIGRATE_RESOLVE !== "1") {
+    const stuck = IDEMPOTENT_MIGRATION_NAMES.find((n) => deploy.out.includes(n));
     if (stuck) {
       console.error(
         `\n[vercel-build] P3009: auto-resolve rolled-back for ${stuck} (known stuck / idempotent migration), then retry migrate deploy…\n`,
