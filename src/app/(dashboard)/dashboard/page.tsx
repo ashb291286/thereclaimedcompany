@@ -243,28 +243,59 @@ export default async function DashboardPage({
           <span className="mt-3 inline-block text-sm font-medium text-brand">View nearby stock →</span>
         </Link>
       ) : null}
-      <div className="mt-6 rounded-xl border border-driven-warm bg-driven-paper p-5 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-driven-accent">The Reclaimed Company</p>
-            <h2 className="mt-1 text-lg font-semibold text-driven-ink">Driven · Reclaimed</h2>
-            <p className="mt-1 max-w-xl text-sm text-driven-muted">
-              Build a vehicle passport, add history and documents, browse auctions, and manage your garage.
-            </p>
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-driven-warm bg-driven-paper p-5 shadow-sm">
+          <div className="flex h-full flex-col gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-driven-accent">
+                The Reclaimed Company
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-driven-ink">Driven · Reclaimed</h2>
+              <p className="mt-1 text-sm text-driven-muted">
+                Build a vehicle passport, add history and documents, browse auctions, and manage your garage.
+              </p>
+            </div>
+            <div className="mt-auto flex flex-wrap gap-2">
+              <Link
+                href="/driven"
+                className="inline-flex rounded-lg border border-driven-ink bg-driven-ink px-4 py-2 text-sm font-semibold text-driven-paper hover:border-driven-accent hover:bg-driven-accent"
+              >
+                Open Driven
+              </Link>
+              <Link
+                href="/driven/garage"
+                className="inline-flex rounded-lg border border-driven-warm bg-white px-4 py-2 text-sm font-medium text-driven-ink hover:border-driven-ink"
+              >
+                Your garage
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2 sm:shrink-0">
-            <Link
-              href="/driven"
-              className="inline-flex rounded-lg border border-driven-ink bg-driven-ink px-4 py-2 text-sm font-semibold text-driven-paper hover:bg-driven-accent hover:border-driven-accent"
-            >
-              Open Driven
-            </Link>
-            <Link
-              href="/driven/garage"
-              className="inline-flex rounded-lg border border-driven-warm bg-white px-4 py-2 text-sm font-medium text-driven-ink hover:border-driven-ink"
-            >
-              Your garage
-            </Link>
+        </div>
+        <div className="rounded-xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-white to-amber-50/50 p-5 shadow-sm">
+          <div className="flex h-full flex-col gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-800/80">
+                The Reclaimed Company
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-zinc-900">The Prop Yard</h2>
+              <p className="mt-1 text-sm text-zinc-600">
+                Weekly hire from real yards for productions — build sets, send hire requests, or list stock for film and TV.
+              </p>
+            </div>
+            <div className="mt-auto flex flex-wrap gap-2">
+              <Link
+                href="/prop-yard"
+                className="inline-flex rounded-lg border border-amber-900 bg-amber-900 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-950"
+              >
+                Open Prop Yard
+              </Link>
+              <Link
+                href="/prop-yard/dashboard"
+                className="inline-flex rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-950 hover:border-amber-400"
+              >
+                Prop dashboard
+              </Link>
+            </div>
           </div>
         </div>
       </div>

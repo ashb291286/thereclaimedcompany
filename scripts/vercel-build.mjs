@@ -17,6 +17,7 @@ const env = process.env;
 const AUTO_RESOLVE_P3009_MIGRATIONS = [
   "20260408120000_listing_visible_on_marketplace",
   "20260408140000_prop_rental_set_builder",
+  "20260408150000_offer_from_seller_counter",
 ];
 
 function runCaptured(cmd) {

@@ -8,6 +8,7 @@ import { ListingCheckoutActions } from "./ListingCheckoutActions";
 import { HaggleForm } from "./HaggleForm";
 import { BidForm } from "./BidForm";
 import { OfferRespond } from "./OfferRespond";
+import { BuyerCounterRespond } from "./BuyerCounterRespond";
 import { CONDITION_LABELS, LISTING_KIND_LABELS } from "@/lib/constants";
 import {
   formatDeliveryOptionLine,
@@ -167,7 +168,7 @@ export default async function ListingPage({
     }),
     isOwner
       ? prisma.offer.findMany({
-          where: { listingId: id, status: "pending" },
+          where: { listingId: id, status: "pending", fromSellerCounter: false },
           include: { buyer: { select: { name: true, email: true } } },
           orderBy: { createdAt: "desc" },
         })
@@ -175,8 +176,8 @@ export default async function ListingPage({
     session?.user?.id && !isOwner
       ? prisma.offer.findMany({
           where: { listingId: id, buyerId: session.user.id },
-          orderBy: { createdAt: "desc" },
-          take: 5,
+          orderBy: { updatedAt: "desc" },
+          take: 15,
         })
       : Promise.resolve([]),
     session?.user?.id && !isOwner
@@ -603,10 +604,25 @@ export default async function ListingPage({
         {myOffers.length > 0 && (
           <section className={sectionClass}>
             <p className="font-medium text-zinc-800">Your recent offers</p>
-            <ul className="mt-2 space-y-1">
+            <ul className="mt-2 space-y-3">
               {myOffers.map((o) => (
-                <li key={o.id}>
-                  £{(o.offeredPrice / 100).toFixed(2)} — {o.status}
+                <li key={o.id} className="rounded-lg border border-zinc-100 bg-white/60 px-2 py-2">
+                  <p className="text-sm text-zinc-700">
+                    {o.fromSellerCounter ? (
+                      <>
+                        <span className="font-medium text-zinc-900">Seller counter-offer:</span> £
+                        {(o.offeredPrice / 100).toFixed(2)}
+                      </>
+                    ) : (
+                      <>
+                        Your offer: £{(o.offeredPrice / 100).toFixed(2)}
+                      </>
+                    )}{" "}
+                    — {o.status}
+                  </p>
+                  {o.status === "pending" && o.fromSellerCounter ? (
+                    <BuyerCounterRespond offerId={o.id} />
+                  ) : null}
                 </li>
               ))}
             </ul>
