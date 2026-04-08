@@ -13,6 +13,7 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:baseline": "node scripts/prisma-baseline.mjs",
+    "db:baseline:prop-pending": "node scripts/prisma-baseline.mjs prop-pending",
     "db:seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
