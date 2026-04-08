@@ -39,12 +39,17 @@ export default async function PropYardSearchPage({ searchParams }: Props) {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-amber-950">Find props</h2>
-      <p className="mt-2 max-w-2xl text-sm text-zinc-600">
+      <h2 className="font-[family-name:var(--font-driven-display)] text-2xl font-semibold text-driven-ink">
+        Find props
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-driven-muted">
         Listed by UK reclamation yards for weekly hire. Results are separate from marketplace purchase listings.
       </p>
       <div className="mt-3">
-        <Link href="/prop-yard/basket" className="text-sm font-medium text-amber-900 underline hover:text-amber-950">
+        <Link
+          href="/prop-yard/basket"
+          className="text-sm font-medium text-driven-accent underline hover:text-driven-ink"
+        >
           Open request basket
         </Link>
       </div>
@@ -59,18 +64,18 @@ export default async function PropYardSearchPage({ searchParams }: Props) {
           name="q"
           defaultValue={term}
           placeholder="Search title or description…"
-          className="min-w-[12rem] flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+          className="min-w-[12rem] flex-1 rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink"
         />
         <button
           type="submit"
-          className="rounded-lg bg-amber-900 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-950"
+          className="rounded-lg border border-driven-ink bg-driven-ink px-4 py-2 font-[family-name:var(--font-driven-mono)] text-xs font-semibold uppercase tracking-wide text-driven-paper hover:bg-driven-accent"
         >
           Search
         </button>
       </form>
 
       {offers.length === 0 ? (
-        <p className="mt-10 text-center text-sm text-zinc-600">
+        <p className="mt-10 text-center text-sm text-driven-muted">
           No props match{term ? " that search" : ""} yet. Try another keyword or check back as yards opt in.
         </p>
       ) : (
@@ -79,32 +84,27 @@ export default async function PropYardSearchPage({ searchParams }: Props) {
             const img = o.listing.images[0];
             const yard = o.listing.seller.sellerProfile;
             return (
-              <li
-                key={o.id}
-                className="overflow-hidden rounded-xl border border-amber-900/10 bg-white shadow-sm"
-              >
+              <li key={o.id} className="overflow-hidden rounded-xl border border-driven-warm bg-white shadow-sm">
                 <Link href={`/prop-yard/offers/${o.id}`} className="block">
-                  <div className="relative aspect-[4/3] bg-zinc-100">
+                  <div className="relative aspect-[4/3] bg-driven-warm">
                     {img ? (
                       <Image src={img} alt="" fill className="object-cover" unoptimized />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-zinc-400">No image</div>
+                      <div className="flex h-full items-center justify-center text-driven-muted">No image</div>
                     )}
                   </div>
                   <div className="p-4">
-                    <p className="text-xs font-medium uppercase tracking-wide text-amber-900/70">
+                    <p className="font-[family-name:var(--font-driven-mono)] text-[10px] font-medium uppercase tracking-wide text-driven-muted">
                       {o.listing.category.name}
                     </p>
-                    <h3 className="mt-1 line-clamp-2 font-semibold text-zinc-900">{o.listing.title}</h3>
-                    <p className="mt-2 text-sm font-medium text-amber-950">
+                    <h3 className="mt-1 line-clamp-2 font-semibold text-driven-ink">{o.listing.title}</h3>
+                    <p className="mt-2 text-sm font-medium text-driven-ink">
                       £{(o.weeklyHirePence / 100).toFixed(2)} / week
                     </p>
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 text-xs text-driven-muted">
                       Min hire {o.minimumHireWeeks} week{o.minimumHireWeeks === 1 ? "" : "s"}
                     </p>
-                    {yard ? (
-                      <p className="mt-1 text-xs text-zinc-500">{yard.displayName}</p>
-                    ) : null}
+                    {yard ? <p className="mt-1 text-xs text-driven-muted">{yard.displayName}</p> : null}
                   </div>
                 </Link>
               </li>

@@ -1,5 +1,30 @@
 import type { Metadata } from "next";
+import { DM_Mono, DM_Sans, Playfair_Display } from "next/font/google";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/db";
 import { PropYardNav } from "@/components/prop-yard/PropYardNav";
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-driven-display",
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-driven-body",
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  subsets: ["latin"],
+  variable: "--font-driven-mono",
+  display: "swap",
+  weight: ["400", "500"],
+});
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: {
@@ -10,29 +35,26 @@ export const metadata: Metadata = {
     "Hire authentic reclaimed pieces from UK reclamation yards for film, TV, and stills. Separate from marketplace sales — weekly hire, contracts, and logistics built for productions.",
 };
 
-export default function PropYardLayout({ children }: { children: React.ReactNode }) {
+export default async function PropYardLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+  let showManageOffers = false;
+  if (session?.user?.id) {
+    const [userRow, sellerProfile] = await Promise.all([
+      prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }),
+      prisma.sellerProfile.findUnique({ where: { userId: session.user.id }, select: { id: true } }),
+    ]);
+    showManageOffers =
+      userRow?.role === "reclamation_yard" || !!sellerProfile;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-stone-50 to-stone-100 text-zinc-900">
-      <header className="border-b border-amber-900/10 bg-amber-100/40 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/70">
-                The Reclaimed Company
-              </p>
-              <h1 className="font-serif text-3xl font-semibold tracking-tight text-amber-950 sm:text-4xl">
-                The Prop Yard
-              </h1>
-              <p className="mt-2 max-w-xl text-sm text-zinc-700">
-                Business-to-business hire of yard stock for film &amp; TV — layered on your listings, not a
-                second shopfront.
-              </p>
-            </div>
-          </div>
-          <PropYardNav />
-        </div>
-      </header>
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</div>
+    <div
+      className={`${playfair.variable} ${dmSans.variable} ${dmMono.variable} min-h-screen bg-driven-paper text-driven-ink`}
+    >
+      <PropYardNav showManageOffers={showManageOffers} />
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="font-[family-name:var(--font-driven-body)] text-base leading-relaxed">{children}</div>
+      </div>
     </div>
   );
 }
