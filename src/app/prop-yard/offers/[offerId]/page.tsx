@@ -3,8 +3,11 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE, PROP_YARD_TERMS_VERSION } from "@/lib/prop-yard";
-import { upsertPropSetItemAction } from "@/lib/actions/prop-yard";
+import {
+  PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE,
+  utcCalendarDateToIso,
+} from "@/lib/prop-yard";
+import { PropHireAddToSetForm } from "./PropHireAddToSetForm";
 
 type Props = {
   params: Promise<{ offerId: string }>;
@@ -21,7 +24,7 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
       ? await prisma.propRentalSet.findMany({
           where: { userId: session.user.id },
           orderBy: { updatedAt: "desc" },
-          select: { id: true, name: true },
+          select: { id: true, name: true, defaultHireStart: true, defaultHireEnd: true },
         })
       : [];
 
@@ -106,18 +109,29 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
               £{(offer.weeklyHirePence / 100).toFixed(2)}
               <span className="text-base font-normal text-driven-muted"> / week</span>
             </p>
-            <p className="mt-2 text-xs text-driven-muted">
-              Yard list price reference: £{(listPrice / 100).toFixed(2)} — typical suggestion was {pct}% (
-              £{(suggested / 100).toFixed(2)}/wk); actual hire rate is as shown.
-            </p>
-            <p className="mt-1 text-xs text-driven-muted">
-              Minimum hire period: {offer.minimumHireWeeks} week{offer.minimumHireWeeks === 1 ? "" : "s"}.
-            </p>
-            <p className="mt-1 text-xs text-driven-muted">
-              Availability cues: {offer.bookings.length} active booking request
-              {offer.bookings.length === 1 ? "" : "s"} · {offer.unavailability.length} blackout period
-              {offer.unavailability.length === 1 ? "" : "s"} on file.
-            </p>
+            {isOwner ? (
+              <p className="mt-2 text-xs text-driven-muted">
+                Yard list price reference: £{(listPrice / 100).toFixed(2)} — typical suggestion was {pct}% (
+                £{(suggested / 100).toFixed(2)}/wk); actual hire rate is as shown.
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-driven-muted">
+                Minimum hire: {offer.minimumHireWeeks} week{offer.minimumHireWeeks === 1 ? "" : "s"}. Pricing uses the
+                weekly rate pro-rata by day (you never pay less than the minimum-period charge).
+              </p>
+            )}
+            {isOwner ? (
+              <>
+                <p className="mt-1 text-xs text-driven-muted">
+                  Minimum hire period: {offer.minimumHireWeeks} week{offer.minimumHireWeeks === 1 ? "" : "s"}.
+                </p>
+                <p className="mt-1 text-xs text-driven-muted">
+                  Availability cues: {offer.bookings.length} active booking request
+                  {offer.bookings.length === 1 ? "" : "s"} · {offer.unavailability.length} blackout period
+                  {offer.unavailability.length === 1 ? "" : "s"} on file.
+                </p>
+              </>
+            ) : null}
             {offer.yardHireNotes ? (
               <div className="mt-4 rounded-lg bg-driven-accent-light/50 px-3 py-2 text-sm text-driven-ink">
                 <p className="font-[family-name:var(--font-driven-mono)] text-[10px] font-semibold uppercase text-driven-muted">
@@ -194,83 +208,23 @@ export default async function PropYardOfferPage({ params, searchParams }: Props)
                         Change
                       </Link>
                     </p>
-                    <form action={upsertPropSetItemAction} className="mt-4 space-y-4">
-                      <input type="hidden" name="offerId" value={offer.id} />
-                      <input type="hidden" name="setId" value={activeSet.id} />
-                      <input
-                        type="hidden"
-                        name="returnTo"
-                        value={`/prop-yard/set/${activeSet.id}`}
-                      />
-                      <div>
-                        <label className="block text-xs font-medium text-driven-ink">Hire start</label>
-                        <input
-                          type="date"
-                          name="hireStart"
-                          required
-                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-driven-ink">Hire end (inclusive)</label>
-                        <input
-                          type="date"
-                          name="hireEnd"
-                          required
-                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-driven-ink">Fulfillment</label>
-                        <select
-                          name="fulfillment"
-                          required
-                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                        >
-                          <option value="COLLECT_AND_RETURN">We collect from yard and return after shoot</option>
-                          <option value="YARD_DELIVERS_AND_COLLECTS">Yard delivers and collects</option>
-                          <option value="ARRANGE_SEPARATELY">Arrange separately (note below)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-driven-ink">Production / company name</label>
-                        <input
-                          name="hirerOrgName"
-                          required
-                          placeholder="e.g. Northlight Pictures Ltd"
-                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-driven-ink">Production notes (optional)</label>
-                        <textarea
-                          name="productionNotes"
-                          rows={3}
-                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                          placeholder="Unit, location, special handling…"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-driven-ink">
-                          Delivery &amp; return notes (optional)
-                        </label>
-                        <textarea
-                          name="deliveryArrangementNotes"
-                          rows={2}
-                          className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
-                        />
-                      </div>
-                      <p className="text-[11px] text-driven-muted">
-                        Hire terms (v{PROP_YARD_TERMS_VERSION}) are confirmed when you send requests from the set
-                        builder.
-                      </p>
-                      <button
-                        type="submit"
-                        className="w-full rounded-lg border border-driven-ink bg-driven-ink py-3 font-[family-name:var(--font-driven-mono)] text-xs font-semibold uppercase tracking-wide text-driven-paper hover:bg-driven-accent"
-                      >
-                        Add to set
-                      </button>
-                    </form>
+                    <PropHireAddToSetForm
+                      key={activeSet.id}
+                      offerId={offer.id}
+                      setId={activeSet.id}
+                      minimumHireWeeks={offer.minimumHireWeeks}
+                      returnToPath={`/prop-yard/set/${activeSet.id}`}
+                      defaultHireStartIso={
+                        activeSet.defaultHireStart && activeSet.defaultHireEnd
+                          ? utcCalendarDateToIso(activeSet.defaultHireStart)
+                          : null
+                      }
+                      defaultHireEndIso={
+                        activeSet.defaultHireStart && activeSet.defaultHireEnd
+                          ? utcCalendarDateToIso(activeSet.defaultHireEnd)
+                          : null
+                      }
+                    />
                     <p className="mt-3 text-xs text-driven-muted">
                       <Link
                         href={`/prop-yard/set/${activeSet.id}`}

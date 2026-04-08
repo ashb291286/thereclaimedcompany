@@ -489,11 +489,18 @@ export default async function ListingPage({
               </p>
               <p className="mt-1 text-xs text-zinc-500">
                 Minimum {listing.propRentalOffer.minimumHireWeeks} week
-                {listing.propRentalOffer.minimumHireWeeks === 1 ? "" : "s"} ·{" "}
-                {listing.propRentalOffer.bookings.length} active request
-                {listing.propRentalOffer.bookings.length === 1 ? "" : "s"} ·{" "}
-                {listing.propRentalOffer.unavailability.length} blackout period
-                {listing.propRentalOffer.unavailability.length === 1 ? "" : "s"}.
+                {listing.propRentalOffer.minimumHireWeeks === 1 ? "" : "s"}
+                {isOwner ? (
+                  <>
+                    {" "}
+                    · {listing.propRentalOffer.bookings.length} active request
+                    {listing.propRentalOffer.bookings.length === 1 ? "" : "s"} ·{" "}
+                    {listing.propRentalOffer.unavailability.length} blackout period
+                    {listing.propRentalOffer.unavailability.length === 1 ? "" : "s"}.
+                  </>
+                ) : (
+                  "."
+                )}
               </p>
               <Link
                 href={`/prop-yard/offers/${listing.propRentalOffer.id}`}

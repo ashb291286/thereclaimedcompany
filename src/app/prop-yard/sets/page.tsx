@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { createPropRentalSetAction, deletePropRentalSetAction } from "@/lib/actions/prop-yard";
-import { billableWeeksFromRange } from "@/lib/prop-yard";
+import { computePropHireTotalPence } from "@/lib/prop-yard";
 
 type Props = { searchParams: Promise<{ error?: string }> };
 
@@ -21,7 +21,7 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
         select: {
           hireStart: true,
           hireEnd: true,
-          offer: { select: { weeklyHirePence: true } },
+          offer: { select: { weeklyHirePence: true, minimumHireWeeks: true } },
         },
       },
     },
@@ -33,16 +33,17 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
         Your sets
       </h1>
       <p className="mt-2 max-w-2xl text-sm text-driven-muted">
-        Create a set for a scene, production, or mood board — then search props and add hire details here. When you
-        send requests, we group them by yard the same as before.
+        Create a set for a scene, production, or mood board — optionally set a default hire window so every prop you
+        add picks up the same dates (you can still edit per line). When you send requests, we group them by yard. Lines
+        stay in the set after sending so you can pay and add more.
       </p>
 
       {error ? (
         <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{decodeURIComponent(error)}</p>
       ) : null}
 
-      <form action={createPropRentalSetAction} className="mt-8 flex max-w-xl flex-wrap items-end gap-3">
-        <div className="min-w-[12rem] flex-1">
+      <form action={createPropRentalSetAction} className="mt-8 max-w-xl space-y-4 rounded-xl border border-driven-warm bg-white p-4">
+        <div>
           <label htmlFor="new-set-name" className="block text-xs font-medium text-driven-ink">
             New set name
           </label>
@@ -53,6 +54,33 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
             className="mt-1 w-full rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink"
           />
         </div>
+        <div className="flex flex-wrap gap-4">
+          <div>
+            <label htmlFor="new-set-hire-start" className="block text-xs font-medium text-driven-ink">
+              Default hire start <span className="font-normal text-driven-muted">(optional)</span>
+            </label>
+            <input
+              id="new-set-hire-start"
+              type="date"
+              name="defaultHireStart"
+              className="mt-1 rounded-lg border border-driven-warm px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="new-set-hire-end" className="block text-xs font-medium text-driven-ink">
+              Default hire end <span className="font-normal text-driven-muted">(inclusive, optional)</span>
+            </label>
+            <input
+              id="new-set-hire-end"
+              type="date"
+              name="defaultHireEnd"
+              className="mt-1 rounded-lg border border-driven-warm px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+        <p className="text-[11px] text-driven-muted">
+          If you use default dates, fill both fields — they auto-fill when you add props to this set.
+        </p>
         <button
           type="submit"
           className="rounded-lg border border-driven-ink bg-driven-ink px-4 py-2 font-[family-name:var(--font-driven-mono)] text-xs font-semibold uppercase tracking-wide text-driven-paper hover:bg-driven-accent"
@@ -70,10 +98,17 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
         ) : (
           <ul className="mt-4 divide-y divide-driven-warm border border-driven-warm bg-white">
             {sets.map((s) => {
-              const indicativePence = s.items.reduce((sum, it) => {
-                const w = billableWeeksFromRange(it.hireStart, it.hireEnd);
-                return sum + w * it.offer.weeklyHirePence;
-              }, 0);
+              const indicativePence = s.items.reduce(
+                (sum, it) =>
+                  sum +
+                  computePropHireTotalPence(
+                    it.hireStart,
+                    it.hireEnd,
+                    it.offer.minimumHireWeeks,
+                    it.offer.weeklyHirePence
+                  ),
+                0
+              );
               return (
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
                 <div>
@@ -89,6 +124,13 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
                       <>
                         {" "}
                         · indicative <span className="font-medium text-driven-ink">£{(indicativePence / 100).toFixed(2)}</span>
+                      </>
+                    ) : null}
+                    {s.defaultHireStart && s.defaultHireEnd ? (
+                      <>
+                        {" "}
+                        · default window {s.defaultHireStart.toLocaleDateString("en-GB")}–
+                        {s.defaultHireEnd.toLocaleDateString("en-GB")}
                       </>
                     ) : null}{" "}
                     · updated {s.updatedAt.toLocaleDateString("en-GB")}

@@ -297,11 +297,15 @@ model PropRentalSet {
   id        String   @id @default(cuid())
   userId    String
   name      String   @default("Untitled set")
+  /// Optional production window: prefilled when adding props to this set (UTC calendar dates).
+  defaultHireStart DateTime?
+  defaultHireEnd   DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items PropRentalSetItem[]
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items           PropRentalSetItem[]
+  bookingsFromSet PropRentalBooking[]
 
   @@index([userId])
 }
@@ -349,23 +353,30 @@ model PropRentalBooking {
   hireStart                DateTime
   hireEnd                  DateTime
   billableWeeks            Int // ceil weeks between hireStart and hireEnd for quote
-  totalHirePence           Int // billableWeeks * weekly at request time
+  totalHirePence           Int // pro-rata daily share of weekly rate, minimum minimumHireWeeks × weekly (snapshot)
   status                   PropRentalBookingStatus  @default(REQUESTED)
   fulfillment              PropRentalFulfillment
   contractAcceptedAt       DateTime?
   hirerOrgName             String?
   productionNotes          String?                  @db.Text
   deliveryArrangementNotes String?                  @db.Text
+  hireRequestBatchId       String? // groups line items from one “send requests” submit
+  propRentalSetId          String?
+  stripeCheckoutSessionId  String?
+  hirePaidAt               DateTime?
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt
 
-  offer PropRentalOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  hirer User            @relation("PropRentalHirer", fields: [hirerId], references: [id], onDelete: Cascade)
+  offer           PropRentalOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  hirer           User            @relation("PropRentalHirer", fields: [hirerId], references: [id], onDelete: Cascade)
+  propRentalSet   PropRentalSet?  @relation(fields: [propRentalSetId], references: [id], onDelete: SetNull)
 
   @@index([offerId])
   @@index([hirerId])
   @@index([status])
   @@index([hireStart, hireEnd])
+  @@index([hireRequestBatchId])
+  @@index([propRentalSetId])
 }
 
 model ListingFavorite {

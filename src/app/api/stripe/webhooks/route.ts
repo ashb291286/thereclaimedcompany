@@ -38,6 +38,33 @@ export async function POST(req: Request) {
     const offerIdMeta = session.metadata?.offerId?.trim();
     const bidIdMeta = session.metadata?.bidId?.trim();
 
+    if (kind === "prop_hire_batch" && paymentIntentId) {
+      const batchIdMeta = session.metadata?.batchId?.trim();
+      const hirerIdMeta = session.metadata?.hirerId?.trim();
+      const bookingIdsRaw = session.metadata?.bookingIds?.trim();
+      if (batchIdMeta && hirerIdMeta && bookingIdsRaw) {
+        const bookingIds = bookingIdsRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (bookingIds.length > 0) {
+          await prisma.propRentalBooking.updateMany({
+            where: {
+              id: { in: bookingIds },
+              hirerId: hirerIdMeta,
+              hireRequestBatchId: batchIdMeta,
+              hirePaidAt: null,
+            },
+            data: {
+              hirePaidAt: new Date(),
+              stripeCheckoutSessionId: session.id,
+            },
+          });
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+
     if (kind === "listing_boost" && listingId && sellerId && paymentIntentId) {
       const listing = await prisma.listing.findFirst({
         where: { id: listingId, sellerId },

@@ -11,11 +11,14 @@ import { syncListingLocalYardAlerts } from "@/lib/listing-local-yard-alerts";
 import { ListingPricingMode, ListingStatus, type Condition } from "@/generated/prisma/client";
 import {
   billableWeeksFromRange,
+  computePropHireTotalPence,
   inclusiveHireDays,
   rangesOverlapUtc,
   startOfUtcDay,
+  utcCalendarDateToIso,
 } from "@/lib/prop-yard";
 import type { PropRentalBookingStatus, PropRentalFulfillment } from "@/generated/prisma/client";
+import { randomUUID } from "crypto";
 
 const BLOCKING: PropRentalBookingStatus[] = ["REQUESTED", "CONFIRMED", "OUT_ON_HIRE"];
 const FULFILLMENTS: PropRentalFulfillment[] = [
@@ -370,13 +373,41 @@ async function validateAvailability(offerId: string, hireStart: Date, hireEnd: D
   }
 }
 
+function parseSetDefaultHireWindow(formData: FormData): {
+  defaultHireStart: Date | null;
+  defaultHireEnd: Date | null;
+} | { error: string } {
+  const ds = String(formData.get("defaultHireStart") ?? "").trim();
+  const de = String(formData.get("defaultHireEnd") ?? "").trim();
+  if (!ds && !de) return { defaultHireStart: null, defaultHireEnd: null };
+  if (!ds || !de) return { error: "Enter both a default hire start and end date, or leave both blank." };
+  const hireStart = startOfUtcDay(new Date(ds));
+  const hireEnd = startOfUtcDay(new Date(de));
+  if (Number.isNaN(hireStart.getTime()) || Number.isNaN(hireEnd.getTime()) || hireEnd < hireStart) {
+    return { error: "Default hire dates are invalid (end must be on or after start)." };
+  }
+  if (inclusiveHireDays(hireStart, hireEnd) > 365) {
+    return { error: "Default hire window cannot exceed 365 days." };
+  }
+  return { defaultHireStart: hireStart, defaultHireEnd: hireEnd };
+}
+
 export async function createPropRentalSetAction(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/prop-yard/sets");
   const rawName = String(formData.get("name") ?? "").trim();
   const name = rawName.slice(0, 120) || "Untitled set";
+  const window = parseSetDefaultHireWindow(formData);
+  if ("error" in window) {
+    redirect("/prop-yard/sets?error=" + encodeURIComponent(window.error));
+  }
   const set = await prisma.propRentalSet.create({
-    data: { userId: session.user.id, name },
+    data: {
+      userId: session.user.id,
+      name,
+      defaultHireStart: window.defaultHireStart,
+      defaultHireEnd: window.defaultHireEnd,
+    },
   });
   redirect(`/prop-yard/set/${set.id}`);
 }
@@ -391,6 +422,26 @@ export async function updatePropRentalSetNameAction(formData: FormData): Promise
     where: { id: setId, userId: session.user.id },
     data: { name: rawName.slice(0, 120) },
   });
+  redirect(`/prop-yard/set/${setId}`);
+}
+
+export async function updatePropRentalSetHireWindowAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/auth/signin");
+  const setId = String(formData.get("setId") ?? "").trim();
+  if (!setId) redirect("/prop-yard/sets");
+  const window = parseSetDefaultHireWindow(formData);
+  if ("error" in window) {
+    redirect(`/prop-yard/set/${setId}?error=` + encodeURIComponent(window.error));
+  }
+  const n = await prisma.propRentalSet.updateMany({
+    where: { id: setId, userId: session.user.id },
+    data: {
+      defaultHireStart: window.defaultHireStart,
+      defaultHireEnd: window.defaultHireEnd,
+    },
+  });
+  if (n.count === 0) redirect("/prop-yard/sets?error=" + encodeURIComponent("Set not found."));
   redirect(`/prop-yard/set/${setId}`);
 }
 
@@ -428,15 +479,30 @@ export async function upsertPropSetItemAction(formData: FormData): Promise<void>
 
   const set = await prisma.propRentalSet.findFirst({
     where: { id: setId, userId: session.user.id },
-    select: { id: true },
+    select: { id: true, defaultHireStart: true, defaultHireEnd: true },
   });
   if (!set) {
     redirect("/prop-yard/sets?error=" + encodeURIComponent("That set was not found or you do not have access."));
   }
 
-  const hireStart = startOfUtcDay(new Date(startRaw));
-  const hireEnd = startOfUtcDay(new Date(endRaw));
-  if (Number.isNaN(hireStart.getTime()) || Number.isNaN(hireEnd.getTime()) || hireEnd < hireStart) {
+  const useStartRaw =
+    startRaw ||
+    (set.defaultHireStart != null && set.defaultHireEnd != null
+      ? utcCalendarDateToIso(set.defaultHireStart)
+      : "");
+  const useEndRaw =
+    endRaw ||
+    (set.defaultHireStart != null && set.defaultHireEnd != null ? utcCalendarDateToIso(set.defaultHireEnd) : "");
+
+  const hireStart = startOfUtcDay(new Date(useStartRaw));
+  const hireEnd = startOfUtcDay(new Date(useEndRaw));
+  if (
+    !useStartRaw ||
+    !useEndRaw ||
+    Number.isNaN(hireStart.getTime()) ||
+    Number.isNaN(hireEnd.getTime()) ||
+    hireEnd < hireStart
+  ) {
     redirect(`/prop-yard/offers/${offerId}?setId=${encodeURIComponent(setId)}&error=` + encodeURIComponent("Choose valid hire dates."));
   }
   const days = inclusiveHireDays(hireStart, hireEnd);
@@ -535,6 +601,7 @@ export async function submitPropSetRequestsAction(formData: FormData): Promise<v
 
   let created = 0;
   const affectedYards = new Set<string>();
+  const batchId = randomUUID();
 
   await prisma.$transaction(async (tx) => {
     for (const item of items) {
@@ -558,6 +625,13 @@ export async function submitPropSetRequestsAction(formData: FormData): Promise<v
         continue;
       }
 
+      const totalHirePence = computePropHireTotalPence(
+        item.hireStart,
+        item.hireEnd,
+        offer.minimumHireWeeks,
+        offer.weeklyHirePence
+      );
+
       await tx.propRentalBooking.create({
         data: {
           offerId: offer.id,
@@ -565,22 +639,20 @@ export async function submitPropSetRequestsAction(formData: FormData): Promise<v
           hireStart: item.hireStart,
           hireEnd: item.hireEnd,
           billableWeeks: weeks,
-          totalHirePence: weeks * offer.weeklyHirePence,
+          totalHirePence,
           status: "REQUESTED",
           fulfillment: item.fulfillment,
           contractAcceptedAt: new Date(),
           hirerOrgName: item.hirerOrgName,
           productionNotes: item.productionNotes,
           deliveryArrangementNotes: item.deliveryArrangementNotes,
+          hireRequestBatchId: batchId,
+          propRentalSetId: setId,
         },
       });
       affectedYards.add(offer.listing.sellerId);
       created += 1;
     }
-
-    await tx.propRentalSetItem.deleteMany({
-      where: { setId },
-    });
   });
 
   if (created === 0) {
@@ -588,5 +660,7 @@ export async function submitPropSetRequestsAction(formData: FormData): Promise<v
       `/prop-yard/set/${setId}?error=` + encodeURIComponent("No requests were sent. Check dates/minimum periods.")
     );
   }
-  redirect(`/prop-yard/hires/success?sent=${created}&yards=${affectedYards.size}`);
+  redirect(
+    `/prop-yard/hires/success?batchId=${encodeURIComponent(batchId)}&setId=${encodeURIComponent(setId)}&sent=${created}&yards=${affectedYards.size}`
+  );
 }
