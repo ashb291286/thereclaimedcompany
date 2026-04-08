@@ -440,6 +440,11 @@ export async function updateListing(id: string, formData: FormData) {
   }
   const { listingKind, freeToCollector, price, auctionEndsAt, auctionReservePence } = parsed.data;
 
+  const visibleOnMarketplace =
+    dbUser?.role === "reclamation_yard" && listingKind === "sell" && !freeToCollector
+      ? formData.get("visibleOnMarketplace") === "on"
+      : true;
+
   const categoryResolved = await resolveListingCategoryId(formData);
   if (!categoryResolved.ok) {
     redirect(editUrl + "?error=" + encodeURIComponent(categoryResolved.message));

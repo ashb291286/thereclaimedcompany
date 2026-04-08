@@ -161,6 +161,7 @@ export async function createPropOnlyListingAndOfferAction(formData: FormData): P
   }
 
   const listing = await prisma.$transaction(async (tx) => {
+    const p = resolvedPostcode!;
     const l = await tx.listing.create({
       data: {
         sellerId: userId,
@@ -169,11 +170,11 @@ export async function createPropOnlyListingAndOfferAction(formData: FormData): P
         price: listPricePence,
         condition,
         categoryId,
-        postcode: resolvedPostcode.postcode,
-        lat: resolvedPostcode.lat,
-        lng: resolvedPostcode.lng,
-        adminDistrict: resolvedPostcode.adminDistrict,
-        region: resolvedPostcode.region,
+        postcode: p.postcode,
+        lat: p.lat,
+        lng: p.lng,
+        adminDistrict: p.adminDistrict,
+        region: p.region,
         images,
         status: ListingStatus.active,
         listingKind: "sell",

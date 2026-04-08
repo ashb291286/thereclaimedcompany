@@ -20,7 +20,9 @@ export default async function DashboardPropYardPage() {
   const offers = await prisma.propRentalOffer.findMany({
     where: { listing: { sellerId: session.user.id } },
     orderBy: { updatedAt: "desc" },
-    include: { listing: { select: { id: true, title: true, status: true, price: true } } },
+    include: {
+      listing: { select: { id: true, title: true, status: true, price: true, visibleOnMarketplace: true } },
+    },
   });
 
   const pct = Math.round(PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE * 100);
