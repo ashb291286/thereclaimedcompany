@@ -24,6 +24,7 @@ const IDEMPOTENT_MIGRATION_NAMES = [
   "20260408183000_prop_rental_set_default_hire_dates",
   "20260408200000_prop_booking_set_batch_payment",
   "20260409140000_offer_status_superseded",
+  "20260409160000_user_buyer_home_location",
 ];
 
 function runCaptured(cmd) {
