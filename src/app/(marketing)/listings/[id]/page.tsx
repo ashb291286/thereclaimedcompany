@@ -23,6 +23,11 @@ import { ListingFomoStrip } from "@/components/ListingFomoStrip";
 import { buildSellerBadges } from "@/lib/seller-badges";
 import { openingHoursCompactLine, scheduleFromDbField } from "@/lib/opening-hours";
 import { publicSellerPath } from "@/lib/yard-public-path";
+import {
+  buyerGrossPenceFromSellerNetPence,
+  sellerChargesVat,
+  vatLabelSuffix,
+} from "@/lib/vat-pricing";
 import { ListingLocalYardsForOwner } from "@/components/ListingLocalYardsForOwner";
 import { ListingPricingMode } from "@/lib/listing-client-enums";
 import type { Metadata } from "next";
@@ -216,7 +221,13 @@ export default async function ListingPage({
   const minNextPence = isAuction
     ? minimumNextBidPence(listing.price, topBid?.amountPence ?? null)
     : listing.price;
-  const minNextPounds = minNextPence / 100;
+  const chargesVat = sellerChargesVat({
+    sellerRole: listing.seller?.role,
+    vatRegistered: sellerProfile?.vatRegistered,
+  });
+  const buyerListPricePence = buyerGrossPenceFromSellerNetPence(listing.price, chargesVat);
+  const buyerMinNextPence = buyerGrossPenceFromSellerNetPence(minNextPence, chargesVat);
+  const minNextPounds = buyerMinNextPence / 100;
 
   const userWonAuction =
     !!topBid &&
@@ -343,9 +354,17 @@ export default async function ListingPage({
               isOwner={isOwner}
             />
             <div className="mt-3 flex items-start justify-between gap-3">
-              <h1 className="min-w-0 flex-1 text-xl font-semibold leading-snug text-zinc-900 sm:text-2xl">
-                {listing.title}
-              </h1>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl font-semibold leading-snug text-zinc-900 sm:text-2xl">
+                  {listing.title}
+                </h1>
+                {listing.sellerReference?.trim() ? (
+                  <p className="mt-1.5 text-sm text-zinc-600">
+                    <span className="font-medium text-zinc-800">Reference</span>{" "}
+                    <span className="font-mono text-zinc-700">{listing.sellerReference.trim()}</span>
+                  </p>
+                ) : null}
+              </div>
               <ListingFavoriteButton
                 listingId={id}
                 initialFavorited={!!userFavorite}
@@ -355,7 +374,8 @@ export default async function ListingPage({
             </div>
             {listing.listingKind === "sell" && !listing.freeToCollector && (
               <p className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
-                £{(listing.price / 100).toFixed(2)}
+                £{(buyerListPricePence / 100).toFixed(2)}
+                {vatLabelSuffix(chargesVat)}
               </p>
             )}
             {listing.listingKind === "sell" && listing.freeToCollector && (
@@ -367,8 +387,8 @@ export default async function ListingPage({
               <div className="mt-3 space-y-1 border-t border-zinc-100 pt-3">
                 <p className="text-2xl font-semibold tracking-tight text-zinc-900">
                   {topBid
-                    ? `Current bid £${(topBid.amountPence / 100).toFixed(2)}`
-                    : `Starting bid £${(listing.price / 100).toFixed(2)}`}
+                    ? `Current bid £${(buyerGrossPenceFromSellerNetPence(topBid.amountPence, chargesVat) / 100).toFixed(2)}${vatLabelSuffix(chargesVat)}`
+                    : `Starting bid £${(buyerListPricePence / 100).toFixed(2)}${vatLabelSuffix(chargesVat)}`}
                 </p>
                 {listing.auctionEndsAt && (
                   <p className="text-sm text-zinc-600">
@@ -522,16 +542,20 @@ export default async function ListingPage({
                   freeToCollector={listing.freeToCollector}
                   pricingMode={listing.pricingMode}
                   unitsAvailable={listing.unitsAvailable}
-                  unitPricePence={listing.price}
+                  unitPricePence={buyerListPricePence}
                   offerId={acceptedMine?.id}
                   offerPayLabel={
                     acceptedMine
-                      ? `Pay agreed £${(acceptedMine.offeredPrice / 100).toFixed(2)}`
+                      ? `Pay agreed £${(buyerGrossPenceFromSellerNetPence(acceptedMine.offeredPrice, chargesVat) / 100).toFixed(2)}${vatLabelSuffix(chargesVat)}`
                       : undefined
                   }
                 />
                 {!listing.freeToCollector ? (
-                  <HaggleForm listingId={listing.id} listPricePence={listing.price} />
+                  <HaggleForm
+                    listingId={listing.id}
+                    listPricePence={buyerListPricePence}
+                    chargesVat={chargesVat}
+                  />
                 ) : null}
               </>
             )}
@@ -555,7 +579,7 @@ export default async function ListingPage({
                   <BuyButton
                     listingId={listing.id}
                     bidId={topBid.id}
-                    label={`Pay winning bid £${(topBid.amountPence / 100).toFixed(2)}`}
+                    label={`Pay winning bid £${(buyerGrossPenceFromSellerNetPence(topBid.amountPence, chargesVat) / 100).toFixed(2)}${chargesVat ? " (incl. VAT)" : ""}`}
                   />
                 </div>
               </div>
@@ -617,11 +641,19 @@ export default async function ListingPage({
               {incomingOffers.map((o) => (
                 <li key={o.id} className="rounded-lg border border-zinc-200 bg-white p-3 text-sm">
                   <p className="font-medium text-zinc-900">
-                    £{(o.offeredPrice / 100).toFixed(2)} from{" "}
-                    {o.buyer.name ?? o.buyer.email ?? "Buyer"}
+                    £
+                    {(buyerGrossPenceFromSellerNetPence(o.offeredPrice, chargesVat) / 100).toFixed(2)}
+                    {vatLabelSuffix(chargesVat)} from {o.buyer.name ?? o.buyer.email ?? "Buyer"}
                   </p>
                   {o.message && <p className="mt-1 text-zinc-600">{o.message}</p>}
-                  <OfferRespond offerId={o.id} />
+                  <OfferRespond
+                    offerId={o.id}
+                    listingActive={
+                      listing.status === "active" &&
+                      listing.listingKind === "sell" &&
+                      !listing.freeToCollector
+                    }
+                  />
                 </li>
               ))}
             </ul>
@@ -638,14 +670,20 @@ export default async function ListingPage({
                     {o.fromSellerCounter ? (
                       <>
                         <span className="font-medium text-zinc-900">Seller counter-offer:</span> £
-                        {(o.offeredPrice / 100).toFixed(2)}
+                        {(buyerGrossPenceFromSellerNetPence(o.offeredPrice, chargesVat) / 100).toFixed(2)}
+                        {vatLabelSuffix(chargesVat)}
                       </>
                     ) : (
                       <>
-                        Your offer: £{(o.offeredPrice / 100).toFixed(2)}
+                        Your offer: £
+                        {(buyerGrossPenceFromSellerNetPence(o.offeredPrice, chargesVat) / 100).toFixed(2)}
+                        {vatLabelSuffix(chargesVat)}
                       </>
                     )}{" "}
-                    — {o.status}
+                    —{" "}
+                    {o.status === "superseded" && !o.fromSellerCounter
+                      ? "superseded (seller countered)"
+                      : o.status}
                   </p>
                   {o.status === "pending" && o.fromSellerCounter ? (
                     <BuyerCounterRespond offerId={o.id} />
@@ -662,7 +700,8 @@ export default async function ListingPage({
             <ul className="mt-2 space-y-1 text-sm text-zinc-600">
               {recentBids.map((b) => (
                 <li key={b.id}>
-                  £{(b.amountPence / 100).toFixed(2)} · {b.bidder.name ?? b.bidder.email ?? "Bidder"}
+                  £{(buyerGrossPenceFromSellerNetPence(b.amountPence, chargesVat) / 100).toFixed(2)}
+                  {vatLabelSuffix(chargesVat)} · {b.bidder.name ?? b.bidder.email ?? "Bidder"}
                 </li>
               ))}
             </ul>

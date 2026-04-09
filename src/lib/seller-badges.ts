@@ -9,7 +9,7 @@ export type SellerBadgeVM = {
 };
 
 const BROWSE_RECLAIMED = "/search";
-const BROWSE_YARDS = "/search?sellerType=reclamation_yard";
+const BROWSE_YARDS = "/reclamation-yards";
 
 /**
  * Public “reclaimer” badges for the listing seller card. Each badge links into the reclaimed marketplace browse experience.

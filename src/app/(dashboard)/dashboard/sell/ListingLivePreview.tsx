@@ -4,6 +4,8 @@ import type { ListingKind } from "@/lib/listing-client-enums";
 export type ListingLivePreviewProps = {
   images: string[];
   title: string;
+  /** Optional yard/stock reference — same as public listing. */
+  sellerReference?: string | null;
   description: string;
   categoryName: string;
   conditionLabel: string;
@@ -23,6 +25,7 @@ export type ListingLivePreviewProps = {
 export function ListingLivePreview({
   images,
   title,
+  sellerReference,
   description,
   categoryName,
   conditionLabel,
@@ -91,6 +94,11 @@ export function ListingLivePreview({
         <p className="line-clamp-2 font-medium text-zinc-900">
           {title.trim() || "Listing title"}
         </p>
+        {sellerReference?.trim() ? (
+          <p className="mt-1 text-xs font-medium text-zinc-600">
+            Ref: <span className="text-zinc-800">{sellerReference.trim()}</span>
+          </p>
+        ) : null}
         <p className="mt-1 text-sm font-medium text-zinc-900">{priceLine}</p>
         {auctionEndsLine && (
           <p className="mt-0.5 text-xs text-zinc-600">{auctionEndsLine}</p>

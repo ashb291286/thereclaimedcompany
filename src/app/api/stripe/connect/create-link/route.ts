@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { NextResponse } from "next/server";
 
-export async function POST() {
+export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,9 +19,23 @@ export async function POST() {
     );
   }
 
+  let flow: "dashboard" | "onboarding" = "dashboard";
+  try {
+    const body = (await req.json().catch(() => ({}))) as { flow?: string };
+    if (body?.flow === "onboarding") flow = "onboarding";
+  } catch {
+    /* ignore */
+  }
+
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-  const returnUrl = `${baseUrl}/dashboard?stripe=success`;
-  const refreshUrl = `${baseUrl}/dashboard?stripe=refresh`;
+  const returnUrl =
+    flow === "onboarding"
+      ? `${baseUrl}/dashboard/onboarding?phase=complete&stripe=success`
+      : `${baseUrl}/dashboard?stripe=success`;
+  const refreshUrl =
+    flow === "onboarding"
+      ? `${baseUrl}/dashboard/onboarding?phase=payments&stripe=refresh`
+      : `${baseUrl}/dashboard?stripe=refresh`;
 
   try {
     let accountId = sellerProfile.stripeAccountId;

@@ -57,6 +57,8 @@ enum OfferStatus {
   accepted
   declined
   withdrawn
+  /// Buyer’s offer replaced by a seller counter (still in history).
+  superseded
 }
 
 enum ListingLocalYardAlertStatus {
@@ -68,6 +70,19 @@ enum WantedAdStatus {
   active
   fulfilled
   closed
+}
+
+/// Demolition / refurb salvage: one site project with multiple claimable lots.
+enum DemolitionProjectStatus {
+  draft
+  active
+  closed
+}
+
+enum DemolitionElementStatus {
+  available
+  reserved
+  withdrawn
 }
 
 // ---- NextAuth (Auth.js v5) ----
@@ -94,6 +109,16 @@ model User {
   notifications Notification[]
   listingFavorites ListingFavorite[]
 
+  /// Set at credentials sign-up: "buying" | "selling" (drives buyer welcome flow).
+  registrationIntent   String?
+  /// Buyer’s saved area for distance hints on listings (UK postcode + geocode).
+  homePostcode         String?
+  homeLat              Float?
+  homeLng              Float?
+  homeAdminDistrict    String?
+  homeRegion           String?
+  buyerWelcomeCompletedAt DateTime?
+
   stripeCustomerId     String? @unique // platform Customer for saved auction payment method
   bidPaymentMethodId   String? // default PaymentMethod id (card on file for bids)
   localYardAlerts          ListingLocalYardAlert[] @relation("YardLocalAlerts")
@@ -102,6 +127,9 @@ model User {
   propListingDrafts         PropListingDraft[]
   seenOnScreenRequested     SeenOnScreenVerificationRequest[] @relation("SeenOnScreenRequestedBy")
   seenOnScreenReviewed      SeenOnScreenVerificationRequest[] @relation("SeenOnScreenReviewedBy")
+  demolitionProjectsOrganized DemolitionProject[]
+  demolitionElementsClaimed   DemolitionElement[]              @relation("DemolitionElementClaimedBy")
+  demolitionElementInterests  DemolitionElementInterest[]
 }
 
 model Account {
@@ -161,6 +189,8 @@ model SellerProfile {
   yardWebsiteUrl       String?
   yardSocialJson       Json?    // instagram, facebook, x, linkedin, tiktok URLs
   verificationStatus String?  @default("none") // none | pending | verified
+  /// UK VAT-registered reclamation yards: listing prices stored ex VAT; buyers pay +20% at checkout.
+  vatRegistered     Boolean   @default(false)
   stripeAccountId   String?   // Stripe Connect account id when onboarding complete
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -201,6 +231,8 @@ model Listing {
   id                String        @id @default(cuid())
   sellerId          String
   title             String
+  /// Optional stock / yard reference (e.g. SKU) — shown on the listing for buyers.
+  sellerReference   String?
   description       String
   price             Int // asking (sell) or starting bid (auction), pence; 0 when freeToCollector
   condition         Condition
@@ -644,6 +676,79 @@ model WantedAd {
   @@index([userId])
   @@index([status])
   @@index([categoryId])
+}
+
+model DemolitionProject {
+  id                  String                  @id @default(cuid())
+  organizerId         String
+  title               String
+  description         String                  @db.Text
+  siteAddress         String?
+  postcode            String
+  lat                 Float?
+  lng                 Float?
+  adminDistrict       String?
+  region              String?
+  /// Site access: where to meet, gate times, induction, etc.
+  accessWhereWhen     String?                 @db.Text
+  /// Insurance, method statements, general strip-out rules.
+  conditionsGeneral   String?                 @db.Text
+  images              String[]                @default([])
+  status              DemolitionProjectStatus @default(draft)
+  publishedAt         DateTime?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  organizer User                @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  elements  DemolitionElement[]
+
+  @@index([organizerId])
+  @@index([status])
+  @@index([postcode])
+  @@index([createdAt])
+}
+
+model DemolitionElement {
+  id                    String                  @id @default(cuid())
+  projectId             String
+  title                 String
+  description           String?                 @db.Text
+  isFree                Boolean                 @default(true)
+  /// When chargeable: asking price in pence (payment arranged off-platform or future checkout).
+  pricePence            Int?
+  removalMustCompleteBy DateTime?
+  pickupWhereWhen       String?                 @db.Text
+  conditions            String?                 @db.Text
+  quantityNote          String?
+  sortOrder             Int                     @default(0)
+  status                DemolitionElementStatus @default(available)
+  claimedById           String?
+  claimedAt             DateTime?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  project   DemolitionProject             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  claimedBy User?                         @relation("DemolitionElementClaimedBy", fields: [claimedById], references: [id], onDelete: SetNull)
+  interests DemolitionElementInterest[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+/// Registered interest for a chargeable demolition lot (organizer follows up).
+model DemolitionElementInterest {
+  id        String   @id @default(cuid())
+  elementId String
+  userId    String
+  message   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  element DemolitionElement @relation(fields: [elementId], references: [id], onDelete: Cascade)
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([elementId])
+  @@index([userId])
+  @@index([elementId, userId])
 }
 
 model Notification {

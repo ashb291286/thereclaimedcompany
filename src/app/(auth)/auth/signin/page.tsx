@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { signIn } from "@/auth";
 import { redirect } from "next/navigation";
 
@@ -9,7 +9,7 @@ export default async function SignInPage({
 }) {
   const { error } = await searchParams;
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-8">
+    <div className="mx-auto w-full max-w-md rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
       <h1 className="text-2xl font-semibold text-zinc-900 mb-6">Sign in</h1>
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

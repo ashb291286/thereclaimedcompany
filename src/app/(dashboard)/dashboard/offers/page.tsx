@@ -6,7 +6,11 @@ import { OfferRespond } from "@/app/(marketing)/listings/[id]/OfferRespond";
 import { SellerCounterOfferForm } from "@/app/(marketing)/listings/[id]/SellerCounterOfferForm";
 import { BuyerCounterRespond } from "@/app/(marketing)/listings/[id]/BuyerCounterRespond";
 
-function statusLabel(status: string) {
+function statusLabel(
+  status: string,
+  fromSellerCounter: boolean,
+  perspective: "sellerListingHistory" | "buyerOutgoing" = "sellerListingHistory"
+) {
   switch (status) {
     case "pending":
       return "Pending";
@@ -16,6 +20,11 @@ function statusLabel(status: string) {
       return "Declined";
     case "withdrawn":
       return "Withdrawn";
+    case "superseded":
+      if (fromSellerCounter) return "Superseded";
+      return perspective === "buyerOutgoing"
+        ? "Superseded — seller countered"
+        : "Counter sent — buyer notified";
     default:
       return status;
   }
@@ -25,7 +34,7 @@ export default async function OffersPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
 
-  const [incoming, pendingSellerCounters, historyIncoming, outgoing] = await Promise.all([
+  const [incoming, historyIncoming, outgoing] = await Promise.all([
     prisma.offer.findMany({
       where: {
         status: "pending",
@@ -40,19 +49,7 @@ export default async function OffersPage() {
     }),
     prisma.offer.findMany({
       where: {
-        status: "pending",
-        fromSellerCounter: true,
-        listing: { sellerId: session.user.id },
-      },
-      include: {
-        listing: true,
-        buyer: { select: { name: true, email: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.offer.findMany({
-      where: {
-        status: { in: ["declined", "accepted", "withdrawn"] },
+        status: { in: ["declined", "accepted", "withdrawn", "superseded"] },
         listing: { sellerId: session.user.id },
       },
       include: {
@@ -74,8 +71,8 @@ export default async function OffersPage() {
     <div>
       <h1 className="text-2xl font-semibold text-zinc-900">Offers & haggling</h1>
       <p className="mt-2 text-sm text-zinc-600">
-        Accept a buyer’s offer to lock the price — they pay that amount from the listing page. From history you can
-        send a counter-offer after a decline.
+        Accept a buyer’s offer to lock the price — they pay that amount from the listing page. You can counter a
+        pending offer or one you previously declined; counters appear in history as “counter sent”.
       </p>
 
       <section className="mt-10">
@@ -97,7 +94,14 @@ export default async function OffersPage() {
                 >
                   View listing
                 </Link>
-                <OfferRespond offerId={o.id} />
+                <OfferRespond
+                  offerId={o.id}
+                  listingActive={
+                    o.listing.status === "active" &&
+                    o.listing.listingKind === "sell" &&
+                    !o.listing.freeToCollector
+                  }
+                />
               </li>
             ))}
           </ul>
@@ -107,8 +111,8 @@ export default async function OffersPage() {
       <section className="mt-10">
         <h2 className="text-lg font-medium text-zinc-900">History on your listings</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Declined, accepted, and withdrawn offers stay visible. Use counter-offer after a decline if the listing is
-          still active.
+          Declined, accepted, withdrawn, and superseded (countered) offers stay visible. You can send another counter
+          from a declined row if the listing is still active.
         </p>
         {historyIncoming.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-500">No past offers yet.</p>
@@ -132,7 +136,7 @@ export default async function OffersPage() {
                     </p>
                     {o.message ? <p className="mt-1 text-sm text-zinc-600">{o.message}</p> : null}
                     <p className="mt-2 text-xs text-zinc-500">
-                      {statusLabel(o.status)}
+                      {statusLabel(o.status, o.fromSellerCounter)}
                       {o.respondedAt
                         ? ` · ${o.respondedAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}`
                         : ""}
@@ -147,7 +151,7 @@ export default async function OffersPage() {
                 </div>
                 {o.status === "declined" ? (
                   <SellerCounterOfferForm
-                    declinedOfferId={o.id}
+                    baseOfferId={o.id}
                     listingActive={
                       o.listing.status === "active" &&
                       o.listing.listingKind === "sell" &&
@@ -174,7 +178,8 @@ export default async function OffersPage() {
                 </Link>
                 <p className="text-zinc-600">
                   {o.fromSellerCounter ? "Seller counter-offer: " : "Your offer: "}
-                  £{(o.offeredPrice / 100).toFixed(2)} · {statusLabel(o.status)}
+                  £{(o.offeredPrice / 100).toFixed(2)} ·{" "}
+                  {statusLabel(o.status, o.fromSellerCounter, "buyerOutgoing")}
                 </p>
                 {o.status === "pending" && o.fromSellerCounter ? (
                   <BuyerCounterRespond offerId={o.id} />

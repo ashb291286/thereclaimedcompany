@@ -17,6 +17,11 @@ export default async function SellPage({
 
   const sellerProfile = await prisma.sellerProfile.findUnique({
     where: { userId: session.user.id },
+    select: {
+      postcode: true,
+      displayName: true,
+      vatRegistered: true,
+    },
   });
   if (!sellerProfile) redirect("/dashboard/onboarding");
 
@@ -40,7 +45,8 @@ export default async function SellPage({
         <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-950">
           <p className="font-semibold">You&apos;re ready to sell</p>
           <p className="mt-1 text-emerald-900/90">
-            Profile saved. Add photos (you&apos;ll crop each one), then publish your first listing.
+            Add photos (you&apos;ll crop each one), set your price, then publish. Connect Stripe from the dashboard
+            if you haven&apos;t already — you&apos;ll need it before your first paid order.
           </p>
           <Link
             href="/dashboard"
@@ -63,6 +69,9 @@ export default async function SellPage({
         sellerDisplayName={sellerProfile.displayName}
         materialOptions={materialOptions}
         isReclamationYard={dbUser?.role === "reclamation_yard"}
+        yardPricesExcludeVat={
+          dbUser?.role === "reclamation_yard" && Boolean(sellerProfile.vatRegistered)
+        }
       />
     </div>
   );

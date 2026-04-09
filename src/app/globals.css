@@ -34,6 +34,57 @@
   }
 }
 
+@keyframes testimonial-marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes testimonial-marquee-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.testimonial-marquee-track-left {
+  animation: testimonial-marquee-left 52s linear infinite;
+  will-change: transform;
+}
+
+.testimonial-marquee-track-right {
+  animation: testimonial-marquee-right 48s linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .testimonial-marquee-track-left,
+  .testimonial-marquee-track-right {
+    animation: none;
+    transform: none !important;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 96rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    row-gap: 0.75rem;
+  }
+
+  /* Each track duplicates quotes for seamless loop; show one set when motion is reduced */
+  .testimonial-marquee-track-left > figure:nth-child(n + 7),
+  .testimonial-marquee-track-right > figure:nth-child(n + 7) {
+    display: none;
+  }
+}
+
 @layer base {
   body {
     background: var(--background);

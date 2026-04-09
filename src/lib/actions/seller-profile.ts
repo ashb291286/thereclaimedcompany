@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
+import { slugifyAdminDistrict } from "@/lib/yard-area-seo";
 
 function normalizeWebsiteUrl(raw: string | null | undefined): string | null {
   const t = raw?.trim();
@@ -79,12 +80,19 @@ export async function updateYardProfileAction(formData: FormData): Promise<void>
   const yardHeaderImageUrl = (formData.get("yardHeaderImageUrl") as string)?.trim() || null;
 
   const social = yardSocialFromForm(formData);
+  const vatRegistered = String(formData.get("vatRegistered") ?? "no") === "yes";
+
+  const previous = await prisma.sellerProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { adminDistrict: true },
+  });
 
   await prisma.sellerProfile.update({
     where: { userId: session.user.id },
     data: {
       displayName,
       businessName: (formData.get("businessName") as string)?.trim() || null,
+      vatRegistered,
       postcode: resolvedPostcode.postcode,
       lat: resolvedPostcode.lat,
       lng: resolvedPostcode.lng,
@@ -107,6 +115,14 @@ export async function updateYardProfileAction(formData: FormData): Promise<void>
 
   revalidatePath("/dashboard/seller-profile");
   revalidatePath("/dashboard");
+  revalidatePath("/search");
+  revalidatePath("/reclamation-yards");
+  if (previous?.adminDistrict?.trim()) {
+    revalidatePath(`/reclamation-yards/${slugifyAdminDistrict(previous.adminDistrict)}`);
+  }
+  if (resolvedPostcode.adminDistrict?.trim()) {
+    revalidatePath(`/reclamation-yards/${slugifyAdminDistrict(resolvedPostcode.adminDistrict)}`);
+  }
   revalidatePath(`/sellers/${session.user.id}`);
   revalidatePath(`/reclamation-yard/${slugResult.slug}`);
   redirect("/dashboard/seller-profile?saved=1");

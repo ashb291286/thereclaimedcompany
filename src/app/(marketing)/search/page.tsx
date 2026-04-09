@@ -1,15 +1,38 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
+import { Suspense } from "react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { SearchForm } from "./SearchForm";
+import { BuyerWelcomeModal } from "./BuyerWelcomeModal";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { searchListings } from "@/lib/listing-search";
 import { formatMiles } from "@/lib/geo";
+import { buyerGrossPenceFromSellerNetPence, sellerChargesVat, vatLabelSuffix } from "@/lib/vat-pricing";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseMobileReels, type ReelListing } from "./BrowseMobileReels";
 import type { SearchListingRow } from "@/lib/listing-search";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ sellerType?: string }>;
+}): Promise<Metadata> {
+  const p = await searchParams;
+  if (p.sellerType === "reclamation_yard") {
+    return {
+      title: "Reclamation yards near me | Browse UK salvage yards",
+      description:
+        "Find reclamation yards by UK postcode and search radius. Browse salvage and reclaimed listings from yards across the country.",
+    };
+  }
+  return {
+    title: "Browse listings",
+    description: "Search active reclaimed and salvage listings on The Reclaimed Company.",
+  };
+}
 
 function auctionCountdownLabel(endsAt: Date | null): string | null {
   if (!endsAt) return null;
@@ -44,6 +67,7 @@ export default async function SearchPage({
     page?: string;
     ids?: string;
     fromImage?: string;
+    welcome?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -63,7 +87,21 @@ export default async function SearchPage({
     ? Math.min(100, Math.max(5, radiusRaw))
     : 50;
 
-  const [searchResult, categories, session] = await Promise.all([
+  const session = await auth();
+  const userPrefs = session?.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          registrationIntent: true,
+          buyerWelcomeCompletedAt: true,
+          homePostcode: true,
+          homeLat: true,
+          homeLng: true,
+        },
+      })
+    : null;
+
+  const [searchResult, categories] = await Promise.all([
     searchListings({
       q: params.q,
       categoryId: params.categoryId,
@@ -81,18 +119,34 @@ export default async function SearchPage({
       idList: idList.length > 0 ? idList : undefined,
       skip,
       take: pageSize,
+      viewerHomeLat: userPrefs?.homeLat ?? undefined,
+      viewerHomeLng: userPrefs?.homeLng ?? undefined,
+      viewerHomePostcode: userPrefs?.homePostcode ?? undefined,
     }),
     prisma.category.findMany({
       where: { parentId: null },
       orderBy: { name: "asc" },
     }),
-    auth(),
   ]);
 
-  const { listings: listingsOrdered, total, sortByDistance, searchOriginPostcode } = searchResult;
+  const {
+    listings: listingsOrdered,
+    total,
+    sortByDistance,
+    searchOriginPostcode,
+    usingSavedHomeForDistance,
+    distanceNotePostcode,
+  } = searchResult;
+
+  const showBuyerWelcome =
+    params.welcome === "1" &&
+    !!session?.user?.id &&
+    userPrefs?.registrationIntent === "buying" &&
+    !userPrefs?.buyerWelcomeCompletedAt;
 
   const totalPages = Math.ceil(total / pageSize);
   const fromImage = params.fromImage === "1";
+  const yardsBrowse = params.sellerType === "reclamation_yard";
 
   const paramRecord: Record<string, string | undefined> = {
     q: params.q,
@@ -102,10 +156,10 @@ export default async function SearchPage({
     radius: params.radius ?? (params.postcode?.trim() ? String(radiusMiles) : undefined),
     sellerType: params.sellerType,
     conditionGrade: params.conditionGrade,
-    era: params.era,
-    genre: params.genre,
+    era: yardsBrowse ? undefined : params.era,
+    genre: yardsBrowse ? undefined : params.genre,
     setting: params.setting,
-    material: params.material,
+    material: yardsBrowse ? undefined : params.material,
     hireOnly: params.hireOnly,
     availableNow: params.availableNow,
     ids: params.ids,
@@ -123,12 +177,18 @@ export default async function SearchPage({
 
   function toReelListing(l: SearchListingRow): ReelListing {
     const carbon = parseStoredCarbonImpact(l);
+    const v = sellerChargesVat({
+      sellerRole: l.seller.role,
+      vatRegistered: l.seller.sellerProfile?.vatRegistered,
+    });
+    const buyerPence = buyerGrossPenceFromSellerNetPence(l.price, v);
+    const vatBit = vatLabelSuffix(v);
     const priceLine =
       l.listingKind === "sell" && l.freeToCollector
         ? "Free to collect"
         : l.listingKind === "auction"
-          ? `From £${(l.price / 100).toFixed(2)}`
-          : `£${(l.price / 100).toFixed(2)}`;
+          ? `From £${(buyerPence / 100).toFixed(2)}${vatBit}`
+          : `£${(buyerPence / 100).toFixed(2)}${vatBit}`;
     return {
       id: l.id,
       title: l.title,
@@ -157,12 +217,19 @@ export default async function SearchPage({
     } else if (searchOriginPostcode && idList.length) {
       locationNote = `Distances from ${searchOriginPostcode} (photo-matched order kept).`;
     }
+  } else if (usingSavedHomeForDistance && distanceNotePostcode) {
+    locationNote = `Approximate distance from your saved postcode (${distanceNotePostcode}). Listings need coordinates — older ones may not show miles until the seller adds them.`;
   }
 
   return (
     <div className="mx-auto w-full overflow-x-hidden px-[30px] py-6 sm:py-8">
+      {showBuyerWelcome ? (
+        <Suspense fallback={null}>
+          <BuyerWelcomeModal open />
+        </Suspense>
+      ) : null}
       <h1 className="text-2xl font-semibold text-zinc-900">
-        {params.sellerType === "reclamation_yard" ? "Browse yards" : "Browse listings"}
+        {yardsBrowse ? "Reclamation yards near me" : "Browse listings"}
       </h1>
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
         <aside className="lg:sticky lg:top-24">
@@ -177,7 +244,7 @@ export default async function SearchPage({
             defaultQ={params.q}
             defaultCategoryId={params.categoryId}
             defaultCondition={params.condition}
-            defaultPostcode={params.postcode}
+            defaultPostcode={params.postcode?.trim() ? params.postcode : userPrefs?.homePostcode ?? undefined}
             defaultRadius={String(radiusMiles)}
             defaultSellerType={params.sellerType}
         defaultConditionGrade={params.conditionGrade}
@@ -186,7 +253,8 @@ export default async function SearchPage({
         defaultSetting={params.setting}
         defaultMaterial={params.material}
         defaultHireOnly={params.hireOnly === "1"}
-        defaultAvailableNow={params.availableNow === "1"}
+            defaultAvailableNow={params.availableNow === "1"}
+            yardsBrowseMode={yardsBrowse}
           />
           <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
             <p className="text-sm font-semibold text-zinc-900">Have something to sell?</p>
@@ -232,10 +300,10 @@ export default async function SearchPage({
                   radius: params.radius ?? (params.postcode?.trim() ? String(radiusMiles) : undefined),
                   sellerType: params.sellerType,
                   conditionGrade: params.conditionGrade,
-                  era: params.era,
-                  genre: params.genre,
+                  era: yardsBrowse ? undefined : params.era,
+                  genre: yardsBrowse ? undefined : params.genre,
                   setting: params.setting,
-                  material: params.material,
+                  material: yardsBrowse ? undefined : params.material,
                   hireOnly: params.hireOnly,
                   availableNow: params.availableNow,
                   ids: params.ids,
@@ -247,6 +315,12 @@ export default async function SearchPage({
                 {listingsOrdered.map((l) => {
                   const impact = parseStoredCarbonImpact(l);
                   const auctionCountdown = l.listingKind === "auction" ? auctionCountdownLabel(l.auctionEndsAt) : null;
+                  const gridVat = sellerChargesVat({
+                    sellerRole: l.seller.role,
+                    vatRegistered: l.seller.sellerProfile?.vatRegistered,
+                  });
+                  const gridBuyerPence = buyerGrossPenceFromSellerNetPence(l.price, gridVat);
+                  const gridVatBit = vatLabelSuffix(gridVat);
                   return (
                     <li key={l.id}>
                       <Link
@@ -302,8 +376,8 @@ export default async function SearchPage({
                             {l.listingKind === "sell" && l.freeToCollector
                               ? `Free to collect · ${l.category.name}`
                               : l.listingKind === "auction"
-                                ? `From £${(l.price / 100).toFixed(2)} · ${l.category.name}`
-                                : `£${(l.price / 100).toFixed(2)} · ${l.category.name}`}
+                                ? `From £${(gridBuyerPence / 100).toFixed(2)}${gridVatBit} · ${l.category.name}`
+                                : `£${(gridBuyerPence / 100).toFixed(2)}${gridVatBit} · ${l.category.name}`}
                             {l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
                           </p>
                           {(l.adminDistrict || l.region || l.postcode) && (

@@ -3,6 +3,7 @@ import { stripe } from "@/lib/stripe";
 import { createNotification } from "@/lib/notifications";
 import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
 import { ListingStatus } from "@/generated/prisma/client";
+import { buyerGrossPenceFromSellerNetPence, sellerChargesVat } from "@/lib/vat-pricing";
 
 const PLATFORM_FEE_PERCENT = 10;
 const PLATFORM_FEE_FIXED = 20; // pence
@@ -82,7 +83,11 @@ export async function finalizeAuctionListing(listingId: string): Promise<void> {
 
   const buyer = await prisma.user.findUnique({ where: { id: top.bidderId } });
   const destination = listing.seller.sellerProfile?.stripeAccountId;
-  const amount = top.amountPence;
+  const winChargesVat = sellerChargesVat({
+    sellerRole: listing.seller.role,
+    vatRegistered: listing.seller.sellerProfile?.vatRegistered,
+  });
+  const amount = buyerGrossPenceFromSellerNetPence(top.amountPence, winChargesVat);
   const applicationFeeAmount = platformFeePence(amount);
 
   if (!buyer?.stripeCustomerId || !buyer?.bidPaymentMethodId || !destination) {

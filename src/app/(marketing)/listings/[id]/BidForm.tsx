@@ -9,10 +9,12 @@ export function BidForm({
   listingId,
   minimumPounds,
   hasBidPaymentMethod,
+  chargesVat = false,
 }: {
   listingId: string;
   minimumPounds: number;
   hasBidPaymentMethod: boolean;
+  chargesVat?: boolean;
 }) {
   const router = useRouter();
   const [pounds, setPounds] = useState(minimumPounds.toFixed(2));
@@ -62,8 +64,8 @@ export function BidForm({
     <form onSubmit={onSubmit} className="rounded-xl border border-brand/20 bg-brand-soft/60 p-4">
       <h3 className="text-sm font-semibold text-zinc-900">Place a bid</h3>
       <p className="mt-1 text-xs text-zinc-600">
-        Minimum next bid from £{minimumPounds.toFixed(2)} (includes increment rules). Your saved card
-        will be charged if you win.
+        Minimum next bid from £{minimumPounds.toFixed(2)}
+        {chargesVat ? " (incl. VAT)" : ""} (includes increment rules). Your saved card will be charged if you win.
       </p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
         <input

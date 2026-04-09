@@ -6,6 +6,11 @@ import { createNotification } from "@/lib/notifications";
 import { revalidatePath } from "next/cache";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
 import { minimumNextBidPence } from "@/lib/auction";
+import {
+  buyerGrossPenceFromSellerNetPence,
+  sellerChargesVat,
+  sellerNetPenceFromBuyerGrossPence,
+} from "@/lib/vat-pricing";
 
 export async function placeBid(listingId: string, bidPounds: number) {
   const session = await auth();
@@ -15,6 +20,9 @@ export async function placeBid(listingId: string, bidPounds: number) {
 
   const listing = await prisma.listing.findUnique({
     where: { id: listingId, status: "active" },
+    include: {
+      seller: { include: { sellerProfile: { select: { vatRegistered: true } } } },
+    },
   });
   if (!listing) return { ok: false as const, error: "Listing not available." };
   if (!listing.visibleOnMarketplace) {
@@ -41,8 +49,14 @@ export async function placeBid(listingId: string, bidPounds: number) {
     };
   }
 
-  const amountPence = Math.round(bidPounds * 100);
-  if (Number.isNaN(amountPence) || amountPence < STRIPE_MIN_AMOUNT_PENCE) {
+  const bidChargesVat = sellerChargesVat({
+    sellerRole: listing.seller.role,
+    vatRegistered: listing.seller.sellerProfile?.vatRegistered,
+  });
+  const inputBidPence = Math.round(bidPounds * 100);
+  const amountPence = bidChargesVat ? sellerNetPenceFromBuyerGrossPence(inputBidPence) : inputBidPence;
+  const minCardPence = bidChargesVat ? inputBidPence : amountPence;
+  if (Number.isNaN(amountPence) || minCardPence < STRIPE_MIN_AMOUNT_PENCE) {
     return {
       ok: false as const,
       error: `Bid must be at least £${(STRIPE_MIN_AMOUNT_PENCE / 100).toFixed(2)}.`,
@@ -55,11 +69,12 @@ export async function placeBid(listingId: string, bidPounds: number) {
   });
 
   const minimumNext = minimumNextBidPence(listing.price, top?.amountPence ?? null);
+  const minimumDisplayPence = buyerGrossPenceFromSellerNetPence(minimumNext, bidChargesVat);
 
   if (amountPence < minimumNext) {
     return {
       ok: false as const,
-      error: `Your bid must be at least £${(minimumNext / 100).toFixed(2)}.`,
+      error: `Your bid must be at least £${(minimumDisplayPence / 100).toFixed(2)}${bidChargesVat ? " (incl. VAT)" : ""}.`,
     };
   }
 

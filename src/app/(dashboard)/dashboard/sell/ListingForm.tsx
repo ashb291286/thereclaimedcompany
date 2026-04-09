@@ -113,6 +113,7 @@ export function ListingForm({
   sellerDisplayName,
   materialOptions,
   isReclamationYard = false,
+  yardPricesExcludeVat = false,
 }: {
   categories: Category[];
   defaultPostcode: string;
@@ -120,6 +121,7 @@ export function ListingForm({
   sellerDisplayName?: string;
   materialOptions: MaterialOption[];
   isReclamationYard?: boolean;
+  yardPricesExcludeVat?: boolean;
 }) {
   const [imageUrls, setImageUrls] = useState<string[]>(listing?.images ?? []);
   const [uploading, setUploading] = useState(false);
@@ -138,6 +140,7 @@ export function ListingForm({
   const isEdit = !!listing;
 
   const [title, setTitle] = useState(listing?.title ?? "");
+  const [sellerReference, setSellerReference] = useState(listing?.sellerReference ?? "");
   const [description, setDescription] = useState(listing?.description ?? "");
   const [categoryId, setCategoryId] = useState(
     () => listing?.categoryId ?? categories[0]?.id ?? ""
@@ -358,6 +361,7 @@ export function ListingForm({
     return {
       images: imageUrls,
       title,
+      sellerReference: sellerReference.trim() || null,
       description,
       categoryName,
       conditionLabel,
@@ -385,6 +389,7 @@ export function ListingForm({
     carrierForm,
     imageUrls,
     title,
+    sellerReference,
     description,
     deliveryNotes,
   ]);
@@ -627,6 +632,24 @@ export function ListingForm({
             className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
+        <div>
+          <label htmlFor="sellerReference" className="mb-1 block text-sm font-medium text-zinc-700">
+            Reference <span className="font-normal text-zinc-500">(optional)</span>
+          </label>
+          <input
+            id="sellerReference"
+            name="sellerReference"
+            type="text"
+            maxLength={120}
+            value={sellerReference}
+            onChange={(e) => setSellerReference(e.target.value)}
+            placeholder="e.g. Yard stock no., SKU, aisle location"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+          <p className="mt-1 text-xs text-zinc-500">
+            Shown on the public listing so buyers and yards can quote this when they contact you.
+          </p>
+        </div>
         {title.trim().length > 2 ? (
           <div className="rounded-xl border border-zinc-200 bg-zinc-50/90 px-3 py-3 text-sm text-zinc-700">
             {categoryHint?.bestMatch && categoryHint.score >= 0.65 ? (
@@ -727,7 +750,13 @@ export function ListingForm({
         <div>
           <label htmlFor="price" className="mb-1 block text-sm font-medium text-zinc-700">
             {listingKind === "auction" ? "Starting bid (£)" : "Price (£)"}
+            {yardPricesExcludeVat ? " — ex VAT" : ""}
           </label>
+          {yardPricesExcludeVat ? (
+            <p className="-mt-0.5 mb-2 text-xs text-zinc-500">
+              Buyers see and pay this amount plus 20% UK VAT at checkout.
+            </p>
+          ) : null}
           <input
             id="price"
             name="price"

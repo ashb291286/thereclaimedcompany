@@ -22,11 +22,14 @@ export default async function MarketingLayout({
             <Link href="/search" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
               Browse
             </Link>
-            <Link href="/search?sellerType=reclamation_yard" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
+            <Link href="/reclamation-yards" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
               Yards
             </Link>
             <Link href="/wanted" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
               Wanted
+            </Link>
+            <Link href="/demolition-alerts" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
+              Demolition alerts
             </Link>
             <Link
               href="/driven"

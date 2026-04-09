@@ -4,6 +4,7 @@ import { stripe } from "@/lib/stripe";
 import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
 import { ListingPricingMode } from "@/generated/prisma/client";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
+import { buyerGrossPenceFromSellerNetPence, sellerChargesVat } from "@/lib/vat-pricing";
 import { NextResponse } from "next/server";
 
 const MAX_CHECKOUT_QUANTITY = 10_000;
@@ -200,6 +201,15 @@ export async function POST(req: Request) {
     lineUnitAmount = listing.price;
     lineQuantity = 1;
     amount = listing.price;
+  }
+
+  const chargesVat = sellerChargesVat({
+    sellerRole: listing.seller?.role,
+    vatRegistered: listing.seller?.sellerProfile?.vatRegistered,
+  });
+  if (chargesVat) {
+    lineUnitAmount = buyerGrossPenceFromSellerNetPence(lineUnitAmount, true);
+    amount = lineUnitAmount * lineQuantity;
   }
 
   if (amount <= 0) {

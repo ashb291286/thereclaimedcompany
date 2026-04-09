@@ -38,6 +38,7 @@ export function DashboardSidebar({
     { href: "/dashboard/sell", label: "Sell" },
     { href: "/dashboard/offers", label: "Offers" },
     { href: "/dashboard/wanted", label: "My wanted" },
+    { href: "/dashboard/demolition-alerts", label: "Demolition alerts" },
     { href: "/orders", label: "Orders" },
     { href: "/dashboard/notifications", label: "Notifications", badge: unreadCount > 0 ? String(Math.min(99, unreadCount)) : null },
   ];

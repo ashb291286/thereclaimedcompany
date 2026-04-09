@@ -13,10 +13,11 @@ export async function GET(req: NextRequest) {
     : 50;
   const sellerType = searchParams.get("sellerType") ?? "";
   const conditionGrade = searchParams.get("conditionGrade") ?? "";
-  const era = searchParams.get("era") ?? "";
-  const genre = searchParams.get("genre") ?? "";
+  const isYardSellerFilter = sellerType === "reclamation_yard";
+  const era = isYardSellerFilter ? "" : (searchParams.get("era") ?? "");
+  const genre = isYardSellerFilter ? "" : (searchParams.get("genre") ?? "");
   const setting = searchParams.get("setting") ?? "";
-  const material = searchParams.get("material") ?? "";
+  const material = isYardSellerFilter ? "" : (searchParams.get("material") ?? "");
   const hireOnly = searchParams.get("hireOnly") === "1";
   const availableNow = searchParams.get("availableNow") === "1";
   const idsParam = searchParams.get("ids") ?? "";

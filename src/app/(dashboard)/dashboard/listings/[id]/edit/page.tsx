@@ -54,6 +54,9 @@ export default async function EditListingPage({
         sellerDisplayName={sellerProfile?.displayName}
         materialOptions={materialOptions}
         isReclamationYard={dbUser?.role === "reclamation_yard"}
+        yardPricesExcludeVat={
+          dbUser?.role === "reclamation_yard" && Boolean(sellerProfile?.vatRegistered)
+        }
       />
     </div>
   );

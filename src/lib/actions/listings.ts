@@ -246,6 +246,12 @@ function parseDeliveryFields(
   };
 }
 
+function parseSellerReference(formData: FormData): string | null {
+  const raw = ((formData.get("sellerReference") as string) ?? "").trim();
+  if (!raw) return null;
+  return raw.length > 120 ? raw.slice(0, 120) : raw;
+}
+
 async function materialCarbonFromForm(formData: FormData) {
   const materialType = ((formData.get("materialType") as string) ?? "").trim() || null;
   const qtyRaw = ((formData.get("materialQuantity") as string) ?? "").trim();
@@ -352,10 +358,13 @@ export async function createListing(formData: FormData) {
   const notifyLocalYards =
     listingKind === "sell" && !freeToCollector && formData.get("notifyLocalYards") === "on";
 
+  const sellerReference = parseSellerReference(formData);
+
   const created = await prisma.listing.create({
     data: {
       sellerId: session.user.id,
       title: title.trim(),
+      sellerReference,
       description: description.trim(),
       price,
       condition,
@@ -490,10 +499,13 @@ export async function updateListing(id: string, formData: FormData) {
   const notifyLocalYards =
     listingKind === "sell" && !freeToCollector && formData.get("notifyLocalYards") === "on";
 
+  const sellerReference = parseSellerReference(formData);
+
   await prisma.listing.update({
     where: { id },
     data: {
       title: title.trim(),
+      sellerReference,
       description: description.trim(),
       price,
       condition,

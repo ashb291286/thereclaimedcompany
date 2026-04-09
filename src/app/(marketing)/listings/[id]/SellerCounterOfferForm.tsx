@@ -5,10 +5,10 @@ import { submitSellerCounterOffer } from "@/lib/actions/offers";
 import { useRouter } from "next/navigation";
 
 export function SellerCounterOfferForm({
-  declinedOfferId,
+  baseOfferId,
   listingActive,
 }: {
-  declinedOfferId: string;
+  baseOfferId: string;
   listingActive: boolean;
 }) {
   const router = useRouter();
@@ -26,7 +26,7 @@ export function SellerCounterOfferForm({
       return;
     }
     setBusy(true);
-    const r = await submitSellerCounterOffer(declinedOfferId, n, note || undefined);
+    const r = await submitSellerCounterOffer(baseOfferId, n, note || undefined);
     setBusy(false);
     if (!r.ok) {
       setErr(r.error);

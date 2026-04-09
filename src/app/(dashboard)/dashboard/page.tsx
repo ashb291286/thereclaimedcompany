@@ -9,6 +9,7 @@ import { StripeConnectButton } from "./StripeConnectButton";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { publicSellerPath } from "@/lib/yard-public-path";
+import { OffersAttentionBanner } from "./OffersAttentionBanner";
 
 export default async function DashboardPage({
   searchParams,
@@ -94,8 +95,17 @@ export default async function DashboardPage({
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [sellerProfile, dbUser, listings, listingCarbon, viewsTotal, views7d, localStockPendingCount] =
-    await Promise.all([
+  const [
+    sellerProfile,
+    dbUser,
+    listings,
+    listingCarbon,
+    viewsTotal,
+    views7d,
+    localStockPendingCount,
+    pendingBuyerOffersAsSeller,
+    pendingSellerCountersAsBuyer,
+  ] = await Promise.all([
     prisma.sellerProfile.findUnique({ where: { userId: session.user.id } }),
     prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }),
     prisma.listing.findMany({
@@ -127,6 +137,20 @@ export default async function DashboardPage({
         status: "PENDING",
         linkedOfferId: null,
         listing: { status: "active" },
+      },
+    }),
+    prisma.offer.count({
+      where: {
+        status: "pending",
+        fromSellerCounter: false,
+        listing: { sellerId: session.user.id },
+      },
+    }),
+    prisma.offer.count({
+      where: {
+        status: "pending",
+        fromSellerCounter: true,
+        buyerId: session.user.id,
       },
     }),
   ]);
@@ -169,6 +193,10 @@ export default async function DashboardPage({
         {sellerProfile.displayName}
         {sellerProfile.businessName && ` · ${sellerProfile.businessName}`}
       </p>
+      <OffersAttentionBanner
+        incomingAsSeller={pendingBuyerOffersAsSeller}
+        pendingCountersAsBuyer={pendingSellerCountersAsBuyer}
+      />
       {isYardAccount ? (
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           <Link href="/dashboard/nearby-stock" className="font-medium text-emerald-800 hover:underline">

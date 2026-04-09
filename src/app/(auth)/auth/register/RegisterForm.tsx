@@ -1,11 +1,18 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 
 type RegisterAction = (formData: FormData) => Promise<{ error?: string } | void>;
 
-export function RegisterForm({ register }: { register: RegisterAction }) {
-  const [accountIntent, setAccountIntent] = useState<"buying" | "selling">("buying");
+export function RegisterForm({
+  register,
+  accountIntent,
+  onAccountIntentChange,
+}: {
+  register: RegisterAction;
+  accountIntent: "buying" | "selling";
+  onAccountIntentChange: (intent: "buying" | "selling") => void;
+}) {
   const [state, formAction] = useActionState(
     async (_: { error?: string } | null, formData: FormData) => {
       const result = await register(formData);
@@ -30,7 +37,7 @@ export function RegisterForm({ register }: { register: RegisterAction }) {
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <button
             type="button"
-            onClick={() => setAccountIntent("buying")}
+            onClick={() => onAccountIntentChange("buying")}
             className={`rounded-xl border p-3 text-left transition ${
               accountIntent === "buying"
                 ? "border-brand bg-brand-soft/60 ring-1 ring-brand/25"
@@ -42,7 +49,7 @@ export function RegisterForm({ register }: { register: RegisterAction }) {
           </button>
           <button
             type="button"
-            onClick={() => setAccountIntent("selling")}
+            onClick={() => onAccountIntentChange("selling")}
             className={`rounded-xl border p-3 text-left transition ${
               accountIntent === "selling"
                 ? "border-brand bg-brand-soft/60 ring-1 ring-brand/25"

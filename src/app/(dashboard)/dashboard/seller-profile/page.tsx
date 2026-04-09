@@ -93,6 +93,35 @@ export default async function SellerProfileSettingsPage({
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
+          <fieldset className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
+            <legend className="px-1 text-sm font-semibold text-zinc-900">VAT on marketplace prices</legend>
+            <p className="mt-1 text-xs text-zinc-600">
+              If you are VAT registered, enter listing prices <strong>excluding</strong> VAT; buyers pay 20% at
+              checkout. Otherwise your price is the full buyer total.
+            </p>
+            <div className="mt-3 space-y-2">
+              <label className="flex cursor-pointer gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm">
+                <input
+                  type="radio"
+                  name="vatRegistered"
+                  value="no"
+                  defaultChecked={!profile.vatRegistered}
+                  className="mt-0.5"
+                />
+                <span>Not VAT registered — my prices are the full amount buyers pay</span>
+              </label>
+              <label className="flex cursor-pointer gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm">
+                <input
+                  type="radio"
+                  name="vatRegistered"
+                  value="yes"
+                  defaultChecked={profile.vatRegistered}
+                  className="mt-0.5"
+                />
+                <span>VAT registered — my prices exclude VAT (+20% for buyers)</span>
+              </label>
+            </div>
+          </fieldset>
           <div>
             <label htmlFor="yardSlug" className="mb-1 block text-sm font-medium text-zinc-700">
               Public URL slug

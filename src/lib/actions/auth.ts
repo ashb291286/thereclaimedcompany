@@ -29,6 +29,7 @@ export async function register(formData: FormData) {
       email: email.trim(),
       password: hashed,
       name: name?.trim() || null,
+      registrationIntent: accountIntent === "selling" ? "selling" : "buying",
     },
   });
 

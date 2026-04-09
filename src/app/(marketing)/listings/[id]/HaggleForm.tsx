@@ -7,9 +7,11 @@ import { useRouter } from "next/navigation";
 export function HaggleForm({
   listingId,
   listPricePence,
+  chargesVat = false,
 }: {
   listingId: string;
   listPricePence: number;
+  chargesVat?: boolean;
 }) {
   const router = useRouter();
   const [pounds, setPounds] = useState(
@@ -41,7 +43,9 @@ export function HaggleForm({
     <form id="listing-offer" onSubmit={onSubmit} className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
       <h3 className="text-sm font-semibold text-zinc-900">Make an offer</h3>
       <p className="mt-1 text-xs text-zinc-600">
-        Suggest a price. If the seller accepts, you&apos;ll pay that amount at checkout.
+        {chargesVat
+          ? "Enter the total you are willing to pay, including 20% VAT. If the seller accepts, you will pay that amount at checkout."
+          : "Suggest a price. If the seller accepts, you will pay that amount at checkout."}
       </p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex-1">
