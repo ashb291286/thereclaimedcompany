@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/db";
 import { PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE, PROP_YARD_TERMS_VERSION } from "@/lib/prop-yard";
 import styles from "./marquee.module.css";
@@ -114,20 +115,79 @@ export default async function PropYardHomePage() {
         ) : (
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
             {featured.map((o) => (
-              <li key={o.id} className="border border-driven-warm bg-white">
-                <Link href={`/prop-yard/offers/${o.id}`} className="block p-5 hover:bg-driven-accent-light/40">
-                  <p className="font-[family-name:var(--font-driven-display)] text-xl text-driven-ink line-clamp-2">
-                    {o.listing.title}
-                  </p>
-                  <p className="mt-1 font-[family-name:var(--font-driven-mono)] text-xs uppercase text-driven-muted">
-                    {o.listing.category.name} · from £{(o.weeklyHirePence / 100).toLocaleString("en-GB")}/week · min{" "}
-                    {o.minimumHireWeeks} week{o.minimumHireWeeks === 1 ? "" : "s"}
-                  </p>
+              <li key={o.id} className="overflow-hidden border border-driven-warm bg-white">
+                <Link href={`/prop-yard/offers/${o.id}`} className="block hover:bg-driven-accent-light/40">
+                  <div className="relative aspect-[4/3] bg-driven-warm/20">
+                    {o.listing.images[0] ? (
+                      <Image
+                        src={o.listing.images[0]}
+                        alt={o.listing.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-wide text-driven-muted">
+                        No image
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-5">
+                    <p className="font-[family-name:var(--font-driven-display)] text-xl text-driven-ink line-clamp-2">
+                      {o.listing.title}
+                    </p>
+                    <p className="mt-1 font-[family-name:var(--font-driven-mono)] text-xs uppercase text-driven-muted">
+                      {o.listing.category.name} · from £{(o.weeklyHirePence / 100).toLocaleString("en-GB")}/week · min{" "}
+                      {o.minimumHireWeeks} week{o.minimumHireWeeks === 1 ? "" : "s"}
+                    </p>
+                  </div>
                 </Link>
               </li>
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="mt-12 border border-driven-warm bg-white px-6 py-8 sm:px-8">
+        <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-[0.35em] text-driven-accent">
+          How It Works
+        </p>
+        <h2 className="mt-3 max-w-3xl font-[family-name:var(--font-driven-display)] text-3xl leading-tight text-driven-ink sm:text-4xl">
+          From sourcing to confirmation in four steps.
+        </h2>
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              step: "01",
+              title: "Search stock",
+              body: "Browse live props from real UK yards and open listings with weekly rates and minimum hire windows.",
+            },
+            {
+              step: "02",
+              title: "Build your set",
+              body: "Add items to Set Builder with your dates, fulfillment notes, and production details.",
+            },
+            {
+              step: "03",
+              title: "Send grouped requests",
+              body: "Submit one batch from your set and Prop Yard routes requests by supplier yard.",
+            },
+            {
+              step: "04",
+              title: "Confirm and pay",
+              body: "Yards accept hire requests, you track status, then settle each hire through the platform.",
+            },
+          ].map((item) => (
+            <article key={item.step} className="border border-driven-warm bg-driven-paper px-4 py-4">
+              <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-[0.2em] text-driven-accent">
+                Step {item.step}
+              </p>
+              <h3 className="mt-2 font-[family-name:var(--font-driven-display)] text-xl text-driven-ink">{item.title}</h3>
+              <p className="mt-2 text-sm text-driven-muted">{item.body}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section id="hire-terms" className="mt-12 scroll-mt-24 grid gap-6 md:grid-cols-2">
