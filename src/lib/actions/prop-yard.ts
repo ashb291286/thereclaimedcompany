@@ -333,25 +333,25 @@ export async function createPropComprehensiveListingAction(formData: FormData): 
   }
 
   const name = String(payload.name ?? "").trim();
-  const descriptionShort = String(payload.descriptionShort ?? "").trim();
-  const descriptionFull = String(payload.descriptionFull ?? "").trim();
+  const descriptionBody = String(
+    payload.description ?? payload.descriptionShort ?? payload.descriptionFull ?? ""
+  ).trim();
+  const descriptionShort = descriptionBody.slice(0, 300);
+  const descriptionFull = descriptionBody;
   const categoryName = String(payload.category ?? "").trim();
   const subcategory = String(payload.subcategory ?? "").trim();
   const quantityAvailable = Number(payload.quantityAvailable ?? 1);
   const images = Array.isArray(payload.images) ? payload.images.map((x) => String(x).trim()).filter(Boolean) : [];
-  const conditionGrade = String(payload.conditionGrade ?? "").trim();
+  const conditionRaw = String(payload.condition ?? "").trim() as Condition;
   const conditionNotes = String(payload.conditionNotes ?? "").trim();
   const genres = Array.isArray(payload.genres) ? payload.genres.map((x) => String(x)) : [];
   const eras = Array.isArray(payload.eras) ? payload.eras.map((x) => String(x)) : [];
 
-  if (shouldPublish && (!name || !descriptionShort || !descriptionFull || !categoryName || !conditionGrade || !conditionNotes)) {
+  if (shouldPublish && (!name || !descriptionBody || !categoryName || !PROP_ONLY_CONDITIONS.includes(conditionRaw))) {
     redirect(`${errBase}?error=${encodeURIComponent("Complete all required fields before publishing.")}`);
   }
-  if (shouldPublish && descriptionShort.length > 300) {
-    redirect(`${errBase}?error=${encodeURIComponent("Short description must be 300 chars or less.")}`);
-  }
-  if (shouldPublish && images.length < 4) {
-    redirect(`${errBase}?error=${encodeURIComponent("Upload at least 4 photos before publishing.")}`);
+  if (shouldPublish && images.length < 1) {
+    redirect(`${errBase}?error=${encodeURIComponent("Add at least one photo before publishing.")}`);
   }
   if (shouldPublish && (genres.length < 1 || eras.length < 1)) {
     redirect(`${errBase}?error=${encodeURIComponent("Add at least one era and one genre tag.")}`);
@@ -379,12 +379,12 @@ export async function createPropComprehensiveListingAction(formData: FormData): 
     data: {
       sellerId: userId,
       title: name,
-      description: descriptionShort,
+      description: descriptionBody,
       descriptionShort,
       descriptionFull,
       price: saleEnabled ? salePricePence : Math.max(hirePriceWeekPence, 100),
-      condition: "used",
-      conditionGrade: conditionGrade as "A" | "B" | "C",
+      condition: conditionRaw,
+      conditionGrade: null,
       categoryId: category.id,
       propSubcategory: subcategory || null,
       quantityAvailable: Number.isFinite(quantityAvailable) ? quantityAvailable : 1,
@@ -392,10 +392,10 @@ export async function createPropComprehensiveListingAction(formData: FormData): 
       dimensionsW: Number(payload.dimensionsW ?? 0) || null,
       dimensionsD: Number(payload.dimensionsD ?? 0) || null,
       weightKg: Number(payload.weightKg ?? 0) || null,
-      propMaterials: (Array.isArray(payload.materials) ? payload.materials : []).map((x) => String(x)),
-      propColours: [String(payload.colourName ?? "").trim()].filter(Boolean),
-      colourHex: String(payload.colourHex ?? "").trim() || null,
-      colourName: String(payload.colourName ?? "").trim() || null,
+      propMaterials: [],
+      propColours: [],
+      colourHex: null,
+      colourName: null,
       eraTags: eras,
       dateSpecific: String(payload.dateSpecific ?? "").trim() || null,
       styleTags: (Array.isArray(payload.styles) ? payload.styles : []).map((x) => String(x)),
@@ -414,11 +414,11 @@ export async function createPropComprehensiveListingAction(formData: FormData): 
       productionName: String(payload.productionName ?? "").trim() || null,
       studioTags: (Array.isArray(payload.studios) ? payload.studios : []).map((x) => String(x)),
       studioOtherText: String(payload.studioOtherText ?? "").trim() || null,
-      provenanceBuilding: String(payload.provenanceBuilding ?? "").trim() || null,
-      provenanceDateText: String(payload.provenanceDateText ?? "").trim() || null,
-      provenanceRegion: String(payload.provenanceRegion ?? "").trim() || null,
-      authenticityVerifiedBy: String(payload.authenticityVerifiedBy ?? "UNVERIFIED") as never,
-      restorationNotes: String(payload.restorationNotes ?? "").trim() || null,
+      provenanceBuilding: null,
+      provenanceDateText: null,
+      provenanceRegion: null,
+      authenticityVerifiedBy: "UNVERIFIED" as never,
+      restorationNotes: null,
       conditionNotes,
       hireEnabled,
       saleEnabled,
@@ -443,8 +443,8 @@ export async function createPropComprehensiveListingAction(formData: FormData): 
       heroImageUrl: images[0],
       images,
       detailShots: payload.detailShots ? (payload.detailShots as object) : undefined,
-      videoUrl: String(payload.videoUrl ?? "").trim() || null,
-      view360Url: String(payload.view360Url ?? "").trim() || null,
+      videoUrl: null,
+      view360Url: null,
       seenOnScreenProductions: [],
       propListingStatus: shouldPublish ? "ACTIVE" : "DRAFT",
       publishedAt: shouldPublish ? new Date() : null,
