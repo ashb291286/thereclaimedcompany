@@ -21,6 +21,7 @@ import type { PropRentalBookingStatus, PropRentalFulfillment } from "@/generated
 import { randomUUID } from "crypto";
 import { createNotification } from "@/lib/notifications";
 import { isCarbonAdmin } from "@/lib/admin";
+import { parsePropSetProductionType } from "@/lib/prop-yard-set-production";
 
 const BLOCKING: PropRentalBookingStatus[] = ["REQUESTED", "CONFIRMED", "OUT_ON_HIRE"];
 const FULFILLMENTS: PropRentalFulfillment[] = [
@@ -692,6 +693,10 @@ export async function createPropRentalSetAction(formData: FormData): Promise<voi
   if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/prop-yard/sets");
   const rawName = String(formData.get("name") ?? "").trim();
   const name = rawName.slice(0, 120) || "Untitled set";
+  const productionType = parsePropSetProductionType(String(formData.get("productionType") ?? ""));
+  if (!productionType) {
+    redirect("/prop-yard/sets?error=" + encodeURIComponent("Choose a production type."));
+  }
   const window = parseSetDefaultHireWindow(formData);
   if ("error" in window) {
     redirect("/prop-yard/sets?error=" + encodeURIComponent(window.error));
@@ -700,6 +705,7 @@ export async function createPropRentalSetAction(formData: FormData): Promise<voi
     data: {
       userId: session.user.id,
       name,
+      productionType,
       defaultHireStart: window.defaultHireStart,
       defaultHireEnd: window.defaultHireEnd,
     },
@@ -713,9 +719,18 @@ export async function updatePropRentalSetNameAction(formData: FormData): Promise
   const setId = String(formData.get("setId") ?? "").trim();
   const rawName = String(formData.get("name") ?? "").trim();
   if (!setId || !rawName) redirect("/prop-yard/sets");
+  const productionTypeRaw = String(formData.get("productionType") ?? "").trim();
+  const productionType =
+    productionTypeRaw === "" ? null : parsePropSetProductionType(productionTypeRaw);
+  if (productionTypeRaw !== "" && !productionType) {
+    redirect(`/prop-yard/set/${setId}?error=` + encodeURIComponent("Choose a valid production type."));
+  }
   await prisma.propRentalSet.updateMany({
     where: { id: setId, userId: session.user.id },
-    data: { name: rawName.slice(0, 120) },
+    data: {
+      name: rawName.slice(0, 120),
+      productionType,
+    },
   });
   redirect(`/prop-yard/set/${setId}`);
 }

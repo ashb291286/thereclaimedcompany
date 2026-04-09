@@ -15,6 +15,7 @@ import {
   PROP_YARD_TERMS_VERSION,
   utcCalendarDateToIso,
 } from "@/lib/prop-yard";
+import { labelForPropSetProductionType, PROP_SET_PRODUCTION_OPTIONS } from "@/lib/prop-yard-set-production";
 
 type Props = { params: Promise<{ setId: string }>; searchParams: Promise<{ error?: string }> };
 
@@ -101,6 +102,11 @@ export default async function PropYardSetBuilderPage({ params, searchParams }: P
           <h1 className="font-[family-name:var(--font-driven-display)] text-2xl font-semibold text-driven-ink">
             {set.name}
           </h1>
+          {labelForPropSetProductionType(set.productionType) ? (
+            <p className="mt-1 text-xs font-medium uppercase tracking-wide text-driven-accent">
+              {labelForPropSetProductionType(set.productionType)}
+            </p>
+          ) : null}
           <p className="mt-1 text-sm text-driven-muted">
             Add props from search, then send hire requests. Your lines stay in the set after sending so you can track
             what you submitted and pay each yard through the platform.
@@ -142,7 +148,7 @@ export default async function PropYardSetBuilderPage({ params, searchParams }: P
       </div>
 
       <div className="mt-6 flex max-w-2xl flex-col gap-6">
-        <form action={updatePropRentalSetNameAction} className="flex flex-wrap items-end gap-2">
+        <form action={updatePropRentalSetNameAction} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <input type="hidden" name="setId" value={set.id} />
           <div className="min-w-[10rem] flex-1">
             <label className="block text-xs text-driven-muted">Rename set</label>
@@ -152,11 +158,26 @@ export default async function PropYardSetBuilderPage({ params, searchParams }: P
               className="mt-1 w-full rounded-lg border border-driven-warm px-3 py-2 text-sm"
             />
           </div>
+          <div className="min-w-[12rem] sm:max-w-[240px]">
+            <label className="block text-xs text-driven-muted">Production type</label>
+            <select
+              name="productionType"
+              defaultValue={set.productionType ?? ""}
+              className="mt-1 w-full rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink"
+            >
+              <option value="">Not set</option>
+              {PROP_SET_PRODUCTION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             type="submit"
-            className="rounded-lg border border-driven-warm px-3 py-2 text-xs font-medium text-driven-ink hover:border-driven-ink"
+            className="rounded-lg border border-driven-warm px-3 py-2 text-xs font-medium text-driven-ink hover:border-driven-ink sm:shrink-0"
           >
-            Save name
+            Save details
           </button>
         </form>
 

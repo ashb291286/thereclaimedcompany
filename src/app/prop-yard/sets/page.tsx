@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { createPropRentalSetAction, deletePropRentalSetAction } from "@/lib/actions/prop-yard";
 import { computePropHireTotalPence } from "@/lib/prop-yard";
+import { labelForPropSetProductionType, PROP_SET_PRODUCTION_OPTIONS } from "@/lib/prop-yard-set-production";
 
 type Props = { searchParams: Promise<{ error?: string }> };
 
@@ -53,6 +54,27 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
             placeholder="e.g. Kitchen scene — 1970s"
             className="mt-1 w-full rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink"
           />
+        </div>
+        <div>
+          <label htmlFor="new-set-production-type" className="block text-xs font-medium text-driven-ink">
+            Production type
+          </label>
+          <select
+            id="new-set-production-type"
+            name="productionType"
+            required
+            defaultValue=""
+            className="mt-1 w-full rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink"
+          >
+            <option value="" disabled>
+              Select production type…
+            </option>
+            {PROP_SET_PRODUCTION_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex flex-wrap gap-4">
           <div>
@@ -119,6 +141,14 @@ export default async function PropYardSetsPage({ searchParams }: Props) {
                     {s.name}
                   </Link>
                   <p className="mt-1 text-xs text-driven-muted">
+                    {labelForPropSetProductionType(s.productionType) ? (
+                      <>
+                        <span className="font-medium text-driven-ink">
+                          {labelForPropSetProductionType(s.productionType)}
+                        </span>
+                        {" · "}
+                      </>
+                    ) : null}
                     {s._count.items} prop{s._count.items === 1 ? "" : "s"}
                     {s._count.items > 0 ? (
                       <>
