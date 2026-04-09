@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { createPropOnlyListingAndOfferAction, createPropRentalOfferAction } from "@/lib/actions/prop-yard";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { PROP_YARD_TERMS_VERSION, suggestedWeeklyHirePence } from "@/lib/prop-yard";
+import { ListingImageCropModal } from "../../sell/ListingImageCropModal";
+import { ListingLivePreview } from "../../sell/ListingLivePreview";
 
 export type PropWizardListing = {
   id: string;
@@ -26,14 +28,17 @@ export function PropListingWizard({
   categories,
   pctLabel,
   initialListingId,
+  initialMode,
 }: {
   listings: PropWizardListing[];
   categories: Category[];
   pctLabel: number;
   initialListingId?: string;
+  initialMode?: "link" | "hire_only";
 }) {
   const linkFormRef = useRef<HTMLFormElement>(null);
   const hireFormRef = useRef<HTMLFormElement>(null);
+  const cropBlobUrlRef = useRef<string | null>(null);
 
   const linkable = useMemo(() => listings.filter((l) => !l.hasPropOffer), [listings]);
 
@@ -44,8 +49,10 @@ export function PropListingWizard({
     ? (suggestedWeeklyHirePence(bootListing.price) / 100).toFixed(2)
     : (suggestedWeeklyHirePence(0) / 100).toFixed(2);
 
-  const [step, setStep] = useState(resolvedInitial ? 1 : 0);
-  const [mode, setMode] = useState<"link" | "hire_only" | null>(resolvedInitial ? "link" : null);
+  const initialResolvedMode: "link" | "hire_only" | null =
+    initialMode === "hire_only" ? "hire_only" : resolvedInitial ? "link" : null;
+  const [step, setStep] = useState(initialResolvedMode ? 1 : 0);
+  const [mode, setMode] = useState<"link" | "hire_only" | null>(initialResolvedMode);
 
   const [listingId, setListingId] = useState(bootListing?.id ?? "");
 
@@ -55,8 +62,11 @@ export function PropListingWizard({
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [postcode, setPostcode] = useState("");
-  const [images, setImages] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [listPriceGbp, setListPriceGbp] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [cropState, setCropState] = useState<{ src: string; fileName: string } | null>(null);
 
   const selectedListing = useMemo(
     () => linkable.find((l) => l.id === listingId),
@@ -77,6 +87,70 @@ export function PropListingWizard({
   const [offersDelivery, setOffersDelivery] = useState(false);
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [termsOk, setTermsOk] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (cropBlobUrlRef.current) {
+        URL.revokeObjectURL(cropBlobUrlRef.current);
+        cropBlobUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  function openCropForFile(file: File) {
+    if (cropBlobUrlRef.current) {
+      URL.revokeObjectURL(cropBlobUrlRef.current);
+    }
+    const src = URL.createObjectURL(file);
+    cropBlobUrlRef.current = src;
+    setCropState({ src, fileName: file.name });
+  }
+
+  function closeCrop() {
+    if (cropBlobUrlRef.current) {
+      URL.revokeObjectURL(cropBlobUrlRef.current);
+      cropBlobUrlRef.current = null;
+    }
+    setCropState(null);
+  }
+
+  async function uploadCroppedFile(file: File) {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Upload failed");
+      }
+      const data = await res.json();
+      if (data.url) setImageUrls((prev) => [...prev, data.url]);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      closeCrop();
+    }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please choose an image file.");
+      return;
+    }
+    setUploadError(null);
+    openCropForFile(file);
+  }
+
+  function removeImage(url: string) {
+    setImageUrls((prev) => prev.filter((u) => u !== url));
+  }
 
   function syncWeeklyFromSuggestion() {
     setWeeklyHireGbp(suggestedWeekly);
@@ -111,7 +185,7 @@ export function PropListingWizard({
       const w = suggestedWeeklyHirePence(selectedListing?.price ?? 0);
       setWeeklyHireGbp((w / 100).toFixed(2));
     } else {
-      if (!title.trim() || !description.trim() || !postcode.trim() || !images.trim() || !listPriceGbp) return;
+      if (!title.trim() || !description.trim() || !postcode.trim() || imageUrls.length === 0 || !listPriceGbp) return;
     }
     setStep(2);
   }
@@ -138,9 +212,23 @@ export function PropListingWizard({
       : ERROR_RETURN;
 
   const maxStep = 3;
+  const previewCategoryName = categories.find((c) => c.id === categoryId)?.name ?? "";
+  const listPriceNumber = parseFloat(listPriceGbp);
+  const listPriceLine =
+    Number.isFinite(listPriceNumber) && listPriceNumber > 0
+      ? `Reference list price £${listPriceNumber.toFixed(2)}`
+      : "Reference list price not set";
+  const previewTitle = mode === "link" ? selectedListing?.title ?? "" : title;
+  const previewImages = mode === "link" ? selectedListing?.images ?? [] : imageUrls;
+  const previewPriceLine =
+    mode === "link"
+      ? `List price £${(((selectedListing?.price ?? 0) / 100) as number).toFixed(2)} · Hire from £${weeklyHireGbp || "0.00"}/wk`
+      : `${listPriceLine} · Hire from £${weeklyHireGbp || "0.00"}/wk`;
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-6xl">
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
+        <div className="w-full max-w-2xl">
       <div className="mb-8 flex items-center gap-2 text-xs font-medium text-zinc-500">
         {[0, 1, 2, 3].map((i) => (
           <span key={i} className="flex items-center gap-2">
@@ -321,15 +409,33 @@ export function PropListingWizard({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-zinc-700">Image URLs (comma-separated)</label>
-            <textarea
-              value={images}
-              onChange={(e) => setImages(e.target.value)}
-              required
-              rows={2}
-              placeholder="https://…"
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-            />
+            <label className="block text-xs font-medium text-zinc-700">Photos</label>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {imageUrls.map((url) => (
+                <div key={url} className="relative">
+                  <img src={url} alt="" className="h-24 w-24 rounded-lg border border-zinc-200 object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(url)}
+                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white hover:bg-red-600"
+                  >
+                    x
+                  </button>
+                </div>
+              ))}
+              <label className="flex h-24 w-24 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 hover:border-amber-700 hover:bg-amber-50">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  disabled={uploading || !!cropState}
+                />
+                {uploading ? "..." : "+"}
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-zinc-500">At least one photo is required.</p>
+            {uploadError ? <p className="mt-1 text-xs text-red-700">{uploadError}</p> : null}
           </div>
           <div>
             <label className="block text-xs font-medium text-zinc-700">Reference list price (£)</label>
@@ -477,6 +583,83 @@ export function PropListingWizard({
           )}
         </div>
       ) : null}
+        </div>
+
+        <aside className="hidden w-full max-w-sm shrink-0 lg:block lg:sticky lg:top-24">
+          <ListingLivePreview
+            images={previewImages}
+            title={previewTitle}
+            description={mode === "hire_only" ? description : ""}
+            categoryName={mode === "hire_only" ? previewCategoryName : "Marketplace listing"}
+            conditionLabel={mode === "hire_only" ? CONDITION_LABELS[condition] : "Used"}
+            listingKind="sell"
+            freeToCollector={false}
+            priceLine={previewPriceLine}
+            locationLine={postcode.trim() || "Add postcode"}
+            auctionEndsLine={null}
+            collectionLine={
+              offersDelivery
+                ? "Collection or delivery by arrangement with the yard."
+                : "Collection and return by arrangement with the yard."
+            }
+            deliveryLines={offersDelivery ? ["Delivery available by arrangement"] : []}
+            extraDeliveryNotes={deliveryNotes}
+          />
+        </aside>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setPreviewOpen(true)}
+        className="fixed bottom-6 right-6 z-40 rounded-full bg-amber-900 px-4 py-3 text-sm font-semibold text-white shadow-lg hover:bg-amber-950 lg:hidden"
+      >
+        Preview
+      </button>
+
+      {previewOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            className="absolute inset-0 bg-zinc-900/50"
+            aria-label="Close preview"
+            onClick={() => setPreviewOpen(false)}
+          />
+          <div className="absolute right-0 top-0 flex h-full w-[min(100%,380px)] max-w-full flex-col border-l border-zinc-200 bg-white shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-4 py-3">
+              <h2 className="text-sm font-semibold text-zinc-900">Prop preview</h2>
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                aria-label="Close"
+              >
+                <span className="text-xl leading-none">x</span>
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              <ListingLivePreview
+                images={previewImages}
+                title={previewTitle}
+                description={mode === "hire_only" ? description : ""}
+                categoryName={mode === "hire_only" ? previewCategoryName : "Marketplace listing"}
+                conditionLabel={mode === "hire_only" ? CONDITION_LABELS[condition] : "Used"}
+                listingKind="sell"
+                freeToCollector={false}
+                priceLine={previewPriceLine}
+                locationLine={postcode.trim() || "Add postcode"}
+                auctionEndsLine={null}
+                collectionLine={
+                  offersDelivery
+                    ? "Collection or delivery by arrangement with the yard."
+                    : "Collection and return by arrangement with the yard."
+                }
+                deliveryLines={offersDelivery ? ["Delivery available by arrangement"] : []}
+                extraDeliveryNotes={deliveryNotes}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Off-screen forms so server actions handle redirect */}
       <form
@@ -509,7 +692,7 @@ export function PropListingWizard({
         <input type="hidden" name="categoryId" value={newCategoryName.trim() ? "" : categoryId} />
         <input type="hidden" name="newCategoryName" value={newCategoryName} />
         <input type="hidden" name="postcode" value={postcode} />
-        <input type="hidden" name="images" value={images} />
+        <input type="hidden" name="images" value={imageUrls.join(",")} />
         <input type="hidden" name="listPriceGbp" value={listPriceGbp} />
         <input type="hidden" name="weeklyHireGbp" value={weeklyHireGbp} />
         <input type="hidden" name="minimumHireWeeks" value={minimumHireWeeks} />
@@ -517,6 +700,14 @@ export function PropListingWizard({
         <input type="hidden" name="deliveryNotes" value={deliveryNotes} />
         {offersDelivery ? <input type="hidden" name="offersDelivery" value="on" /> : null}
       </form>
+      {cropState ? (
+        <ListingImageCropModal
+          imageSrc={cropState.src}
+          fileName={cropState.fileName}
+          onCancel={closeCrop}
+          onComplete={uploadCroppedFile}
+        />
+      ) : null}
     </div>
   );
 }

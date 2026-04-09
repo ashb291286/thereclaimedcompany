@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE } from "@/lib/prop-yard";
 import { PropListingWizard } from "./PropListingWizard";
 
-type Props = { searchParams: Promise<{ error?: string; listingId?: string }> };
+type Props = { searchParams: Promise<{ error?: string; listingId?: string; mode?: string }> };
 
 export default async function PropListingWizardPage({ searchParams }: Props) {
   const session = await auth();
@@ -23,7 +23,7 @@ export default async function PropListingWizardPage({ searchParams }: Props) {
     );
   }
 
-  const { error, listingId: listingIdParam } = await searchParams;
+  const { error, listingId: listingIdParam, mode } = await searchParams;
 
   const [categories, listings] = await Promise.all([
     prisma.category.findMany({
@@ -82,6 +82,7 @@ export default async function PropListingWizardPage({ searchParams }: Props) {
           categories={categories}
           pctLabel={pct}
           initialListingId={listingIdParam}
+          initialMode={mode === "hire_only" ? "hire_only" : undefined}
         />
       </div>
     </div>

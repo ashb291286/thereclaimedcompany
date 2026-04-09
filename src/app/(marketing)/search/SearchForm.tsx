@@ -51,9 +51,9 @@ export function SearchForm({
   );
 
   return (
-    <div id={id} className="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-2">
+    <div id={id} className="rounded-xl border border-zinc-200 bg-white p-4">
+      <div className="grid grid-cols-1 gap-4">
+        <div>
           <label className="block text-xs font-medium text-zinc-500 mb-1">Search</label>
           <input
             type="search"

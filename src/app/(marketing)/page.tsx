@@ -122,7 +122,7 @@ export default async function HomePage() {
                     )}
                   </div>
                   <div className="p-3">
-                    <div className="mb-1 flex flex-wrap gap-1">
+                    <div className="mb-1 flex min-h-[18px] flex-wrap content-start items-start gap-1">
                       {l.listingKind === "auction" && (
                         <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
                           Auction

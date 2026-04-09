@@ -225,7 +225,7 @@ export function BrowseMobileReels({
               </div>
 
               <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end p-4 pt-16 text-white">
-                <div className="mb-2 flex flex-wrap gap-1.5">
+                <div className="mb-2 flex min-h-[20px] flex-wrap content-start items-start gap-1.5">
                   {l.listingKind === "auction" && (
                     <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide backdrop-blur-sm">
                       Auction

@@ -4,6 +4,38 @@ import { PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE, PROP_YARD_TERMS_VERSIO
 
 export default async function PropYardHomePage() {
   const pct = Math.round(PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE * 100);
+  const testimonials = [
+    {
+      quote:
+        "We built our hero props by yard in one place, then sent grouped requests in minutes instead of juggling six spreadsheets.",
+      by: "Art Department Lead, TV Drama",
+    },
+    {
+      quote:
+        "Set Builder made scheduling sane - every line had dates, notes, and fulfillment before we contacted suppliers.",
+      by: "Prop Buyer, Feature Film",
+    },
+    {
+      quote:
+        "We can now hire and return stock without hiding our sale inventory manually. The calendar and statuses do that work.",
+      by: "Operations Manager, Reclamation Yard",
+    },
+    {
+      quote:
+        "The quality is better than generic prop houses because it is live reclaimed stock from real UK yards.",
+      by: "Set Decorator, Commercial Studio",
+    },
+    {
+      quote:
+        "Our producers loved seeing request history by batch. It gave finance and production one clear source of truth.",
+      by: "Production Coordinator, Factual Series",
+    },
+    {
+      quote:
+        "Weekly pricing and minimum periods are obvious up front, so fewer back-and-forth emails before confirming hires.",
+      by: "Assistant Buyer, Independent Film",
+    },
+  ];
 
   const featured = await prisma.propRentalOffer.findMany({
     where: { isActive: true, listing: { status: "active" } },
@@ -123,6 +155,124 @@ export default async function PropYardHomePage() {
           </Link>
         </div>
       </section>
+
+      <section className="mt-12 border border-driven-warm bg-driven-ink px-6 py-8 text-driven-paper sm:px-8">
+        <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-[0.35em] text-driven-accent-light">
+          Set Builder
+        </p>
+        <h2 className="mt-3 max-w-3xl font-[family-name:var(--font-driven-display)] text-3xl leading-tight sm:text-4xl">
+          The only prop marketplace in the world built around set-based hire workflow.
+        </h2>
+        <p className="mt-4 max-w-3xl text-sm text-driven-paper/85 sm:text-base">
+          Build sets by production. Add props with dates and notes. Send grouped requests per yard. Track every batch from
+          request to paid hire.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href="/prop-yard/sets"
+            className="border border-driven-paper bg-driven-paper px-5 py-2 font-[family-name:var(--font-driven-mono)] text-xs uppercase tracking-wide text-driven-ink hover:bg-driven-accent-light"
+          >
+            Open Set Builder
+          </Link>
+          <Link
+            href="/prop-yard/search"
+            className="border border-driven-paper/60 px-5 py-2 font-[family-name:var(--font-driven-mono)] text-xs uppercase tracking-wide text-driven-paper hover:border-driven-paper"
+          >
+            Browse Hire Stock
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-12 overflow-hidden border border-driven-warm bg-white py-6">
+        <h2 className="px-6 font-[family-name:var(--font-driven-display)] text-2xl italic text-driven-ink sm:px-8">
+          What productions and yards say
+        </h2>
+        <div className="mt-5 space-y-3">
+          {[0, 1].map((rowIdx) => {
+            const row = rowIdx === 0 ? testimonials : [...testimonials].reverse();
+            const directionClass = rowIdx === 0 ? "animate-marquee-left" : "animate-marquee-right";
+            return (
+              <div key={rowIdx} className="relative overflow-hidden">
+                <div className={`flex min-w-max gap-3 px-4 sm:px-6 ${directionClass}`}>
+                  {[...row, ...row].map((t, i) => (
+                    <article key={`${rowIdx}-${i}`} className="w-[320px] border border-driven-warm bg-driven-paper px-4 py-3">
+                      <p className="text-sm text-driven-ink">{t.quote}</p>
+                      <p className="mt-2 font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide text-driven-muted">
+                        {t.by}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <footer className="mt-12 border border-driven-warm bg-white px-6 py-8 sm:px-8">
+        <div className="grid gap-6 md:grid-cols-3">
+          <div>
+            <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-[0.35em] text-driven-accent">
+              The Prop Yard
+            </p>
+            <p className="mt-3 text-sm text-driven-muted">
+              Hire reclaimed props from UK yards with set-based workflow for film, TV, theatre, and events.
+            </p>
+          </div>
+          <div>
+            <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide text-driven-ink">
+              Explore
+            </p>
+            <div className="mt-3 space-y-2 text-sm">
+              <Link href="/prop-yard/search" className="block text-driven-muted hover:text-driven-ink">
+                Browse props
+              </Link>
+              <Link href="/prop-yard/sets" className="block text-driven-muted hover:text-driven-ink">
+                Set Builder
+              </Link>
+              <Link href="/prop-yard/dashboard" className="block text-driven-muted hover:text-driven-ink">
+                Yard dashboard
+              </Link>
+            </div>
+          </div>
+          <div>
+            <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide text-driven-ink">
+              Terms
+            </p>
+            <p className="mt-3 text-sm text-driven-muted">
+              Hire requests use Prop Yard terms version <span className="text-driven-ink">{PROP_YARD_TERMS_VERSION}</span>.
+            </p>
+            <Link href="/prop-yard#hire-terms" className="mt-2 inline-block text-sm text-driven-accent underline">
+              Read hire terms summary
+            </Link>
+          </div>
+        </div>
+      </footer>
+
+      <style jsx>{`
+        .animate-marquee-left {
+          animation: marquee-left 45s linear infinite;
+        }
+        .animate-marquee-right {
+          animation: marquee-right 45s linear infinite;
+        }
+        @keyframes marquee-left {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        @keyframes marquee-right {
+          0% {
+            transform: translateX(-50%);
+          }
+          100% {
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
