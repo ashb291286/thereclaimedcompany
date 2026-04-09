@@ -11,8 +11,15 @@ export type ListingSearchParams = {
   q?: string;
   categoryId?: string;
   condition?: string;
+  conditionGrade?: string;
   sellerType?: string;
   postcode?: string;
+  eraCsv?: string;
+  genreCsv?: string;
+  settingCsv?: string;
+  materialCsv?: string;
+  hireOnly?: boolean;
+  availableNow?: boolean;
   radiusMiles: number;
   idList?: string[];
   skip: number;
@@ -20,7 +27,7 @@ export type ListingSearchParams = {
 };
 
 function buildBaseWhere(
-  params: Pick<ListingSearchParams, "q" | "categoryId" | "condition" | "sellerType">
+  params: Pick<ListingSearchParams, "q" | "categoryId" | "condition" | "conditionGrade" | "sellerType" | "eraCsv" | "genreCsv" | "settingCsv" | "materialCsv" | "hireOnly" | "availableNow">
 ): Prisma.ListingWhereInput {
   const where: Prisma.ListingWhereInput = { status: "active", visibleOnMarketplace: true };
   if (params.q?.trim()) {
@@ -31,9 +38,22 @@ function buildBaseWhere(
   }
   if (params.categoryId) where.categoryId = params.categoryId;
   if (params.condition) where.condition = params.condition as Condition;
+  if (params.conditionGrade) where.conditionGrade = params.conditionGrade as never;
   if (params.sellerType) {
     where.seller = { role: params.sellerType as "individual" | "reclamation_yard" };
   }
+  const eras = (params.eraCsv ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const genres = (params.genreCsv ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const settings = (params.settingCsv ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const materials = (params.materialCsv ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (eras.length) where.eraTags = { hasSome: eras };
+  if (genres.length) where.genreTags = { hasSome: genres };
+  if (settings.length) {
+    where.OR = [...(where.OR ?? []), { settingInteriorTags: { hasSome: settings } }, { settingExteriorTags: { hasSome: settings } }];
+  }
+  if (materials.length) where.propMaterials = { hasSome: materials };
+  if (params.hireOnly) where.hireEnabled = true;
+  if (params.availableNow) where.propListingStatus = "ACTIVE" as never;
   return where;
 }
 

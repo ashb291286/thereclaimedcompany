@@ -2,11 +2,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db";
 
-type Props = { searchParams: Promise<{ q?: string; error?: string; setId?: string }> };
+type Props = { searchParams: Promise<{ q?: string; error?: string; setId?: string; era?: string; genre?: string; setting?: string; material?: string; conditionGrade?: string; availableNow?: string }> };
 
 export default async function PropYardSearchPage({ searchParams }: Props) {
-  const { q, error, setId: setIdParam } = await searchParams;
+  const { q, error, setId: setIdParam, era, genre, setting, material, conditionGrade, availableNow } = await searchParams;
   const term = (q ?? "").trim();
+  const eraTags = (era ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const genreTags = (genre ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const settingTags = (setting ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const materialTags = (material ?? "").split(",").map((x) => x.trim()).filter(Boolean);
   const setId = (setIdParam ?? "").trim();
   const offerQuery = setId ? `?setId=${encodeURIComponent(setId)}` : "";
 
@@ -17,6 +21,19 @@ export default async function PropYardSearchPage({ searchParams }: Props) {
         status: "active",
         listingKind: "sell",
         freeToCollector: false,
+          ...(conditionGrade ? { conditionGrade: conditionGrade as never } : {}),
+          ...(availableNow === "1" ? { propListingStatus: "ACTIVE" as never } : {}),
+          ...(eraTags.length ? { eraTags: { hasSome: eraTags } } : {}),
+          ...(genreTags.length ? { genreTags: { hasSome: genreTags } } : {}),
+          ...(materialTags.length ? { propMaterials: { hasSome: materialTags } } : {}),
+          ...(settingTags.length
+            ? {
+                OR: [
+                  { settingInteriorTags: { hasSome: settingTags } },
+                  { settingExteriorTags: { hasSome: settingTags } },
+                ],
+              }
+            : {}),
         ...(term
           ? {
               OR: [
@@ -79,6 +96,20 @@ export default async function PropYardSearchPage({ searchParams }: Props) {
         >
           Search
         </button>
+        <input name="era" defaultValue={era ?? ""} placeholder="Era tags (comma)" className="rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink" />
+        <input name="genre" defaultValue={genre ?? ""} placeholder="Genre tags (comma)" className="rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink" />
+        <input name="setting" defaultValue={setting ?? ""} placeholder="Setting tags (comma)" className="rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink" />
+        <input name="material" defaultValue={material ?? ""} placeholder="Material tags (comma)" className="rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink" />
+        <select name="conditionGrade" defaultValue={conditionGrade ?? ""} className="rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink">
+          <option value="">Any condition grade</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+        </select>
+        <label className="inline-flex items-center gap-2 rounded-lg border border-driven-warm bg-white px-3 py-2 text-sm text-driven-ink">
+          <input type="checkbox" name="availableNow" value="1" defaultChecked={availableNow === "1"} />
+          Available now
+        </label>
       </form>
 
       {offers.length === 0 ? (

@@ -70,10 +70,15 @@ export default async function DashboardPropYardPage({
       </div>
 
       {wizard && saved ? (
-        <p className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          Prop listing saved. Open an offer below for <strong>Availability &amp; bookings</strong> — mark a hire as{" "}
-          <strong>Out on hire</strong> to pause marketplace visibility until it&apos;s returned.
-        </p>
+        <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <p>
+            Prop listing saved. Open an offer below for <strong>Availability &amp; bookings</strong> — mark a hire as{" "}
+            <strong>Out on hire</strong> to pause marketplace visibility until it&apos;s returned.
+          </p>
+          <Link href="/dashboard/prop-yard/wizard?similar=1" className="mt-2 inline-block font-medium underline">
+            List similar item
+          </Link>
+        </div>
       ) : null}
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-6">

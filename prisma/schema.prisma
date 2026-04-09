@@ -99,6 +99,9 @@ model User {
   localYardAlerts          ListingLocalYardAlert[] @relation("YardLocalAlerts")
   propRentalBookingsAsHirer PropRentalBooking[] @relation("PropRentalHirer")
   propRentalSets            PropRentalSet[]
+  propListingDrafts         PropListingDraft[]
+  seenOnScreenRequested     SeenOnScreenVerificationRequest[] @relation("SeenOnScreenRequestedBy")
+  seenOnScreenReviewed      SeenOnScreenVerificationRequest[] @relation("SeenOnScreenReviewedBy")
 }
 
 model Account {
@@ -235,6 +238,73 @@ model Listing {
   carbonSavedKg          Float? // cached embodied carbon avoided (kg CO2e)
   carbonWasteDivertedKg  Float? // mass diverted (kg)
   carbonImpactJson       Json? // full breakdown for UI / API
+  descriptionShort       String?
+  descriptionFull        String? @db.Text
+  propSubcategory        String?
+  quantityAvailable      Int?
+  dimensionsH            Float?
+  dimensionsW            Float?
+  dimensionsD            Float?
+  weightKg               Float?
+  propMaterials          String[]  @default([])
+  propColours            String[]  @default([])
+  colourHex              String?
+  colourName             String?
+  conditionGrade         PropConditionGrade?
+  eraTags                String[]  @default([])
+  dateSpecific           String?
+  styleTags              String[]  @default([])
+  geographicOrigin       String?
+  genreTags              String[]  @default([])
+  settingInteriorTags    String[]  @default([])
+  settingExteriorTags    String[]  @default([])
+  flagSuitableCloseup    Boolean   @default(false)
+  flagCameraReady        Boolean   @default(false)
+  flagPreviouslyUsedOnProduction Boolean @default(false)
+  flagFragile            Boolean   @default(false)
+  flagOutdoorSuitable    Boolean   @default(false)
+  flagMultiplesAvailable Boolean   @default(false)
+  flagCanSourceMatching  Boolean   @default(false)
+  flagStudioDelivery     Boolean   @default(false)
+  productionName         String?
+  studioTags             String[]  @default([])
+  studioOtherText        String?
+  provenanceBuilding     String?
+  provenanceDateText     String?
+  provenanceRegion       String?
+  provenanceDocs         String[]  @default([])
+  provenanceDocsAvailable Boolean  @default(false)
+  authenticityVerifiedBy PropAuthenticityVerifiedBy?
+  restorationNotes       String?   @db.Text
+  conditionNotes         String?   @db.Text
+  hireEnabled            Boolean   @default(false)
+  saleEnabled            Boolean   @default(true)
+  hirePriceWeekPence     Int?
+  hireMinPeriod          PropHireMinPeriod?
+  hireDepositPct         Float?
+  hireBlockedDates       Json?
+  damageWaiverTerms      String?   @db.Text
+  salePricePence         Int?
+  saleOffers             Boolean   @default(false)
+  collectionAddress      String?
+  collectionAvailable    Boolean   @default(true)
+  collectionOpeningHours String?
+  deliveryAvailable      Boolean   @default(false)
+  deliveryRadiusMiles    Int?
+  deliveryNationwide     Boolean   @default(false)
+  deliveryPriceType      PropDeliveryPriceType?
+  deliveryPricePence     Int?
+  specialistHandling     Boolean   @default(false)
+  regularStudioRun       Boolean   @default(false)
+  specialistTransportRequired Boolean @default(false)
+  deliveryLeadTime       String?
+  heroImageUrl           String?
+  detailShots            Json?
+  videoUrl               String?
+  view360Url             String?
+  seenOnScreenProductions String[] @default([])
+  propListingStatus      PropListingStatus @default(DRAFT)
+  publishedAt            DateTime?
   createdAt            DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -247,6 +317,8 @@ model Listing {
   viewEvents ListingViewEvent[]
   localYardAlerts ListingLocalYardAlert[]
   propRentalOffer PropRentalOffer?
+  propListingDrafts PropListingDraft[]
+  seenOnScreenRequests SeenOnScreenVerificationRequest[]
 
   @@index([sellerId])
   @@index([categoryId])
@@ -254,6 +326,9 @@ model Listing {
   @@index([lat, lng])
   @@index([createdAt])
   @@index([listingKind])
+  @@index([hireEnabled, saleEnabled, propListingStatus])
+  @@index([conditionGrade])
+  @@index([authenticityVerifiedBy])
 }
 
 // ---- The Prop Yard (film / TV hire layer; reclamation yards only; links to existing listings) ----
@@ -273,6 +348,41 @@ enum PropRentalBookingStatus {
   DECLINED
 }
 
+enum PropConditionGrade {
+  A
+  B
+  C
+}
+
+enum PropAuthenticityVerifiedBy {
+  YARD_OWNER_KNOWLEDGE
+  INDEPENDENT_EXPERT
+  SALVO_MEMBER
+  LAPADA_MEMBER
+  UNVERIFIED
+}
+
+enum PropListingStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum PropHireMinPeriod {
+  ONE_DAY
+  THREE_DAYS
+  ONE_WEEK
+  TWO_WEEKS
+  ONE_MONTH
+}
+
+enum PropDeliveryPriceType {
+  FREE
+  FIXED
+  POA
+  DISTANCE
+}
+
 /// One active prop-rental configuration per marketplace listing.
 model PropRentalOffer {
   id               String   @id @default(cuid())
@@ -290,6 +400,42 @@ model PropRentalOffer {
   setItems PropRentalSetItem[]
 
   @@index([isActive])
+  @@index([weeklyHirePence])
+}
+
+model PropListingDraft {
+  id        String   @id @default(cuid())
+  yardId    String
+  listingId String?
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  yard    User     @relation(fields: [yardId], references: [id], onDelete: Cascade)
+  listing Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@index([yardId, updatedAt])
+  @@index([listingId])
+}
+
+model SeenOnScreenVerificationRequest {
+  id             String   @id @default(cuid())
+  listingId      String
+  requestedById  String
+  productionName String
+  note           String?
+  status         String   @default("PENDING")
+  reviewedById   String?
+  reviewedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  listing     Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  requestedBy User    @relation("SeenOnScreenRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy  User?   @relation("SeenOnScreenReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([listingId, status])
+  @@index([requestedById, createdAt])
 }
 
 /// Production / art-department "set" — a hirer builds a list of props before sending hire requests.

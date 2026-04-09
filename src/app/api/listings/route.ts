@@ -12,6 +12,13 @@ export async function GET(req: NextRequest) {
     ? Math.min(100, Math.max(5, radiusRaw))
     : 50;
   const sellerType = searchParams.get("sellerType") ?? "";
+  const conditionGrade = searchParams.get("conditionGrade") ?? "";
+  const era = searchParams.get("era") ?? "";
+  const genre = searchParams.get("genre") ?? "";
+  const setting = searchParams.get("setting") ?? "";
+  const material = searchParams.get("material") ?? "";
+  const hireOnly = searchParams.get("hireOnly") === "1";
+  const availableNow = searchParams.get("availableNow") === "1";
   const idsParam = searchParams.get("ids") ?? "";
   const idList = idsParam
     .split(",")
@@ -26,6 +33,13 @@ export async function GET(req: NextRequest) {
     q,
     categoryId: categoryId || undefined,
     condition: condition || undefined,
+    conditionGrade: conditionGrade || undefined,
+    eraCsv: era || undefined,
+    genreCsv: genre || undefined,
+    settingCsv: setting || undefined,
+    materialCsv: material || undefined,
+    hireOnly,
+    availableNow,
     sellerType: sellerType || undefined,
     postcode: postcode || undefined,
     radiusMiles,

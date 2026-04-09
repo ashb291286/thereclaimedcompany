@@ -49,6 +49,7 @@ export function DashboardSidebar({
   }
   if (carbonAdmin) {
     items.push({ href: "/dashboard/admin/carbon-factors", label: "Carbon data", accent: "admin" });
+    items.push({ href: "/dashboard/admin/seen-on-screen", label: "Seen on screen queue", accent: "admin" });
   }
 
   return (

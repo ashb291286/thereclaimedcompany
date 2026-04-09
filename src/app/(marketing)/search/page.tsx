@@ -34,6 +34,13 @@ export default async function SearchPage({
     postcode?: string;
     radius?: string;
     sellerType?: string;
+    conditionGrade?: string;
+    era?: string;
+    genre?: string;
+    setting?: string;
+    material?: string;
+    hireOnly?: string;
+    availableNow?: string;
     page?: string;
     ids?: string;
     fromImage?: string;
@@ -62,6 +69,13 @@ export default async function SearchPage({
       categoryId: params.categoryId,
       condition: params.condition,
       sellerType: params.sellerType,
+      conditionGrade: params.conditionGrade,
+      eraCsv: params.era,
+      genreCsv: params.genre,
+      settingCsv: params.setting,
+      materialCsv: params.material,
+      hireOnly: params.hireOnly === "1",
+      availableNow: params.availableNow === "1",
       postcode: params.postcode,
       radiusMiles,
       idList: idList.length > 0 ? idList : undefined,
@@ -87,6 +101,13 @@ export default async function SearchPage({
     postcode: params.postcode,
     radius: params.radius ?? (params.postcode?.trim() ? String(radiusMiles) : undefined),
     sellerType: params.sellerType,
+    conditionGrade: params.conditionGrade,
+    era: params.era,
+    genre: params.genre,
+    setting: params.setting,
+    material: params.material,
+    hireOnly: params.hireOnly,
+    availableNow: params.availableNow,
     ids: params.ids,
     fromImage: params.fromImage,
   };
@@ -159,6 +180,13 @@ export default async function SearchPage({
             defaultPostcode={params.postcode}
             defaultRadius={String(radiusMiles)}
             defaultSellerType={params.sellerType}
+        defaultConditionGrade={params.conditionGrade}
+        defaultEra={params.era}
+        defaultGenre={params.genre}
+        defaultSetting={params.setting}
+        defaultMaterial={params.material}
+        defaultHireOnly={params.hireOnly === "1"}
+        defaultAvailableNow={params.availableNow === "1"}
           />
           <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
             <p className="text-sm font-semibold text-zinc-900">Have something to sell?</p>
@@ -203,6 +231,13 @@ export default async function SearchPage({
                   postcode: params.postcode,
                   radius: params.radius ?? (params.postcode?.trim() ? String(radiusMiles) : undefined),
                   sellerType: params.sellerType,
+                  conditionGrade: params.conditionGrade,
+                  era: params.era,
+                  genre: params.genre,
+                  setting: params.setting,
+                  material: params.material,
+                  hireOnly: params.hireOnly,
+                  availableNow: params.availableNow,
                   ids: params.ids,
                   fromImage: params.fromImage,
                 }}

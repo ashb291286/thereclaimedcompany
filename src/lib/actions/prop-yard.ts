@@ -19,6 +19,8 @@ import {
 } from "@/lib/prop-yard";
 import type { PropRentalBookingStatus, PropRentalFulfillment } from "@/generated/prisma/client";
 import { randomUUID } from "crypto";
+import { createNotification } from "@/lib/notifications";
+import { isCarbonAdmin } from "@/lib/admin";
 
 const BLOCKING: PropRentalBookingStatus[] = ["REQUESTED", "CONFIRMED", "OUT_ON_HIRE"];
 const FULFILLMENTS: PropRentalFulfillment[] = [
@@ -277,6 +279,289 @@ export async function createPropOnlyListingAndOfferAction(formData: FormData): P
 
   await syncListingLocalYardAlerts(listing.id);
   redirect(okBase.includes("?") ? `${okBase}&saved=1` : `${okBase}?saved=1`);
+}
+
+export async function savePropListingDraftAction(formData: FormData): Promise<void> {
+  const userId = await assertPropOfferSeller();
+  const payloadRaw = String(formData.get("payloadJson") ?? "").trim();
+  if (!payloadRaw) return;
+  let payload: unknown;
+  try {
+    payload = JSON.parse(payloadRaw);
+  } catch {
+    return;
+  }
+  const listingIdRaw = String(formData.get("listingId") ?? "").trim();
+  const listingId = listingIdRaw || null;
+  const existing = await prisma.propListingDraft.findFirst({ where: { yardId: userId, listingId } });
+  if (existing) {
+    await prisma.propListingDraft.update({ where: { id: existing.id }, data: { payload: payload as object } });
+  } else {
+    await prisma.propListingDraft.create({ data: { yardId: userId, listingId, payload: payload as object } });
+  }
+}
+
+export async function loadLatestPropListingDraftAction(): Promise<unknown | null> {
+  const userId = await assertPropOfferSeller();
+  const draft = await prisma.propListingDraft.findFirst({
+    where: { yardId: userId },
+    orderBy: { updatedAt: "desc" },
+    select: { payload: true },
+  });
+  return draft?.payload ?? null;
+}
+
+export async function deletePropListingDraftAction(): Promise<void> {
+  const userId = await assertPropOfferSeller();
+  await prisma.propListingDraft.deleteMany({ where: { yardId: userId } });
+}
+
+export async function createPropComprehensiveListingAction(formData: FormData): Promise<void> {
+  const userId = await assertPropOfferSeller();
+  const okBase = safePropYardRedirect(formData.get("_successReturn"), "/dashboard/prop-yard");
+  const errBase = safePropYardRedirect(formData.get("_errorReturn"), "/dashboard/prop-yard/wizard");
+  const payloadRaw = String(formData.get("payloadJson") ?? "").trim();
+  const publishIntent = String(formData.get("publishIntent") ?? "publish").trim();
+  const shouldPublish = publishIntent !== "draft";
+  if (!payloadRaw) redirect(`${errBase}?error=${encodeURIComponent("Missing listing payload.")}`);
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(payloadRaw) as Record<string, unknown>;
+  } catch {
+    redirect(`${errBase}?error=${encodeURIComponent("Invalid listing payload.")}`);
+  }
+
+  const name = String(payload.name ?? "").trim();
+  const descriptionShort = String(payload.descriptionShort ?? "").trim();
+  const descriptionFull = String(payload.descriptionFull ?? "").trim();
+  const categoryName = String(payload.category ?? "").trim();
+  const subcategory = String(payload.subcategory ?? "").trim();
+  const quantityAvailable = Number(payload.quantityAvailable ?? 1);
+  const images = Array.isArray(payload.images) ? payload.images.map((x) => String(x).trim()).filter(Boolean) : [];
+  const conditionGrade = String(payload.conditionGrade ?? "").trim();
+  const conditionNotes = String(payload.conditionNotes ?? "").trim();
+  const genres = Array.isArray(payload.genres) ? payload.genres.map((x) => String(x)) : [];
+  const eras = Array.isArray(payload.eras) ? payload.eras.map((x) => String(x)) : [];
+
+  if (shouldPublish && (!name || !descriptionShort || !descriptionFull || !categoryName || !conditionGrade || !conditionNotes)) {
+    redirect(`${errBase}?error=${encodeURIComponent("Complete all required fields before publishing.")}`);
+  }
+  if (shouldPublish && descriptionShort.length > 300) {
+    redirect(`${errBase}?error=${encodeURIComponent("Short description must be 300 chars or less.")}`);
+  }
+  if (shouldPublish && images.length < 4) {
+    redirect(`${errBase}?error=${encodeURIComponent("Upload at least 4 photos before publishing.")}`);
+  }
+  if (shouldPublish && (genres.length < 1 || eras.length < 1)) {
+    redirect(`${errBase}?error=${encodeURIComponent("Add at least one era and one genre tag.")}`);
+  }
+
+  const postcodeRaw = String(payload.collectionAddress ?? "").trim();
+  const resolvedPostcode = postcodeRaw ? await lookupUkPostcode(postcodeRaw) : null;
+  const categorySlug = slugifyCategoryName(categoryName);
+  if (!categorySlug) redirect(`${errBase}?error=${encodeURIComponent("Invalid category.")}`);
+  const category = await prisma.category.upsert({
+    where: { slug: categorySlug },
+    create: { slug: categorySlug, name: categoryName.slice(0, 120) },
+    update: { name: categoryName.slice(0, 120) },
+  });
+
+  const hireEnabled = Boolean(payload.hireEnabled);
+  const saleEnabled = Boolean(payload.saleEnabled);
+  const hirePriceWeekPence = Math.round(Number(payload.hirePriceWeekGbp ?? 0) * 100);
+  const salePricePence = Math.round(Number(payload.salePriceGbp ?? 0) * 100);
+  if (shouldPublish && !hireEnabled && !saleEnabled) redirect(`${errBase}?error=${encodeURIComponent("Enable hire and/or sale.")}`);
+  if (shouldPublish && hireEnabled && hirePriceWeekPence < 100) redirect(`${errBase}?error=${encodeURIComponent("Hire price must be at least £1.")}`);
+  if (shouldPublish && saleEnabled && salePricePence < 100) redirect(`${errBase}?error=${encodeURIComponent("Sale price must be at least £1.")}`);
+
+  const listing = await prisma.listing.create({
+    data: {
+      sellerId: userId,
+      title: name,
+      description: descriptionShort,
+      descriptionShort,
+      descriptionFull,
+      price: saleEnabled ? salePricePence : Math.max(hirePriceWeekPence, 100),
+      condition: "used",
+      conditionGrade: conditionGrade as "A" | "B" | "C",
+      categoryId: category.id,
+      propSubcategory: subcategory || null,
+      quantityAvailable: Number.isFinite(quantityAvailable) ? quantityAvailable : 1,
+      dimensionsH: Number(payload.dimensionsH ?? 0) || null,
+      dimensionsW: Number(payload.dimensionsW ?? 0) || null,
+      dimensionsD: Number(payload.dimensionsD ?? 0) || null,
+      weightKg: Number(payload.weightKg ?? 0) || null,
+      propMaterials: (Array.isArray(payload.materials) ? payload.materials : []).map((x) => String(x)),
+      propColours: [String(payload.colourName ?? "").trim()].filter(Boolean),
+      colourHex: String(payload.colourHex ?? "").trim() || null,
+      colourName: String(payload.colourName ?? "").trim() || null,
+      eraTags: eras,
+      dateSpecific: String(payload.dateSpecific ?? "").trim() || null,
+      styleTags: (Array.isArray(payload.styles) ? payload.styles : []).map((x) => String(x)),
+      geographicOrigin: String(payload.geographicOrigin ?? "").trim() || null,
+      genreTags: genres,
+      settingInteriorTags: (Array.isArray(payload.settingInterior) ? payload.settingInterior : []).map((x) => String(x)),
+      settingExteriorTags: (Array.isArray(payload.settingExterior) ? payload.settingExterior : []).map((x) => String(x)),
+      flagSuitableCloseup: Boolean(payload.flagSuitableCloseup),
+      flagCameraReady: Boolean(payload.flagCameraReady),
+      flagPreviouslyUsedOnProduction: Boolean(payload.flagPreviouslyUsedOnProduction),
+      flagFragile: Boolean(payload.flagFragile),
+      flagOutdoorSuitable: Boolean(payload.flagOutdoorSuitable),
+      flagMultiplesAvailable: Boolean(payload.flagMultiplesAvailable),
+      flagCanSourceMatching: Boolean(payload.flagCanSourceMatching),
+      flagStudioDelivery: Boolean(payload.flagStudioDelivery),
+      productionName: String(payload.productionName ?? "").trim() || null,
+      studioTags: (Array.isArray(payload.studios) ? payload.studios : []).map((x) => String(x)),
+      studioOtherText: String(payload.studioOtherText ?? "").trim() || null,
+      provenanceBuilding: String(payload.provenanceBuilding ?? "").trim() || null,
+      provenanceDateText: String(payload.provenanceDateText ?? "").trim() || null,
+      provenanceRegion: String(payload.provenanceRegion ?? "").trim() || null,
+      authenticityVerifiedBy: String(payload.authenticityVerifiedBy ?? "UNVERIFIED") as never,
+      restorationNotes: String(payload.restorationNotes ?? "").trim() || null,
+      conditionNotes,
+      hireEnabled,
+      saleEnabled,
+      hirePriceWeekPence: hireEnabled ? hirePriceWeekPence : null,
+      hireMinPeriod: hireEnabled ? (String(payload.hireMinPeriod ?? "ONE_WEEK") as never) : null,
+      hireDepositPct: hireEnabled ? Number(payload.hireDepositPct ?? 100) : null,
+      damageWaiverTerms: String(payload.damageWaiverTerms ?? "").trim() || null,
+      salePricePence: saleEnabled ? salePricePence : null,
+      saleOffers: Boolean(payload.saleOffers),
+      collectionAddress: postcodeRaw || null,
+      collectionAvailable: Boolean(payload.collectionAvailable),
+      collectionOpeningHours: String(payload.collectionOpeningHours ?? "").trim() || null,
+      deliveryAvailable: Boolean(payload.deliveryAvailable),
+      deliveryRadiusMiles: Number(payload.deliveryRadiusMiles ?? 0) || null,
+      deliveryNationwide: Boolean(payload.deliveryNationwide),
+      deliveryPriceType: String(payload.deliveryPriceType ?? "POA") as never,
+      deliveryPricePence: Number(payload.deliveryPriceGbp ?? 0) ? Math.round(Number(payload.deliveryPriceGbp) * 100) : null,
+      specialistHandling: Boolean(payload.specialistHandling),
+      regularStudioRun: Boolean(payload.regularStudioRun),
+      specialistTransportRequired: Boolean(payload.specialistTransportRequired),
+      deliveryLeadTime: String(payload.deliveryLeadTime ?? "").trim() || null,
+      heroImageUrl: images[0],
+      images,
+      detailShots: payload.detailShots ? (payload.detailShots as object) : null,
+      videoUrl: String(payload.videoUrl ?? "").trim() || null,
+      view360Url: String(payload.view360Url ?? "").trim() || null,
+      seenOnScreenProductions: [],
+      propListingStatus: shouldPublish ? "ACTIVE" : "DRAFT",
+      publishedAt: shouldPublish ? new Date() : null,
+      status: shouldPublish ? "active" : "draft",
+      listingKind: "sell",
+      freeToCollector: false,
+      visibleOnMarketplace: saleEnabled,
+      offersDelivery: Boolean(payload.deliveryAvailable),
+      deliveryNotes: String(payload.damageWaiverTerms ?? "").trim() || null,
+      postcode: resolvedPostcode?.postcode ?? null,
+      lat: resolvedPostcode?.lat ?? null,
+      lng: resolvedPostcode?.lng ?? null,
+      adminDistrict: resolvedPostcode?.adminDistrict ?? null,
+      region: resolvedPostcode?.region ?? null,
+    },
+  });
+
+  if (hireEnabled && shouldPublish) {
+    await prisma.propRentalOffer.create({
+      data: {
+        listingId: listing.id,
+        weeklyHirePence: hirePriceWeekPence,
+        minimumHireWeeks: 1,
+        isActive: true,
+        yardHireNotes: String(payload.damageWaiverTerms ?? "").trim() || null,
+      },
+    });
+  }
+
+  const productionName = String(payload.productionName ?? "").trim();
+  if (shouldPublish && Boolean(payload.flagPreviouslyUsedOnProduction) && productionName) {
+    await prisma.seenOnScreenVerificationRequest.create({
+      data: {
+        listingId: listing.id,
+        requestedById: userId,
+        productionName,
+      },
+    });
+  }
+
+  if (hireEnabled && shouldPublish) {
+    const wantedAds = await prisma.wantedAd.findMany({
+      where: {
+        status: "active",
+        OR: [{ categoryId: category.id }, { categoryId: null }],
+      },
+      select: { userId: true, id: true, title: true },
+      take: 40,
+    });
+    for (const ad of wantedAds) {
+      const dedupeLink = `/dashboard/wanted?match=${ad.id}&listing=${listing.id}`;
+      const existing = await prisma.notification.findFirst({
+        where: { userId: ad.userId, type: "prop_listing_brief_match", linkUrl: dedupeLink },
+        select: { id: true },
+      });
+      if (!existing) {
+        await createNotification({
+          userId: ad.userId,
+          type: "prop_listing_brief_match",
+          title: "Item matches an active production brief",
+          body: `Your listing "${name}" may match brief: ${ad.title}`,
+          linkUrl: dedupeLink,
+        });
+      }
+    }
+  }
+
+  if (shouldPublish) {
+    await prisma.propListingDraft.deleteMany({ where: { yardId: userId } });
+  }
+  revalidatePath("/dashboard/prop-yard");
+  revalidatePath("/prop-yard/search");
+  const marker = shouldPublish ? "saved=1" : "draft=1";
+  redirect(okBase.includes("?") ? `${okBase}&${marker}` : `${okBase}?${marker}`);
+}
+
+export async function reviewSeenOnScreenVerificationAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id || !isCarbonAdmin(session)) {
+    redirect("/dashboard?error=" + encodeURIComponent("Admin access required."));
+  }
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const decision = String(formData.get("decision") ?? "").trim();
+  if (!requestId || !["approve", "reject"].includes(decision)) {
+    redirect("/dashboard/admin/seen-on-screen?error=" + encodeURIComponent("Invalid review action."));
+  }
+
+  const reqRow = await prisma.seenOnScreenVerificationRequest.findUnique({
+    where: { id: requestId },
+    select: { id: true, listingId: true, productionName: true, status: true },
+  });
+  if (!reqRow) redirect("/dashboard/admin/seen-on-screen?error=" + encodeURIComponent("Request not found."));
+  if (reqRow.status !== "PENDING") redirect("/dashboard/admin/seen-on-screen");
+
+  await prisma.seenOnScreenVerificationRequest.update({
+    where: { id: requestId },
+    data: {
+      status: decision === "approve" ? "APPROVED" : "REJECTED",
+      reviewedById: session.user.id,
+      reviewedAt: new Date(),
+    },
+  });
+
+  if (decision === "approve") {
+    const listing = await prisma.listing.findUnique({
+      where: { id: reqRow.listingId },
+      select: { seenOnScreenProductions: true },
+    });
+    const next = [...new Set([...(listing?.seenOnScreenProductions ?? []), reqRow.productionName])];
+    await prisma.listing.update({
+      where: { id: reqRow.listingId },
+      data: { seenOnScreenProductions: next },
+    });
+  }
+
+  revalidatePath("/dashboard/admin/seen-on-screen");
+  redirect("/dashboard/admin/seen-on-screen?ok=1");
 }
 
 export async function updatePropRentalBookingStatusAction(formData: FormData): Promise<void> {

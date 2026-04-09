@@ -17,6 +17,13 @@ export function SearchForm({
   defaultPostcode,
   defaultRadius,
   defaultSellerType,
+  defaultConditionGrade,
+  defaultEra,
+  defaultGenre,
+  defaultSetting,
+  defaultMaterial,
+  defaultHireOnly,
+  defaultAvailableNow,
 }: {
   id?: string;
   categories: Category[];
@@ -26,6 +33,13 @@ export function SearchForm({
   defaultPostcode?: string;
   defaultRadius?: string;
   defaultSellerType?: string;
+  defaultConditionGrade?: string;
+  defaultEra?: string;
+  defaultGenre?: string;
+  defaultSetting?: string;
+  defaultMaterial?: string;
+  defaultHireOnly?: boolean;
+  defaultAvailableNow?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -113,6 +127,43 @@ export function SearchForm({
       </div>
       <div className="mt-4 flex flex-wrap items-end gap-2">
         <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">Condition grade</label>
+          <select
+            defaultValue={defaultConditionGrade ?? ""}
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+            onChange={(e) => updateQuery({ conditionGrade: e.target.value })}
+          >
+            <option value="">Any</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">Era tags (comma)</label>
+          <input defaultValue={defaultEra} data-search-era className="rounded-lg border border-zinc-300 px-3 py-2 text-sm w-40" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">Genre tags (comma)</label>
+          <input defaultValue={defaultGenre} data-search-genre className="rounded-lg border border-zinc-300 px-3 py-2 text-sm w-40" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">Setting tags (comma)</label>
+          <input defaultValue={defaultSetting} data-search-setting className="rounded-lg border border-zinc-300 px-3 py-2 text-sm w-40" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">Material tags (comma)</label>
+          <input defaultValue={defaultMaterial} data-search-material className="rounded-lg border border-zinc-300 px-3 py-2 text-sm w-40" />
+        </div>
+        <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
+          <input type="checkbox" data-search-hire-only defaultChecked={defaultHireOnly} />
+          Hire only
+        </label>
+        <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
+          <input type="checkbox" data-search-available-now defaultChecked={defaultAvailableNow} />
+          Available now
+        </label>
+        <div>
           <label className="mb-1 block text-xs font-medium text-zinc-500">Near postcode</label>
           <input
             type="text"
@@ -164,9 +215,21 @@ export function SearchForm({
             )?.value?.trim();
             const radius = (document.querySelector("[data-search-radius]") as HTMLSelectElement)
               ?.value;
+            const era = (document.querySelector("[data-search-era]") as HTMLInputElement)?.value?.trim();
+            const genre = (document.querySelector("[data-search-genre]") as HTMLInputElement)?.value?.trim();
+            const setting = (document.querySelector("[data-search-setting]") as HTMLInputElement)?.value?.trim();
+            const material = (document.querySelector("[data-search-material]") as HTMLInputElement)?.value?.trim();
+            const hireOnly = (document.querySelector("[data-search-hire-only]") as HTMLInputElement)?.checked;
+            const availableNow = (document.querySelector("[data-search-available-now]") as HTMLInputElement)?.checked;
             updateQuery({
               q: q ?? "",
               postcode: postcode ?? "",
+              era: era ?? "",
+              genre: genre ?? "",
+              setting: setting ?? "",
+              material: material ?? "",
+              hireOnly: hireOnly ? "1" : "",
+              availableNow: availableNow ? "1" : "",
               ...(postcode ? { radius: radius ?? "50" } : { radius: "" }),
             });
           }}
