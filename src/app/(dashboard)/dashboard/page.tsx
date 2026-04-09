@@ -11,6 +11,7 @@ import { CarbonBadge } from "@/components/CarbonBadge";
 import { publicSellerPath } from "@/lib/yard-public-path";
 import { OffersAttentionBanner } from "./OffersAttentionBanner";
 import { DashboardJustAddedEffect } from "./DashboardJustAddedEffect";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 export default async function DashboardPage({
   searchParams,
@@ -64,7 +65,7 @@ export default async function DashboardPage({
       });
     }
 
-    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+    const baseUrl = getSiteBaseUrl();
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
       customer: customerId,

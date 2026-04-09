@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
+import { getSiteBaseUrl } from "@/lib/site-url";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
     /* ignore */
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const baseUrl = getSiteBaseUrl();
   const returnUrl =
     flow === "onboarding"
       ? `${baseUrl}/dashboard/onboarding?phase=complete&stripe=success`

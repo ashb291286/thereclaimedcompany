@@ -5,6 +5,7 @@ import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
 import { ListingPricingMode } from "@/generated/prisma/client";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat } from "@/lib/vat-pricing";
+import { getSiteBaseUrl } from "@/lib/site-url";
 import { NextResponse } from "next/server";
 
 const MAX_CHECKOUT_QUANTITY = 10_000;
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Cannot buy your own listing" }, { status: 400 });
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const baseUrl = getSiteBaseUrl();
 
   // Free to collector — no Stripe
   if (listing.listingKind === "sell" && listing.freeToCollector && listing.price === 0) {

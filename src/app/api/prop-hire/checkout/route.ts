@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { NextResponse } from "next/server";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 const PLATFORM_FEE_PERCENT = 10;
 const PLATFORM_FEE_FIXED = 20; // pence
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
   const applicationFeeAmount = Math.round((amount * PLATFORM_FEE_PERCENT) / 100 + PLATFORM_FEE_FIXED);
   const bookingIds = bookings.map((b) => b.id).join(",");
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const baseUrl = getSiteBaseUrl();
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({

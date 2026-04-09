@@ -1,5 +1,6 @@
 import type { DayKey, WeeklyOpeningHours } from "@/lib/opening-hours";
 import { DAY_ORDER } from "@/lib/opening-hours";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 const SCHEMA_DAY: Record<DayKey, string> = {
   mon: "https://schema.org/Monday",
@@ -62,5 +63,5 @@ export function buildYardStoreJsonLd(input: {
 }
 
 export function getSiteUrl(): string {
-  return process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
+  return getSiteBaseUrl();
 }

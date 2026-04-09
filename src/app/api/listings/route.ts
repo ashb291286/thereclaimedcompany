@@ -2,7 +2,7 @@ import { searchListings } from "@/lib/listing-search";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const { searchParams } = req.nextUrl;
   const q = searchParams.get("q") ?? "";
   const categoryId = searchParams.get("categoryId") ?? "";
   const condition = searchParams.get("condition") ?? "";
