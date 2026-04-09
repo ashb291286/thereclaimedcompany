@@ -1,8 +1,18 @@
 -- Demolition / refurb alerts: projects with multiple claimable lots
-CREATE TYPE "DemolitionProjectStatus" AS ENUM ('draft', 'active', 'closed');
-CREATE TYPE "DemolitionElementStatus" AS ENUM ('available', 'reserved', 'withdrawn');
+-- Idempotent: objects may already exist if the DB was synced with db push or a partial apply.
+DO $t$ BEGIN
+  CREATE TYPE "DemolitionProjectStatus" AS ENUM ('draft', 'active', 'closed');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $t$;
 
-CREATE TABLE "DemolitionProject" (
+DO $t$ BEGIN
+  CREATE TYPE "DemolitionElementStatus" AS ENUM ('available', 'reserved', 'withdrawn');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $t$;
+
+CREATE TABLE IF NOT EXISTS "DemolitionProject" (
     "id" TEXT NOT NULL,
     "organizerId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -24,7 +34,7 @@ CREATE TABLE "DemolitionProject" (
     CONSTRAINT "DemolitionProject_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "DemolitionElement" (
+CREATE TABLE IF NOT EXISTS "DemolitionElement" (
     "id" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -45,7 +55,7 @@ CREATE TABLE "DemolitionElement" (
     CONSTRAINT "DemolitionElement_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "DemolitionElementInterest" (
+CREATE TABLE IF NOT EXISTS "DemolitionElementInterest" (
     "id" TEXT NOT NULL,
     "elementId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -55,24 +65,44 @@ CREATE TABLE "DemolitionElementInterest" (
     CONSTRAINT "DemolitionElementInterest_pkey" PRIMARY KEY ("id")
 );
 
-ALTER TABLE "DemolitionProject" ADD CONSTRAINT "DemolitionProject_organizerId_fkey" FOREIGN KEY ("organizerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $t$ BEGIN
+  ALTER TABLE "DemolitionProject" ADD CONSTRAINT "DemolitionProject_organizerId_fkey" FOREIGN KEY ("organizerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $t$;
 
-ALTER TABLE "DemolitionElement" ADD CONSTRAINT "DemolitionElement_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "DemolitionProject"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $t$ BEGIN
+  ALTER TABLE "DemolitionElement" ADD CONSTRAINT "DemolitionElement_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "DemolitionProject"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $t$;
 
-ALTER TABLE "DemolitionElement" ADD CONSTRAINT "DemolitionElement_claimedById_fkey" FOREIGN KEY ("claimedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $t$ BEGIN
+  ALTER TABLE "DemolitionElement" ADD CONSTRAINT "DemolitionElement_claimedById_fkey" FOREIGN KEY ("claimedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $t$;
 
-ALTER TABLE "DemolitionElementInterest" ADD CONSTRAINT "DemolitionElementInterest_elementId_fkey" FOREIGN KEY ("elementId") REFERENCES "DemolitionElement"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $t$ BEGIN
+  ALTER TABLE "DemolitionElementInterest" ADD CONSTRAINT "DemolitionElementInterest_elementId_fkey" FOREIGN KEY ("elementId") REFERENCES "DemolitionElement"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $t$;
 
-ALTER TABLE "DemolitionElementInterest" ADD CONSTRAINT "DemolitionElementInterest_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $t$ BEGIN
+  ALTER TABLE "DemolitionElementInterest" ADD CONSTRAINT "DemolitionElementInterest_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $t$;
 
-CREATE INDEX "DemolitionProject_organizerId_idx" ON "DemolitionProject"("organizerId");
-CREATE INDEX "DemolitionProject_status_idx" ON "DemolitionProject"("status");
-CREATE INDEX "DemolitionProject_postcode_idx" ON "DemolitionProject"("postcode");
-CREATE INDEX "DemolitionProject_createdAt_idx" ON "DemolitionProject"("createdAt");
+CREATE INDEX IF NOT EXISTS "DemolitionProject_organizerId_idx" ON "DemolitionProject"("organizerId");
+CREATE INDEX IF NOT EXISTS "DemolitionProject_status_idx" ON "DemolitionProject"("status");
+CREATE INDEX IF NOT EXISTS "DemolitionProject_postcode_idx" ON "DemolitionProject"("postcode");
+CREATE INDEX IF NOT EXISTS "DemolitionProject_createdAt_idx" ON "DemolitionProject"("createdAt");
 
-CREATE INDEX "DemolitionElement_projectId_idx" ON "DemolitionElement"("projectId");
-CREATE INDEX "DemolitionElement_status_idx" ON "DemolitionElement"("status");
+CREATE INDEX IF NOT EXISTS "DemolitionElement_projectId_idx" ON "DemolitionElement"("projectId");
+CREATE INDEX IF NOT EXISTS "DemolitionElement_status_idx" ON "DemolitionElement"("status");
 
-CREATE INDEX "DemolitionElementInterest_elementId_idx" ON "DemolitionElementInterest"("elementId");
-CREATE INDEX "DemolitionElementInterest_userId_idx" ON "DemolitionElementInterest"("userId");
-CREATE INDEX "DemolitionElementInterest_elementId_userId_idx" ON "DemolitionElementInterest"("elementId", "userId");
+CREATE INDEX IF NOT EXISTS "DemolitionElementInterest_elementId_idx" ON "DemolitionElementInterest"("elementId");
+CREATE INDEX IF NOT EXISTS "DemolitionElementInterest_userId_idx" ON "DemolitionElementInterest"("userId");
+CREATE INDEX IF NOT EXISTS "DemolitionElementInterest_elementId_userId_idx" ON "DemolitionElementInterest"("elementId", "userId");
