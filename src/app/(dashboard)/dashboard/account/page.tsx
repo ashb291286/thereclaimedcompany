@@ -6,7 +6,9 @@ import {
   updateAccountPasswordAction,
   updateAccountTypeAction,
 } from "@/lib/actions/account";
+import { getBidCardSummaryForUser } from "@/lib/actions/bid-payment";
 import { redirect } from "next/navigation";
+import { AccountAuctionCardSection } from "./AccountAuctionCardSection";
 
 export default async function AccountPage({
   searchParams,
@@ -30,10 +32,14 @@ export default async function AccountPage({
 
   if (!user) redirect("/auth/signin");
 
+  const bidCardSummary = await getBidCardSummaryForUser(session.user.id);
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-zinc-900">Account management</h1>
-      <p className="mt-1 text-sm text-zinc-600">Manage sign-in details, account type, and yard setup.</p>
+      <p className="mt-1 text-sm text-zinc-600">
+        Manage sign-in details, saved card for auctions, account type, and yard setup.
+      </p>
 
       {ok ? (
         <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -117,6 +123,10 @@ export default async function AccountPage({
             </button>
           </form>
         </section>
+      </div>
+
+      <div className="mt-4">
+        <AccountAuctionCardSection card={bidCardSummary} />
       </div>
 
       <section className="mt-4 rounded-xl border border-zinc-200 bg-white p-5">

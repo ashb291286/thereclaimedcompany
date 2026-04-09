@@ -404,7 +404,7 @@ export async function createListing(formData: FormData) {
 
   await syncListingLocalYardAlerts(created.id);
 
-  redirect("/dashboard");
+  redirect(`/dashboard?justAdded=${encodeURIComponent(created.id)}`);
 }
 
 export async function updateListing(id: string, formData: FormData) {

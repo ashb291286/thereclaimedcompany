@@ -886,7 +886,7 @@ export function ListingForm({
             </div>
             <div>
               <label htmlFor="materialQuantity" className="mb-1 block text-sm font-medium text-zinc-700">
-                Quantity
+                Weight
               </label>
               <input
                 id="materialQuantity"
@@ -899,6 +899,9 @@ export function ListingForm({
                 placeholder="e.g. 120"
                 className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
+              <p className="mt-1 text-xs text-zinc-500">
+                Mass in kg or tonnes, or volume in m³ (we convert m³ to weight using density for the carbon figure).
+              </p>
             </div>
             <div>
               <label htmlFor="materialUnit" className="mb-1 block text-sm font-medium text-zinc-700">

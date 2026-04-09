@@ -10,15 +10,16 @@ import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { publicSellerPath } from "@/lib/yard-public-path";
 import { OffersAttentionBanner } from "./OffersAttentionBanner";
+import { DashboardJustAddedEffect } from "./DashboardJustAddedEffect";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stripe?: string; boosted?: string; boostError?: string }>;
+  searchParams: Promise<{ stripe?: string; boosted?: string; boostError?: string; justAdded?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) return null;
-  const { stripe: stripeParam, boosted, boostError } = await searchParams;
+  const { stripe: stripeParam, boosted, boostError, justAdded } = await searchParams;
 
   async function deleteListingAction(formData: FormData) {
     "use server";
@@ -157,6 +158,16 @@ export default async function DashboardPage({
 
   const totalViewsByListing = new Map(viewsTotal.map((v) => [v.listingId, v._count._all]));
   const views7dByListing = new Map(views7d.map((v) => [v.listingId, v._count._all]));
+
+  const justAddedParam = typeof justAdded === "string" ? justAdded.trim() : "";
+  const justAddedRow =
+    justAddedParam.length > 0
+      ? await prisma.listing.findFirst({
+          where: { id: justAddedParam, sellerId: session.user.id },
+          select: { id: true },
+        })
+      : null;
+  const justAddedId = justAddedRow?.id ?? null;
   const sellerRole = dbUser?.role ?? session.user.role ?? null;
   const isYardAccount =
     sellerRole === "reclamation_yard" ||
@@ -188,6 +199,7 @@ export default async function DashboardPage({
 
   return (
     <div>
+      {justAddedId ? <DashboardJustAddedEffect listingId={justAddedId} /> : null}
       <h1 className="text-2xl font-semibold text-zinc-900">Dashboard</h1>
       <p className="mt-1 text-zinc-600">
         {sellerProfile.displayName}
@@ -383,9 +395,10 @@ export default async function DashboardPage({
             {listings.map((l) => (
               <li
                 key={l.id}
+                id={`dashboard-listing-${l.id}`}
                 className={`overflow-hidden rounded-xl border border-zinc-200 shadow-sm ${
                   l.propRentalOffer ? "bg-zinc-50/80" : "bg-white"
-                }`}
+                } ${l.id === justAddedId ? "dashboard-listing-just-added" : ""}`}
               >
                 <div className="relative aspect-[4/3] bg-zinc-100">
                   {l.images[0] ? (
@@ -401,7 +414,12 @@ export default async function DashboardPage({
                     <div className="flex h-full w-full items-center justify-center text-zinc-500">No image</div>
                   )}
                   {l.propRentalOffer ? <div className="absolute inset-0 bg-white/45" /> : null}
-                  <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+                  <div className="absolute left-2 top-2 z-10 flex flex-wrap gap-1">
+                    {l.id === justAddedId ? (
+                      <span className="rounded-full bg-brand px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                        Just added
+                      </span>
+                    ) : null}
                     {!l.visibleOnMarketplace ? (
                       <span className="rounded-full bg-zinc-700 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
                         Hire-only

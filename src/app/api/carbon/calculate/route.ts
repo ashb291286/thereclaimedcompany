@@ -25,7 +25,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "material_type is required" }, { status: 400 });
   }
   if (!Number.isFinite(quantity) || quantity <= 0) {
-    return NextResponse.json({ error: "quantity must be a positive number" }, { status: 400 });
+    return NextResponse.json(
+      { error: "weight or volume must be a positive number" },
+      { status: 400 }
+    );
   }
   const unit = unitRaw as MaterialUnit;
   if (unit !== "kg" && unit !== "tonne" && unit !== "m3") {

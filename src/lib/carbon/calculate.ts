@@ -13,7 +13,7 @@ export function quantityToKg(
   densityKgPerM3: number | null
 ): { kg: number; ok: true } | { ok: false; error: string } {
   if (!Number.isFinite(quantity) || quantity <= 0) {
-    return { ok: false, error: "Quantity must be a positive number" };
+    return { ok: false, error: "Weight or volume must be a positive number" };
   }
   switch (unit) {
     case "kg":
@@ -23,7 +23,7 @@ export function quantityToKg(
     case "m3": {
       const d = densityKgPerM3;
       if (d == null || !Number.isFinite(d) || d <= 0) {
-        return { ok: false, error: "Density is required for cubic metre quantities" };
+        return { ok: false, error: "Density is required when using cubic metres (m³)" };
       }
       return { ok: true, kg: quantity * d };
     }
