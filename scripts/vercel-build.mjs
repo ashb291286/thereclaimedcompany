@@ -25,6 +25,7 @@ const IDEMPOTENT_MIGRATION_NAMES = [
   "20260408200000_prop_booking_set_batch_payment",
   "20260409140000_offer_status_superseded",
   "20260409160000_user_buyer_home_location",
+  "20260409180000_seller_vat_onboarding",
 ];
 
 function runCaptured(cmd) {
@@ -47,7 +48,7 @@ function printP3009Hint() {
       "Option A — locally (recommended), using the same DB URL as migrate (DIRECT_URL / non-pooler):\n" +
       "  npx prisma migrate resolve --rolled-back \"<migration_folder_name>\"\n" +
       "  npx prisma migrate deploy\n" +
-      "  (npm scripts: db:migrate:resolve:listing-visible-rolled-back, db:migrate:resolve:offer-superseded-rolled-back)\n\n" +
+      "  (see package.json scripts matching db:migrate:resolve:*)\n\n" +
       "Option B — one Vercel build: set PRISMA_RESOLVE_ROLLED_BACK to that folder name,\n" +
       "redeploy, confirm migrate succeeds, then remove the env var.\n\n",
   );
