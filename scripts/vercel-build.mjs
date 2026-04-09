@@ -23,6 +23,7 @@ const IDEMPOTENT_MIGRATION_NAMES = [
   "20260408150000_offer_from_seller_counter",
   "20260408183000_prop_rental_set_default_hire_dates",
   "20260408200000_prop_booking_set_batch_payment",
+  "20260409140000_offer_status_superseded",
 ];
 
 function runCaptured(cmd) {
@@ -43,10 +44,11 @@ function printP3009Hint() {
   console.error(
     "\n[vercel-build] P3009: A migration is marked as failed in `_prisma_migrations`. New migrations will not apply until it is resolved.\n\n" +
       "Option A — locally (recommended), using the same DB URL as migrate (DIRECT_URL / non-pooler):\n" +
-      "  npm run db:migrate:resolve:listing-visible-rolled-back\n" +
-      "  npx prisma migrate deploy\n\n" +
-      "Option B — one Vercel build: add env var PRISMA_RESOLVE_ROLLED_BACK=20260408120000_listing_visible_on_marketplace,\n" +
-      "redeploy, confirm migrate succeeds, then delete that env var.\n\n",
+      "  npx prisma migrate resolve --rolled-back \"<migration_folder_name>\"\n" +
+      "  npx prisma migrate deploy\n" +
+      "  (npm scripts: db:migrate:resolve:listing-visible-rolled-back, db:migrate:resolve:offer-superseded-rolled-back)\n\n" +
+      "Option B — one Vercel build: set PRISMA_RESOLVE_ROLLED_BACK to that folder name,\n" +
+      "redeploy, confirm migrate succeeds, then remove the env var.\n\n",
   );
 }
 
