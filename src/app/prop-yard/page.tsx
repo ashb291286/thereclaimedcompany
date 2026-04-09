@@ -184,7 +184,7 @@ export default async function PropYardHomePage() {
         </div>
       </section>
 
-      <section className="mt-12 overflow-hidden border border-driven-warm bg-white py-6">
+      <section className="relative left-1/2 mt-12 w-screen -translate-x-1/2 overflow-hidden border-y border-driven-warm bg-white py-6">
         <h2 className="px-6 font-[family-name:var(--font-driven-display)] text-2xl italic text-driven-ink sm:px-8">
           What productions and yards say
         </h2>
@@ -210,8 +210,8 @@ export default async function PropYardHomePage() {
         </div>
       </section>
 
-      <footer className="mt-12 border border-driven-warm bg-white px-6 py-8 sm:px-8">
-        <div className="grid gap-6 md:grid-cols-3">
+      <footer className="relative left-1/2 mt-12 w-screen -translate-x-1/2 border-y border-driven-warm bg-white px-6 py-8 sm:px-8">
+        <div className="mx-auto grid w-full max-w-6xl gap-6 md:grid-cols-3">
           <div>
             <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-[0.35em] text-driven-accent">
               The Prop Yard

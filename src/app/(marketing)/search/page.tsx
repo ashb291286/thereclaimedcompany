@@ -11,6 +11,19 @@ import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseMobileReels, type ReelListing } from "./BrowseMobileReels";
 import type { SearchListingRow } from "@/lib/listing-search";
 
+function auctionCountdownLabel(endsAt: Date | null): string | null {
+  if (!endsAt) return null;
+  const ms = endsAt.getTime() - Date.now();
+  if (ms <= 0) return "Ended";
+  const totalMinutes = Math.floor(ms / 60000);
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+  if (days >= 1) return `${days}d ${hours}h left`;
+  if (hours >= 1) return `${hours}h ${minutes}m left`;
+  return `${Math.max(1, minutes)}m left`;
+}
+
 export default async function SearchPage({
   searchParams,
 }: {
@@ -99,6 +112,7 @@ export default async function SearchPage({
       id: l.id,
       title: l.title,
       imageUrl: l.images[0] ?? null,
+      auctionEndsAtIso: l.auctionEndsAt ? l.auctionEndsAt.toISOString() : null,
       priceLine,
       categoryName: l.category.name,
       conditionLabel: CONDITION_LABELS[l.condition],
@@ -125,11 +139,11 @@ export default async function SearchPage({
   }
 
   return (
-    <div className="mx-auto max-w-7xl overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <div className="mx-auto w-full overflow-x-hidden px-[30px] py-6 sm:py-8">
       <h1 className="text-2xl font-semibold text-zinc-900">
         {params.sellerType === "reclamation_yard" ? "Browse yards" : "Browse listings"}
       </h1>
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
         <aside className="lg:sticky lg:top-24">
           {fromImage ? (
             <p className="mb-3 rounded-lg border border-brand/20 bg-brand-soft px-4 py-3 text-sm text-zinc-900">
@@ -194,9 +208,10 @@ export default async function SearchPage({
                 }}
                 profileHref={session?.user?.id ? "/dashboard" : "/auth/signin?callbackUrl=%2Fsearch"}
               />
-              <ul className="mt-6 hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-3">
+              <ul className="mt-6 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {listingsOrdered.map((l) => {
                   const impact = parseStoredCarbonImpact(l);
+                  const auctionCountdown = l.listingKind === "auction" ? auctionCountdownLabel(l.auctionEndsAt) : null;
                   return (
                     <li key={l.id}>
                       <Link
@@ -204,6 +219,11 @@ export default async function SearchPage({
                         className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
                       >
                         <div className="relative aspect-square bg-zinc-200">
+                          {auctionCountdown ? (
+                            <span className="absolute right-2 top-2 z-10 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
+                              {auctionCountdown}
+                            </span>
+                          ) : null}
                           {l.images[0] ? (
                             <Image
                               src={l.images[0]}
@@ -273,7 +293,7 @@ export default async function SearchPage({
         </section>
       </div>
       {totalPages > 1 && (
-        <div className="mt-8 hidden justify-center gap-2 md:flex lg:ml-[300px]">
+        <div className="mt-8 hidden justify-center gap-2 md:flex lg:ml-[280px]">
           {page > 1 && (
             <Link
               href={`/search?${paginationQuery(page - 1)}`}

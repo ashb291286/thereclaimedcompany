@@ -9,6 +9,7 @@ export type ReelListing = {
   id: string;
   title: string;
   imageUrl: string | null;
+  auctionEndsAtIso: string | null;
   priceLine: string;
   categoryName: string;
   conditionLabel: string;
@@ -34,6 +35,7 @@ type ApiListingRow = {
   id: string;
   title: string;
   images: string[];
+  auctionEndsAt?: string | null;
   price: number;
   category: { name: string };
   condition: keyof typeof CONDITION_LABELS;
@@ -64,6 +66,7 @@ function toReelListing(l: ApiListingRow): ReelListing {
     id: l.id,
     title: l.title,
     imageUrl: l.images[0] ?? null,
+    auctionEndsAtIso: l.auctionEndsAt ?? null,
     priceLine,
     categoryName: l.category.name,
     conditionLabel: CONDITION_LABELS[l.condition] ?? "Used",
@@ -73,6 +76,21 @@ function toReelListing(l: ApiListingRow): ReelListing {
     distanceLabel: l.distanceMiles != null ? milesLabel(l.distanceMiles) : null,
     carbonSavedKg: carbon,
   };
+}
+
+function auctionCountdownLabelFromIso(iso: string | null): string | null {
+  if (!iso) return null;
+  const endsAt = new Date(iso);
+  if (Number.isNaN(endsAt.getTime())) return null;
+  const ms = endsAt.getTime() - Date.now();
+  if (ms <= 0) return "Ended";
+  const totalMinutes = Math.floor(ms / 60000);
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+  if (days >= 1) return `${days}d ${hours}h left`;
+  if (hours >= 1) return `${hours}h ${minutes}m left`;
+  return `${Math.max(1, minutes)}m left`;
 }
 
 /** Client-safe parser to avoid importing server-only carbon modules. */
@@ -197,12 +215,20 @@ export function BrowseMobileReels({
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         <ul className="flex flex-col gap-3 pt-1">
-          {items.map((l) => (
+          {items.map((l) => {
+            const auctionCountdown =
+              l.listingKind === "auction" ? auctionCountdownLabelFromIso(l.auctionEndsAtIso) : null;
+            return (
             <li
               key={l.id}
               className="relative h-[min(calc(100dvh-5.5rem),640px)] min-h-[22rem] w-full shrink-0 snap-start snap-always overflow-hidden rounded-2xl border border-zinc-200/90 bg-zinc-900 shadow-2xl ring-1 ring-black/10"
             >
               <div className="absolute inset-0">
+                {auctionCountdown ? (
+                  <span className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
+                    {auctionCountdown}
+                  </span>
+                ) : null}
                 {l.imageUrl ? (
                   <Image
                     src={l.imageUrl}
@@ -279,7 +305,8 @@ export function BrowseMobileReels({
                 ) : null}
               </div>
             </li>
-          ))}
+          );
+          })}
         </ul>
         <div ref={sentinelRef} className="h-12" />
         {loadingMore ? (

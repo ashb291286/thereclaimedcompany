@@ -5,6 +5,19 @@ import { HeroSearch } from "./HeroSearch";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
 
+function auctionCountdownLabel(endsAt: Date | null): string | null {
+  if (!endsAt) return null;
+  const ms = endsAt.getTime() - Date.now();
+  if (ms <= 0) return "Ended";
+  const totalMinutes = Math.floor(ms / 60000);
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+  if (days >= 1) return `${days}d ${hours}h left`;
+  if (hours >= 1) return `${hours}h ${minutes}m left`;
+  return `${Math.max(1, minutes)}m left`;
+}
+
 export default async function HomePage() {
   const listings = await prisma.listing.findMany({
     where: { status: "active", visibleOnMarketplace: true },
@@ -66,7 +79,7 @@ export default async function HomePage() {
               Driven · <span className="italic font-normal text-driven-muted">Reclaimed</span>
             </p>
             <p className="mt-1 max-w-xl text-sm text-driven-muted">
-              Vehicle passports, provenance, and curated auctions — every car has a story.
+              Unique and Classic Cars, Provenance and Curated Auctions - Every car has a story.
             </p>
           </div>
           <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-driven-ink bg-driven-ink px-5 py-2.5 text-sm font-semibold text-driven-paper group-hover:bg-driven-accent group-hover:border-driven-accent">
@@ -99,6 +112,7 @@ export default async function HomePage() {
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {listings.map((l) => {
               const impact = parseStoredCarbonImpact(l);
+              const auctionCountdown = l.listingKind === "auction" ? auctionCountdownLabel(l.auctionEndsAt) : null;
               return (
               <li key={l.id}>
                 <Link
@@ -106,6 +120,11 @@ export default async function HomePage() {
                   className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
                 >
                   <div className="relative aspect-square bg-zinc-200">
+                    {auctionCountdown ? (
+                      <span className="absolute right-2 top-2 z-10 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
+                        {auctionCountdown}
+                      </span>
+                    ) : null}
                     {l.images[0] ? (
                       <Image
                         src={l.images[0]}
