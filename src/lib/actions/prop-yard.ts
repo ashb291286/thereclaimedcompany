@@ -442,7 +442,7 @@ export async function createPropComprehensiveListingAction(formData: FormData): 
       deliveryLeadTime: String(payload.deliveryLeadTime ?? "").trim() || null,
       heroImageUrl: images[0],
       images,
-      detailShots: payload.detailShots ? (payload.detailShots as object) : null,
+      detailShots: payload.detailShots ? (payload.detailShots as object) : undefined,
       videoUrl: String(payload.videoUrl ?? "").trim() || null,
       view360Url: String(payload.view360Url ?? "").trim() || null,
       seenOnScreenProductions: [],

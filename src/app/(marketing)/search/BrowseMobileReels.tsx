@@ -27,6 +27,13 @@ type FeedQuery = {
   postcode?: string;
   radius?: string;
   sellerType?: string;
+  conditionGrade?: string;
+  era?: string;
+  genre?: string;
+  setting?: string;
+  material?: string;
+  hireOnly?: string;
+  availableNow?: string;
   ids?: string;
   fromImage?: string;
 };
@@ -157,6 +164,13 @@ export function BrowseMobileReels({
     if (query.postcode) sp.set("postcode", query.postcode);
     if (query.radius) sp.set("radius", query.radius);
     if (query.sellerType) sp.set("sellerType", query.sellerType);
+    if (query.conditionGrade) sp.set("conditionGrade", query.conditionGrade);
+    if (query.era) sp.set("era", query.era);
+    if (query.genre) sp.set("genre", query.genre);
+    if (query.setting) sp.set("setting", query.setting);
+    if (query.material) sp.set("material", query.material);
+    if (query.hireOnly) sp.set("hireOnly", query.hireOnly);
+    if (query.availableNow) sp.set("availableNow", query.availableNow);
     if (query.ids) sp.set("ids", query.ids);
     if (query.fromImage) sp.set("fromImage", query.fromImage);
     return sp.toString();

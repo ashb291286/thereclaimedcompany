@@ -132,7 +132,9 @@ export default async function MarketingLayout({
                 <p>Safety Tips</p>
                 <p>Terms</p>
                 <p>Privacy Policy</p>
-                <p>Intellectual Property</p>
+                <Link href="/intellectual-property" className="hover:text-white">
+                  Intellectual Property
+                </Link>
                 <p>Help</p>
               </div>
             </div>
