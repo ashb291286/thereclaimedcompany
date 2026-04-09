@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE, PROP_YARD_TERMS_VERSION } from "@/lib/prop-yard";
+import styles from "./marquee.module.css";
 
 export default async function PropYardHomePage() {
   const pct = Math.round(PROP_YARD_RECOMMENDED_WEEKLY_RATE_OF_LIST_PRICE * 100);
@@ -190,7 +191,7 @@ export default async function PropYardHomePage() {
         <div className="mt-5 space-y-3">
           {[0, 1].map((rowIdx) => {
             const row = rowIdx === 0 ? testimonials : [...testimonials].reverse();
-            const directionClass = rowIdx === 0 ? "animate-marquee-left" : "animate-marquee-right";
+            const directionClass = rowIdx === 0 ? styles.marqueeLeft : styles.marqueeRight;
             return (
               <div key={rowIdx} className="relative overflow-hidden">
                 <div className={`flex min-w-max gap-3 px-4 sm:px-6 ${directionClass}`}>
@@ -249,30 +250,6 @@ export default async function PropYardHomePage() {
         </div>
       </footer>
 
-      <style jsx>{`
-        .animate-marquee-left {
-          animation: marquee-left 45s linear infinite;
-        }
-        .animate-marquee-right {
-          animation: marquee-right 45s linear infinite;
-        }
-        @keyframes marquee-left {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-        @keyframes marquee-right {
-          0% {
-            transform: translateX(-50%);
-          }
-          100% {
-            transform: translateX(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }
