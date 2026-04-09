@@ -17,6 +17,7 @@
     "db:migrate:resolve:buyer-home-rolled-back": "prisma migrate resolve --rolled-back 20260409160000_user_buyer_home_location",
     "db:migrate:resolve:seller-vat-rolled-back": "prisma migrate resolve --rolled-back 20260409180000_seller_vat_onboarding",
     "db:migrate:resolve:demolition-alerts-rolled-back": "prisma migrate resolve --rolled-back 20260409200000_demolition_alerts",
+    "db:migrate:resolve:listing-seller-reference-rolled-back": "prisma migrate resolve --rolled-back 20260409210000_listing_seller_reference",
     "db:push": "prisma db push",
     "db:baseline": "node scripts/prisma-baseline.mjs",
     "db:baseline:prop-pending": "node scripts/prisma-baseline.mjs prop-pending",

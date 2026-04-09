@@ -27,6 +27,7 @@ const IDEMPOTENT_MIGRATION_NAMES = [
   "20260409160000_user_buyer_home_location",
   "20260409180000_seller_vat_onboarding",
   "20260409200000_demolition_alerts",
+  "20260409210000_listing_seller_reference",
 ];
 
 function runCaptured(cmd) {
