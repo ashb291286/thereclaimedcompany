@@ -3,6 +3,7 @@ import Link from "next/link";
 import { signOut } from "@/auth";
 import { prisma } from "@/lib/db";
 import { isCarbonAdmin } from "@/lib/admin";
+import { DashboardSidebar } from "./DashboardSidebar";
 
 export default async function DashboardLayout({
   children,
@@ -28,7 +29,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-zinc-50">
       <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+        <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4">
           <Link href="/" className="font-semibold text-zinc-900">
             Reclaimed Marketplace
           </Link>
@@ -42,48 +43,6 @@ export default async function DashboardLayout({
             <Link href="/dashboard" className="text-sm text-zinc-600 hover:text-zinc-900">
               Dashboard
             </Link>
-            {isYardAccount ? (
-              <>
-                <Link
-                  href="/dashboard/nearby-stock"
-                  className="text-sm text-zinc-600 hover:text-zinc-900"
-                >
-                  Nearby stock
-                </Link>
-                <Link
-                  href="/dashboard/seller-profile"
-                  className="text-sm text-zinc-600 hover:text-zinc-900"
-                >
-                  Yard profile
-                </Link>
-                <Link
-                  href="/dashboard/prop-yard"
-                  className="text-sm text-amber-900 hover:text-amber-950"
-                >
-                  Prop Yard
-                </Link>
-              </>
-            ) : null}
-            <Link href="/dashboard/sell" className="text-sm text-zinc-600 hover:text-zinc-900">
-              Sell
-            </Link>
-            <Link href="/dashboard/offers" className="text-sm text-zinc-600 hover:text-zinc-900">
-              Offers
-            </Link>
-            <Link href="/dashboard/wanted" className="text-sm text-zinc-600 hover:text-zinc-900">
-              My wanted
-            </Link>
-            <Link href="/orders" className="text-sm text-zinc-600 hover:text-zinc-900">
-              Orders
-            </Link>
-            {carbonAdmin ? (
-              <Link
-                href="/dashboard/admin/carbon-factors"
-                className="text-sm text-emerald-800 hover:text-emerald-950"
-              >
-                Carbon data
-              </Link>
-            ) : null}
             <Link
               href="/dashboard/notifications"
               className="relative text-sm text-zinc-600 hover:text-zinc-900"
@@ -96,6 +55,9 @@ export default async function DashboardLayout({
               )}
             </Link>
             <span className="hidden text-sm text-zinc-500 sm:inline">{session?.user?.email}</span>
+            <Link href="/dashboard/account" className="text-sm text-zinc-600 hover:text-zinc-900">
+              Account
+            </Link>
             <form
               action={async () => {
                 "use server";
@@ -109,7 +71,12 @@ export default async function DashboardLayout({
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-[1400px] px-4 py-8">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[250px_minmax(0,1fr)]">
+          <DashboardSidebar isYardAccount={isYardAccount} carbonAdmin={carbonAdmin} unreadCount={unreadCount} />
+          <div>{children}</div>
+        </div>
+      </main>
     </div>
   );
 }
