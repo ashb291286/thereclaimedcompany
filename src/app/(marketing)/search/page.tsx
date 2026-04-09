@@ -12,6 +12,7 @@ import { formatMiles } from "@/lib/geo";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat, vatLabelSuffix } from "@/lib/vat-pricing";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
+import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
 import { BrowseMobileReels, type ReelListing } from "./BrowseMobileReels";
 import type { SearchListingRow } from "@/lib/listing-search";
 
@@ -183,18 +184,14 @@ export default async function SearchPage({
     });
     const buyerPence = buyerGrossPenceFromSellerNetPence(l.price, v);
     const vatBit = vatLabelSuffix(v);
-    const priceLine =
-      l.listingKind === "sell" && l.freeToCollector
-        ? "Free to collect"
-        : l.listingKind === "auction"
-          ? `From £${(buyerPence / 100).toFixed(2)}${vatBit}`
-          : `£${(buyerPence / 100).toFixed(2)}${vatBit}`;
     return {
       id: l.id,
       title: l.title,
       imageUrl: l.images[0] ?? null,
       auctionEndsAtIso: l.auctionEndsAt ? l.auctionEndsAt.toISOString() : null,
-      priceLine,
+      buyerPenceGbp: buyerPence,
+      vatSuffix: vatBit,
+      freeToCollectPrice: l.listingKind === "sell" && l.freeToCollector,
       categoryName: l.category.name,
       conditionLabel: CONDITION_LABELS[l.condition],
       listingKind: l.listingKind,
@@ -372,14 +369,14 @@ export default async function SearchPage({
                             )}
                           </div>
                           <p className="truncate font-medium text-zinc-900">{l.title}</p>
-                          <p className="text-sm text-zinc-500">
-                            {l.listingKind === "sell" && l.freeToCollector
-                              ? `Free to collect · ${l.category.name}`
-                              : l.listingKind === "auction"
-                                ? `From £${(gridBuyerPence / 100).toFixed(2)}${gridVatBit} · ${l.category.name}`
-                                : `£${(gridBuyerPence / 100).toFixed(2)}${gridVatBit} · ${l.category.name}`}
-                            {l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
-                          </p>
+                          <BrowseListingPriceLine
+                            listingKind={l.listingKind}
+                            freeToCollector={l.freeToCollector}
+                            buyerPenceGbp={gridBuyerPence}
+                            vatSuffix={gridVatBit}
+                            categoryName={l.category.name}
+                            conditionExtra={l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
+                          />
                           {(l.adminDistrict || l.region || l.postcode) && (
                             <p className="mt-1 truncate text-xs text-zinc-500">
                               {[l.adminDistrict, l.region].filter(Boolean).join(" · ")}

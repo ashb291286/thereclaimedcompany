@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 type Props = {
   listingId: string;
   offerId?: string;
   bidId?: string;
-  label?: string;
+  label?: ReactNode;
   disabled?: boolean;
   disabledReason?: string;
   /** For per-unit listings (ignored when paying an offer or auction). */

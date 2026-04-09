@@ -5,6 +5,7 @@ import { HeroSearch } from "./HeroSearch";
 import { TestimonialMarqueeFeed } from "./TestimonialMarqueeFeed";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
+import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
 
 function auctionCountdownLabel(endsAt: Date | null): string | null {
   if (!endsAt) return null;
@@ -102,65 +103,6 @@ export default async function HomePage() {
         </div>
       </Link>
 
-      <section className="mt-10 border-y border-amber-900/15 bg-gradient-to-br from-amber-50 via-white to-orange-50/80">
-        <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-12">
-          <p className="text-xs font-semibold uppercase tracking-widest text-amber-900/80">Before it hits the skip</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
-            Demolition &amp; refurb alerts
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-700 sm:text-base">
-            Whole-building strip-outs and refurbs listed as one project with multiple lots — doors, glazing, flooring,
-            furniture, and more. <strong className="font-semibold text-zinc-900">Free</strong> lots can be reserved
-            with collection windows and conditions; <strong className="font-semibold text-zinc-900">chargeable</strong>{" "}
-            lots show a guide price and collect interest from buyers and reclamation yards.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link
-              href="/demolition-alerts"
-              className="rounded-full bg-amber-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-950"
-            >
-              Browse alerts
-            </Link>
-            <Link
-              href="/dashboard/demolition-alerts/new"
-              className="rounded-full border border-amber-900/40 bg-white px-5 py-2.5 text-sm font-semibold text-amber-950 hover:bg-amber-50"
-            >
-              Post a project
-            </Link>
-          </div>
-
-          {demolitionAlerts.length > 0 ? (
-            <ul className="mt-8 grid gap-4 sm:grid-cols-3">
-              {demolitionAlerts.map((d) => {
-                const open = d.elements.filter((e) => e.status === "available").length;
-                return (
-                  <li key={d.id}>
-                    <Link
-                      href={`/demolition-alerts/${d.id}`}
-                      className="block h-full rounded-xl border border-amber-900/20 bg-white/90 p-4 shadow-sm transition hover:border-amber-900/40 hover:shadow"
-                    >
-                      <p className="line-clamp-2 font-semibold text-zinc-900">{d.title}</p>
-                      <p className="mt-2 text-xs text-zinc-600">
-                        {d.postcode}
-                        {d.adminDistrict ? ` · ${d.adminDistrict}` : ""}
-                      </p>
-                      <p className="mt-2 text-xs font-medium text-amber-900">
-                        {d.elements.length} lot{d.elements.length === 1 ? "" : "s"}
-                        {open > 0 ? ` · ${open} open` : ""}
-                      </p>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="mt-6 text-sm text-zinc-600">
-              No live alerts yet — be the first to list a site and its salvage lots.
-            </p>
-          )}
-        </div>
-      </section>
-
       <section className="mx-auto mt-10 w-full max-w-7xl px-4 sm:px-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-zinc-900">Latest listings</h2>
@@ -229,13 +171,13 @@ export default async function HomePage() {
                       )}
                     </div>
                     <p className="truncate font-medium text-zinc-900">{l.title}</p>
-                    <p className="text-sm text-zinc-500">
-                      {l.listingKind === "sell" && l.freeToCollector
-                        ? `Free to collect · ${l.category.name}`
-                        : l.listingKind === "auction"
-                          ? `From £${(l.price / 100).toFixed(2)} · ${l.category.name}`
-                          : `£${(l.price / 100).toFixed(2)} · ${l.category.name}`}
-                    </p>
+                    <BrowseListingPriceLine
+                      listingKind={l.listingKind}
+                      freeToCollector={l.freeToCollector}
+                      buyerPenceGbp={l.price}
+                      vatSuffix=""
+                      categoryName={l.category.name}
+                    />
                     {impact ? (
                       <div className="mt-2">
                         <CarbonBadge impact={impact} variant="compact" />
@@ -249,6 +191,65 @@ export default async function HomePage() {
           </ul>
         )}
       </div>
+
+      <section className="mt-10 border-y border-amber-900/15 bg-gradient-to-br from-amber-50 via-white to-orange-50/80">
+        <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-12">
+          <p className="text-xs font-semibold uppercase tracking-widest text-amber-900/80">Before it hits the skip</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
+            Demolition &amp; refurb alerts
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-700 sm:text-base">
+            Whole-building strip-outs and refurbs listed as one project with multiple lots — doors, glazing, flooring,
+            furniture, and more. <strong className="font-semibold text-zinc-900">Free</strong> lots can be reserved
+            with collection windows and conditions; <strong className="font-semibold text-zinc-900">chargeable</strong>{" "}
+            lots show a guide price and collect interest from buyers and reclamation yards.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              href="/demolition-alerts"
+              className="rounded-full bg-amber-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-950"
+            >
+              Browse alerts
+            </Link>
+            <Link
+              href="/dashboard/demolition-alerts/new"
+              className="rounded-full border border-amber-900/40 bg-white px-5 py-2.5 text-sm font-semibold text-amber-950 hover:bg-amber-50"
+            >
+              Post a project
+            </Link>
+          </div>
+
+          {demolitionAlerts.length > 0 ? (
+            <ul className="mt-8 grid gap-4 sm:grid-cols-3">
+              {demolitionAlerts.map((d) => {
+                const open = d.elements.filter((e) => e.status === "available").length;
+                return (
+                  <li key={d.id}>
+                    <Link
+                      href={`/demolition-alerts/${d.id}`}
+                      className="block h-full rounded-xl border border-amber-900/20 bg-white/90 p-4 shadow-sm transition hover:border-amber-900/40 hover:shadow"
+                    >
+                      <p className="line-clamp-2 font-semibold text-zinc-900">{d.title}</p>
+                      <p className="mt-2 text-xs text-zinc-600">
+                        {d.postcode}
+                        {d.adminDistrict ? ` · ${d.adminDistrict}` : ""}
+                      </p>
+                      <p className="mt-2 text-xs font-medium text-amber-900">
+                        {d.elements.length} lot{d.elements.length === 1 ? "" : "s"}
+                        {open > 0 ? ` · ${open} open` : ""}
+                      </p>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="mt-6 text-sm text-zinc-600">
+              No live alerts yet — be the first to list a site and its salvage lots.
+            </p>
+          )}
+        </div>
+      </section>
 
       <TestimonialMarqueeFeed />
     </div>

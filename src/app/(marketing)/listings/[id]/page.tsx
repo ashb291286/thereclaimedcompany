@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { auth } from "@/auth";
-import { BuyButton } from "./BuyButton";
 import { ListingCheckoutActions } from "./ListingCheckoutActions";
 import { HaggleForm } from "./HaggleForm";
 import { BidForm } from "./BidForm";
@@ -30,6 +29,8 @@ import {
 } from "@/lib/vat-pricing";
 import { ListingLocalYardsForOwner } from "@/components/ListingLocalYardsForOwner";
 import { ListingPricingMode } from "@/lib/listing-client-enums";
+import { DisplayPrice } from "@/components/currency/DisplayPrice";
+import { AuctionWinCheckoutButton } from "./AuctionWinCheckoutButton";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -374,8 +375,7 @@ export default async function ListingPage({
             </div>
             {listing.listingKind === "sell" && !listing.freeToCollector && (
               <p className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
-                £{(buyerListPricePence / 100).toFixed(2)}
-                {vatLabelSuffix(chargesVat)}
+                <DisplayPrice penceGbp={buyerListPricePence} suffix={vatLabelSuffix(chargesVat)} />
               </p>
             )}
             {listing.listingKind === "sell" && listing.freeToCollector && (
@@ -544,11 +544,12 @@ export default async function ListingPage({
                   unitsAvailable={listing.unitsAvailable}
                   unitPricePence={buyerListPricePence}
                   offerId={acceptedMine?.id}
-                  offerPayLabel={
+                  offerPayPenceGbp={
                     acceptedMine
-                      ? `Pay agreed £${(buyerGrossPenceFromSellerNetPence(acceptedMine.offeredPrice, chargesVat) / 100).toFixed(2)}${vatLabelSuffix(chargesVat)}`
+                      ? buyerGrossPenceFromSellerNetPence(acceptedMine.offeredPrice, chargesVat)
                       : undefined
                   }
+                  offerVatSuffix={acceptedMine ? vatLabelSuffix(chargesVat) : undefined}
                 />
                 {!listing.freeToCollector ? (
                   <HaggleForm
@@ -576,10 +577,11 @@ export default async function ListingPage({
                   payment here — same amount, secure Stripe checkout.
                 </p>
                 <div className="mt-3">
-                  <BuyButton
+                  <AuctionWinCheckoutButton
                     listingId={listing.id}
                     bidId={topBid.id}
-                    label={`Pay winning bid £${(buyerGrossPenceFromSellerNetPence(topBid.amountPence, chargesVat) / 100).toFixed(2)}${chargesVat ? " (incl. VAT)" : ""}`}
+                    penceGbp={buyerGrossPenceFromSellerNetPence(topBid.amountPence, chargesVat)}
+                    vatNote={chargesVat ? " (incl. VAT)" : ""}
                   />
                 </div>
               </div>
@@ -700,8 +702,10 @@ export default async function ListingPage({
             <ul className="mt-2 space-y-1 text-sm text-zinc-600">
               {recentBids.map((b) => (
                 <li key={b.id}>
-                  £{(buyerGrossPenceFromSellerNetPence(b.amountPence, chargesVat) / 100).toFixed(2)}
-                  {vatLabelSuffix(chargesVat)} · {b.bidder.name ?? b.bidder.email ?? "Bidder"}
+                  <DisplayPrice
+                    penceGbp={buyerGrossPenceFromSellerNetPence(b.amountPence, chargesVat)}
+                    suffix={`${vatLabelSuffix(chargesVat)} · ${b.bidder.name ?? b.bidder.email ?? "Bidder"}`}
+                  />
                 </li>
               ))}
             </ul>

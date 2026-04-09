@@ -4,13 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDisplayCurrency } from "@/components/currency/CurrencyProvider";
 
 export type ReelListing = {
   id: string;
   title: string;
   imageUrl: string | null;
   auctionEndsAtIso: string | null;
-  priceLine: string;
+  buyerPenceGbp: number;
+  vatSuffix: string;
+  freeToCollectPrice: boolean;
   categoryName: string;
   conditionLabel: string;
   listingKind: "sell" | "auction";
@@ -63,18 +66,15 @@ function milesLabel(m: number): string {
 
 function toReelListing(l: ApiListingRow): ReelListing {
   const carbon = parseCarbonSavedKg(l.carbonImpactJson, l.carbonSavedKg ?? null);
-  const priceLine =
-    l.listingKind === "sell" && l.freeToCollector
-      ? "Free to collect"
-      : l.listingKind === "auction"
-        ? `From £${(l.price / 100).toFixed(2)}`
-        : `£${(l.price / 100).toFixed(2)}`;
+  const freeToCollectPrice = l.listingKind === "sell" && l.freeToCollector;
   return {
     id: l.id,
     title: l.title,
     imageUrl: l.images[0] ?? null,
     auctionEndsAtIso: l.auctionEndsAt ?? null,
-    priceLine,
+    buyerPenceGbp: l.price,
+    vatSuffix: "",
+    freeToCollectPrice,
     categoryName: l.category.name,
     conditionLabel: CONDITION_LABELS[l.condition] ?? "Used",
     listingKind: l.listingKind,
@@ -122,6 +122,7 @@ export function BrowseMobileReels({
   query: FeedQuery;
   profileHref: string;
 }) {
+  const { formatPence } = useDisplayCurrency();
   const [items, setItems] = useState<ReelListing[]>(listings);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [page, setPage] = useState(initialPage);
@@ -136,25 +137,31 @@ export function BrowseMobileReels({
     setLoadError(null);
   }, [listings, initialPage]);
 
-  const shareListing = useCallback(async (l: ReelListing) => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const url = `${origin}/listings/${l.id}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: l.title,
-          text: `${l.title} — ${l.priceLine} on Reclaimed Marketplace`,
-          url,
-        });
-        return;
+  const shareListing = useCallback(
+    async (l: ReelListing) => {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const url = `${origin}/listings/${l.id}`;
+      const priceText = l.freeToCollectPrice
+        ? "Free to collect"
+        : `${l.listingKind === "auction" ? "From " : ""}${formatPence(l.buyerPenceGbp)}${l.vatSuffix}`;
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: l.title,
+            text: `${l.title} — ${priceText} on Reclaimed Marketplace`,
+            url,
+          });
+          return;
+        }
+        await navigator.clipboard.writeText(url);
+        setCopiedId(l.id);
+        window.setTimeout(() => setCopiedId(null), 2000);
+      } catch {
+        /* user cancelled share */
       }
-      await navigator.clipboard.writeText(url);
-      setCopiedId(l.id);
-      window.setTimeout(() => setCopiedId(null), 2000);
-    } catch {
-      /* user cancelled share */
-    }
-  }, []);
+    },
+    [formatPence]
+  );
 
   const queryString = useMemo(() => {
     const sp = new URLSearchParams();
@@ -293,7 +300,17 @@ export function BrowseMobileReels({
                   ) : null}
                 </div>
                 <p className="line-clamp-2 text-lg font-semibold leading-snug drop-shadow-sm">{l.title}</p>
-                <p className="mt-1 text-sm font-medium text-white/95">{l.priceLine}</p>
+                <p className="mt-1 text-sm font-medium text-white/95">
+                  {l.freeToCollectPrice ? (
+                    "Free to collect"
+                  ) : (
+                    <>
+                      {l.listingKind === "auction" ? "From " : ""}
+                      {formatPence(l.buyerPenceGbp)}
+                      {l.vatSuffix}
+                    </>
+                  )}
+                </p>
                 <p className="mt-0.5 text-xs text-white/75">
                   {l.categoryName} · {l.conditionLabel}
                 </p>

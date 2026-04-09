@@ -2,15 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { ListingPricingMode } from "@/lib/listing-client-enums";
+import { useDisplayCurrency } from "@/components/currency/CurrencyProvider";
 import { BuyButton } from "./BuyButton";
 import { FreeCollectButton } from "./FreeCollectButton";
-
-function gbpFromPence(pence: number): string {
-  return (pence / 100).toLocaleString("en-GB", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 export function ListingCheckoutActions({
   listingId,
@@ -20,6 +14,8 @@ export function ListingCheckoutActions({
   unitPricePence,
   offerId,
   offerPayLabel,
+  offerPayPenceGbp,
+  offerVatSuffix,
 }: {
   listingId: string;
   freeToCollector: boolean;
@@ -28,8 +24,12 @@ export function ListingCheckoutActions({
   /** Listed price in pence (per unit when PER_UNIT, or full lot when LOT). */
   unitPricePence: number;
   offerId?: string;
+  /** @deprecated Prefer offerPayPenceGbp + offerVatSuffix for currency display */
   offerPayLabel?: string;
+  offerPayPenceGbp?: number;
+  offerVatSuffix?: string;
 }) {
+  const { formatPence } = useDisplayCurrency();
   const [quantity, setQuantity] = useState(1);
   const maxUnits =
     pricingMode === ListingPricingMode.PER_UNIT && unitsAvailable != null && unitsAvailable >= 1
@@ -45,12 +45,17 @@ export function ListingCheckoutActions({
   }, [quantity, maxUnits]);
 
   if (offerId) {
+    const label =
+      offerPayPenceGbp != null ? (
+        <>
+          Pay agreed {formatPence(offerPayPenceGbp)}
+          {offerVatSuffix ?? ""}
+        </>
+      ) : (
+        (offerPayLabel ?? "Pay agreed price")
+      );
     return (
-      <BuyButton
-        listingId={listingId}
-        offerId={offerId}
-        label={offerPayLabel ?? "Pay agreed price"}
-      />
+      <BuyButton listingId={listingId} offerId={offerId} label={label} />
     );
   }
 
@@ -58,13 +63,11 @@ export function ListingCheckoutActions({
   const totalPence = unitPricePence * quantity;
   const unitLine =
     pricingMode === ListingPricingMode.PER_UNIT
-      ? `£${gbpFromPence(unitPricePence)} each`
+      ? `${formatPence(unitPricePence)} each`
       : "Price for full lot";
 
   const buyLabel =
-    quantity === 1
-      ? `Buy for £${gbpFromPence(totalPence)}`
-      : `Buy ${quantity} for £${gbpFromPence(totalPence)}`;
+    quantity === 1 ? `Buy for ${formatPence(totalPence)}` : `Buy ${quantity} for ${formatPence(totalPence)}`;
 
   const freeLabel =
     quantity === 1
@@ -97,12 +100,10 @@ export function ListingCheckoutActions({
         <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm">
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-zinc-600">Total</span>
-            <span className="text-lg font-semibold tabular-nums text-zinc-900">
-              £{gbpFromPence(totalPence)}
-            </span>
+            <span className="text-lg font-semibold tabular-nums text-zinc-900">{formatPence(totalPence)}</span>
           </div>
           <p className="mt-1 text-xs text-zinc-500">
-            {quantity} × £{gbpFromPence(unitPricePence)} {pricingMode === ListingPricingMode.PER_UNIT ? "each" : ""}
+            {quantity} × {formatPence(unitPricePence)} {pricingMode === ListingPricingMode.PER_UNIT ? "each" : ""}
           </p>
         </div>
       ) : null}
