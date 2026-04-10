@@ -3,6 +3,10 @@ import type { DrivenDocumentType, DrivenEntryCategory } from "@/generated/prisma
 export const MOCK_AUCTION_LISTING_ID = "driven-mock-auction-1";
 export const MOCK_VEHICLE_ID = "driven-mock-vehicle-1";
 
+/** Hero image for sample auction / list card (stable URL). */
+export const MOCK_DRIVEN_VEHICLE_IMAGE_URL =
+  "https://images.unsplash.com/photo-1503376780353-7e6690667a46?auto=format&fit=crop&w=1400&q=80";
+
 export type MockLineageRow = {
   id: string;
   date: Date;
@@ -28,6 +32,7 @@ export type MockAuctionDetail = {
   year: number;
   colour: string | null;
   mileage: number | null;
+  imageUrls: string[];
   reservePrice: number;
   currentBid: number;
   bidCount: number;
@@ -64,6 +69,7 @@ export function getMockAuctionDetail(): MockAuctionDetail {
     year: 1987,
     colour: "Guards Red",
     mileage: 67400,
+    imageUrls: [MOCK_DRIVEN_VEHICLE_IMAGE_URL],
     reservePrice: 3500000,
     currentBid: 3850000,
     bidCount: 14,

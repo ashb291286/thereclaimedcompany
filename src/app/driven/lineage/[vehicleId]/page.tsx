@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { getMockAuctionDetail, MOCK_VEHICLE_ID, type MockLineageRow } from "@/app/driven/_lib/mock-auction";
 import { DrivenLineageTimeline } from "@/components/driven/DrivenLineageTimeline";
 import { DrivenPassportCompleteness } from "@/components/driven/DrivenPassportCompleteness";
+import { DrivenPassportDvlaSnapshot } from "@/components/driven/DrivenPassportDvlaSnapshot";
+import { demoDvlaSnapshotForRegistration } from "@/lib/driven-dvla-demo-snapshot";
 
 type Props = { params: Promise<{ vehicleId: string }> };
 
@@ -59,7 +61,10 @@ export default async function DrivenLineagePublicPage({ params }: Props) {
           <p className="mt-1 font-[family-name:var(--font-driven-mono)] text-xs text-driven-ink">{mock.reclaimedPublicId}</p>
         </header>
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_280px]">
-          <DrivenLineageTimeline entries={entries} />
+          <div className="space-y-8">
+            <DrivenPassportDvlaSnapshot snapshot={demoDvlaSnapshotForRegistration(mock.registration)} />
+            <DrivenLineageTimeline entries={entries} />
+          </div>
           <aside>
             <DrivenPassportCompleteness score={mock.passportScore} />
             <div className="mt-6 border border-driven-warm bg-white p-5">
@@ -131,16 +136,19 @@ export default async function DrivenLineagePublicPage({ params }: Props) {
       </header>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_280px]">
-        {entries.length === 0 ? (
-          <div className="border border-driven-warm bg-white p-10 text-center">
-            <p className="font-[family-name:var(--font-driven-display)] text-xl italic text-driven-ink">No entries yet</p>
-            <p className="mt-3 text-sm text-driven-muted">
-              The owner has not published history for this vehicle on Reclaimed.
-            </p>
-          </div>
-        ) : (
-          <DrivenLineageTimeline entries={entries} />
-        )}
+        <div className="space-y-8">
+          <DrivenPassportDvlaSnapshot snapshot={vehicle.dvlaSnapshotJson} />
+          {entries.length === 0 ? (
+            <div className="border border-driven-warm bg-white p-10 text-center">
+              <p className="font-[family-name:var(--font-driven-display)] text-xl italic text-driven-ink">No entries yet</p>
+              <p className="mt-3 text-sm text-driven-muted">
+                The owner has not published history for this vehicle on Reclaimed.
+              </p>
+            </div>
+          ) : (
+            <DrivenLineageTimeline entries={entries} />
+          )}
+        </div>
         <aside>
           <DrivenPassportCompleteness score={vehicle.passportScore} />
           <div className="mt-6 border border-driven-warm bg-white p-5">

@@ -4,6 +4,7 @@ import {
   normaliseUkRegistration,
   type DvlaVehicleEnquiryData,
 } from "@/lib/dvla-vehicle-enquiry";
+import { demoDvlaSnapshotForRegistration } from "@/lib/driven-dvla-demo-snapshot";
 
 function jsonResponseFromDvla(data: DvlaVehicleEnquiryData, source: "dvla" | "mock") {
   return NextResponse.json({
@@ -37,31 +38,7 @@ export async function GET(req: NextRequest) {
   const key = process.env.DVLA_API_KEY?.trim();
 
   if (!key) {
-    const mock: DvlaVehicleEnquiryData = {
-      registrationNumber: normalised,
-      taxStatus: "Taxed",
-      taxDueDate: "2026-06-01",
-      artEndDate: "2007-12-25",
-      motStatus: "Valid",
-      motExpiryDate: "2026-11-15",
-      make: "Porsche",
-      monthOfFirstDvlaRegistration: "1987-06",
-      monthOfFirstRegistration: "1987-05",
-      yearOfManufacture: 1987,
-      engineCapacity: 3164,
-      co2Emissions: 282,
-      fuelType: "PETROL",
-      markedForExport: false,
-      colour: "Guards Red",
-      typeApproval: "M1",
-      wheelplan: "2 AXLE RIGID BODY",
-      revenueWeight: 1450,
-      realDrivingEmissions: 1,
-      dateOfLastV5CIssued: "2024-03-10",
-      euroStatus: "Euro 4",
-      automatedVehicle: false,
-    };
-    return jsonResponseFromDvla(mock, "mock");
+    return jsonResponseFromDvla(demoDvlaSnapshotForRegistration(normalised), "mock");
   }
 
   const result = await fetchDvlaVehicleByRegistration(reg, key);

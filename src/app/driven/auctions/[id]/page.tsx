@@ -60,6 +60,20 @@ export default async function DrivenAuctionDetailPage({ params }: Props) {
         </p>
         <p className="mt-2 font-[family-name:var(--font-driven-mono)] text-xs text-driven-muted">Reclaimed ID {d.reclaimedPublicId}</p>
 
+        {d.imageUrls.length > 0 ? (
+          <div className="mt-6 flex gap-2 overflow-x-auto pb-1">
+            {d.imageUrls.map((url) => (
+              <div
+                key={url}
+                className="h-52 w-full max-w-2xl shrink-0 overflow-hidden border border-driven-warm bg-driven-warm sm:h-60"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="" className="h-full w-full object-cover" />
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <div className="mt-8 flex flex-wrap items-end gap-8 border-t border-driven-warm pt-8">
           <div>
             <p className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase text-driven-muted">Current bid</p>

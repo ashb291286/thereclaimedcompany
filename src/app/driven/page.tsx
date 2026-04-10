@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { MOCK_AUCTION_LISTING_ID } from "@/app/driven/_lib/mock-auction";
+import {
+  MOCK_AUCTION_LISTING_ID,
+  MOCK_DRIVEN_VEHICLE_IMAGE_URL,
+} from "@/app/driven/_lib/mock-auction";
 
 export default async function DrivenHomePage() {
   const featured = await prisma.drivenAuctionListing.findMany({
@@ -8,7 +11,9 @@ export default async function DrivenHomePage() {
     orderBy: { endsAt: "asc" },
     take: 4,
     include: {
-      vehicle: { select: { id: true, year: true, make: true, model: true, registration: true } },
+      vehicle: {
+        select: { id: true, year: true, make: true, model: true, registration: true, imageUrls: true },
+      },
     },
   });
 
@@ -53,29 +58,56 @@ export default async function DrivenHomePage() {
           seller-written.
         </p>
         {featured.length === 0 ? (
-          <div className="mt-8 border border-driven-warm bg-white p-8 text-center text-sm text-driven-muted">
-            <p>No live auctions yet.</p>
-            <Link href={`/driven/auctions/${MOCK_AUCTION_LISTING_ID}`} className="mt-4 inline-block text-driven-accent underline">
-              Open the curated sample listing
+          <div className="mt-8 overflow-hidden border border-driven-warm bg-white">
+            <Link href={`/driven/auctions/${MOCK_AUCTION_LISTING_ID}`} className="block hover:bg-driven-accent-light/30">
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-driven-warm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={MOCK_DRIVEN_VEHICLE_IMAGE_URL}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="p-8 text-center text-sm text-driven-muted">
+                <p>No live auctions yet.</p>
+                <p className="mt-4 font-[family-name:var(--font-driven-mono)] text-driven-accent underline">
+                  Open the curated sample listing
+                </p>
+              </div>
             </Link>
           </div>
         ) : (
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-            {featured.map((a) => (
-              <li key={a.id} className="border border-driven-warm bg-white">
-                <Link href={`/driven/auctions/${a.id}`} className="block p-5 hover:bg-driven-accent-light/40">
-                  <p className="font-[family-name:var(--font-driven-display)] text-xl text-driven-ink">
-                    {a.vehicle.year} {a.vehicle.make} {a.vehicle.model}
-                  </p>
-                  <p className="mt-1 font-[family-name:var(--font-driven-mono)] text-xs uppercase text-driven-muted">
-                    {a.vehicle.registration} · ends {a.endsAt.toLocaleDateString("en-GB")}
-                  </p>
-                  <p className="mt-3 font-[family-name:var(--font-driven-mono)] text-sm text-driven-ink">
-                    Current bid £{(a.currentBid / 100).toLocaleString("en-GB")}
-                  </p>
-                </Link>
-              </li>
-            ))}
+            {featured.map((a) => {
+              const thumb = a.vehicle.imageUrls[0];
+              return (
+                <li key={a.id} className="border border-driven-warm bg-white">
+                  <Link href={`/driven/auctions/${a.id}`} className="block overflow-hidden hover:bg-driven-accent-light/40">
+                    {thumb ? (
+                      <div className="relative aspect-[16/9] w-full overflow-hidden bg-driven-warm">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={thumb} alt="" className="h-full w-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="flex aspect-[16/9] w-full items-center justify-center bg-driven-warm font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wider text-driven-muted">
+                        No photo
+                      </div>
+                    )}
+                    <div className="p-5">
+                      <p className="font-[family-name:var(--font-driven-display)] text-xl text-driven-ink">
+                        {a.vehicle.year} {a.vehicle.make} {a.vehicle.model}
+                      </p>
+                      <p className="mt-1 font-[family-name:var(--font-driven-mono)] text-xs uppercase text-driven-muted">
+                        {a.vehicle.registration} · ends {a.endsAt.toLocaleDateString("en-GB")}
+                      </p>
+                      <p className="mt-3 font-[family-name:var(--font-driven-mono)] text-sm text-driven-ink">
+                        Current bid £{(a.currentBid / 100).toLocaleString("en-GB")}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

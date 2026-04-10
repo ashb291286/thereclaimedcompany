@@ -25,6 +25,7 @@ function mapDbToViewModel(args: {
     year: number;
     colour: string | null;
     mileage: number | null;
+    imageUrls: string[];
     passportScore: number;
     sellerType: "PRIVATE_PARTY" | "DEALER";
     titleStatus: "UNVERIFIED" | "ESCROWED" | "TRANSFERRED";
@@ -148,6 +149,7 @@ export async function getAuctionDetail(id: string): Promise<AuctionDetailResult 
       year: v.year,
       colour: v.colour,
       mileage: v.mileage,
+      imageUrls: v.imageUrls,
       passportScore: v.passportScore,
       sellerType: v.sellerType,
       titleStatus: v.titleStatus,
