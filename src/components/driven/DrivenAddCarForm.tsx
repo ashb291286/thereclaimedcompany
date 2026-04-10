@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createDrivenVehicleFromGarageAction } from "@/app/driven/actions";
 import { useFormStatus } from "react-dom";
+import { ListingImageCropModal } from "@/app/(dashboard)/dashboard/sell/ListingImageCropModal";
 
 function SubmitLabel() {
   const { pending } = useFormStatus();
@@ -38,6 +39,8 @@ export function DrivenAddCarForm({ error }: { error?: string | null }) {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selfInspect, setSelfInspect] = useState(false);
+  const cropBlobUrlRef = useRef<string | null>(null);
+  const [cropState, setCropState] = useState<{ src: string; fileName: string } | null>(null);
 
   async function lookupDvla() {
     if (!reg.trim()) return;
@@ -81,34 +84,59 @@ export function DrivenAddCarForm({ error }: { error?: string | null }) {
     }
   }
 
-  async function onPhotosChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    e.target.value = "";
-    if (!files?.length) return;
-    setUploadError(null);
+  function openCropForFile(file: File) {
+    const src = URL.createObjectURL(file);
+    cropBlobUrlRef.current = src;
+    setCropState({ src, fileName: file.name });
+  }
+
+  function closeCrop() {
+    if (cropBlobUrlRef.current) {
+      URL.revokeObjectURL(cropBlobUrlRef.current);
+      cropBlobUrlRef.current = null;
+    }
+    setCropState(null);
+  }
+
+  /** Same pipeline as marketplace listings: crop to JPEG, then POST /api/upload (default listings/ path). */
+  async function uploadCroppedFile(file: File) {
     setUploadingImages(true);
+    setUploadError(null);
     try {
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith("image/")) {
-          setUploadError("Only image files are accepted.");
-          continue;
-        }
-        const formData = new FormData();
-        formData.set("file", file);
-        formData.set("folder", "driven-vehicle");
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-        if (!res.ok) {
-          throw new Error(data.error ?? "Upload failed");
-        }
-        const uploadedUrl = data.url;
-        if (uploadedUrl) setImageUrls((prev) => [...prev, uploadedUrl]);
+      const formData = new FormData();
+      formData.set("file", file);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+      });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error ?? "Upload failed");
+      }
+      if (data.url) {
+        setImageUrls((prev) => [...prev, data.url as string]);
+      } else {
+        throw new Error("Upload did not return a URL.");
       }
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploadingImages(false);
+      closeCrop();
     }
+  }
+
+  function handlePhotoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please choose an image file (JPEG, PNG, WebP, etc.).");
+      return;
+    }
+    setUploadError(null);
+    openCropForFile(file);
   }
 
   function removeImage(url: string) {
@@ -152,31 +180,39 @@ export function DrivenAddCarForm({ error }: { error?: string | null }) {
         <span className="font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide text-driven-muted">
           Photos (optional)
         </span>
-        <p className="mt-1 text-xs text-driven-muted">Add images of the vehicle; you can add more later from your record.</p>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <label className="cursor-pointer border border-driven-warm bg-driven-paper px-3 py-2 font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide text-driven-ink hover:bg-driven-warm">
-            {uploadingImages ? "Uploading…" : "Choose images"}
-            <input type="file" accept="image/*" multiple className="sr-only" onChange={(e) => void onPhotosChange(e)} disabled={uploadingImages} />
+        <p className="mt-1 text-xs text-driven-muted">
+          Same flow as marketplace listings: crop each photo, then we upload a JPEG to your storage. Add more from your
+          record later.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          {imageUrls.map((url) => (
+            <div key={url} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" className="h-24 w-24 border border-driven-warm object-cover" />
+              <button
+                type="button"
+                onClick={() => removeImage(url)}
+                className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white hover:bg-red-600"
+                aria-label="Remove photo"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <label className="flex h-24 w-24 cursor-pointer items-center justify-center border-2 border-dashed border-driven-warm bg-driven-paper hover:border-driven-ink hover:bg-driven-warm/40">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoFileChange}
+              disabled={uploadingImages || !!cropState}
+            />
+            <span className="font-[family-name:var(--font-driven-mono)] text-xs text-driven-muted">
+              {uploadingImages ? "…" : "+"}
+            </span>
           </label>
         </div>
         {uploadError ? <p className="mt-2 text-xs text-driven-accent">{uploadError}</p> : null}
-        {imageUrls.length > 0 ? (
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {imageUrls.map((url) => (
-              <li key={url} className="relative h-20 w-28 overflow-hidden border border-driven-warm bg-driven-warm">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" className="h-full w-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removeImage(url)}
-                  className="absolute right-1 top-1 bg-driven-ink/80 px-1.5 py-0.5 font-[family-name:var(--font-driven-mono)] text-[9px] uppercase text-driven-paper"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -300,6 +336,15 @@ export function DrivenAddCarForm({ error }: { error?: string | null }) {
       >
         <SubmitLabel />
       </button>
+
+      {cropState ? (
+        <ListingImageCropModal
+          imageSrc={cropState.src}
+          fileName={cropState.fileName}
+          onCancel={closeCrop}
+          onComplete={uploadCroppedFile}
+        />
+      ) : null}
     </form>
   );
 }

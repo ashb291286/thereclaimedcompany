@@ -70,8 +70,8 @@ export function ListingImageCropModal({ imageSrc, fileName, onCancel, onComplete
             Crop &amp; centre your photo
           </h2>
           <p className="mt-0.5 text-sm text-zinc-600">
-            Drag to position, zoom with the slider. Pick a shape that suits the item — 1:1 matches listing
-            tiles.
+            Drag to position, zoom with the slider. Pick a shape that suits the photo — 1:1 works well for grids
+            and thumbnails.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {ASPECTS.map((a, i) => (
