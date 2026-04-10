@@ -507,6 +507,9 @@ export async function updateListing(id: string, formData: FormData) {
 
   const sellerReference = parseSellerReference(formData);
 
+  const wasLive =
+    listing.status === ListingStatus.active && Boolean(listing.visibleOnMarketplace);
+
   await prisma.listing.update({
     where: { id },
     data: {

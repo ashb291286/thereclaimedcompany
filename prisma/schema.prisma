@@ -137,6 +137,7 @@ model User {
   yardEnquiriesSent     YardEnquiry[]   @relation("YardEnquiriesSent")
   yardStockAlerts       YardStockAlert[] @relation("YardStockAlertsByUser")
   yardStockAlertFans    YardStockAlert[] @relation("YardStockAlertsForSeller")
+  drivenAuctionComments DrivenAuctionComment[]
 }
 
 model Account {
@@ -1031,17 +1032,38 @@ model DrivenGarageEntry {
 }
 
 model DrivenAuctionListing {
-  id             String               @id @default(cuid())
-  vehicleId      String               @unique
-  vehicle        DrivenVehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  reservePrice   Int
-  currentBid     Int                  @default(0)
-  bidCount       Int                  @default(0)
-  watcherCount   Int                  @default(0)
-  endsAt         DateTime
-  status         DrivenAuctionStatus  @default(ACTIVE)
-  createdAt      DateTime             @default(now())
+  id                    String                 @id @default(cuid())
+  vehicleId             String                 @unique
+  vehicle               DrivenVehicle          @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  reservePrice          Int
+  currentBid            Int                    @default(0)
+  bidCount              Int                    @default(0)
+  watcherCount          Int                    @default(0)
+  endsAt                DateTime
+  status                DrivenAuctionStatus    @default(ACTIVE)
+  /// AI-generated neutral summary of the public Q&A thread (regenerated when comments change).
+  qaAiOverview          String?                @db.Text
+  qaAiOverviewUpdatedAt DateTime?
+  createdAt             DateTime               @default(now())
+  comments              DrivenAuctionComment[]
 
   @@index([status])
   @@index([endsAt])
+}
+
+/// Public threaded questions & comments on a Driven auction listing.
+model DrivenAuctionComment {
+  id               String                 @id @default(cuid())
+  auctionListingId String
+  auctionListing   DrivenAuctionListing   @relation(fields: [auctionListingId], references: [id], onDelete: Cascade)
+  parentId         String?
+  parent           DrivenAuctionComment?  @relation("DrivenAuctionCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies          DrivenAuctionComment[] @relation("DrivenAuctionCommentReplies")
+  userId           String
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body             String                 @db.Text
+  createdAt        DateTime               @default(now())
+
+  @@index([auctionListingId, createdAt])
+  @@index([parentId])
 }

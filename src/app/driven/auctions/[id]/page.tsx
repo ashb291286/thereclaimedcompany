@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { auth } from "@/auth";
 import { getAuctionDetail } from "@/app/driven/_lib/get-auction-detail";
 import { DrivenAuctionActions } from "@/components/driven/DrivenAuctionActions";
+import { DrivenAuctionQaSection } from "@/components/driven/DrivenAuctionQaSection";
 import { DrivenCountdown } from "@/components/driven/DrivenCountdown";
 import { DrivenInspectionCard } from "@/components/driven/DrivenInspectionCard";
 import { DrivenLineageTimeline } from "@/components/driven/DrivenLineageTimeline";
@@ -30,6 +32,7 @@ export default async function DrivenAuctionDetailPage({ params }: Props) {
   const result = await getAuctionDetail(id);
   if (!result) notFound();
 
+  const session = await auth();
   const d = result.data;
   const lineageSorted = [...d.lineage].sort((a, b) => b.date.getTime() - a.date.getTime());
 
@@ -100,15 +103,11 @@ export default async function DrivenAuctionDetailPage({ params }: Props) {
       <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_320px]">
         <div className="space-y-8">
           <DrivenLineageTimeline entries={lineageSorted} />
-          <section className="border border-driven-warm bg-white px-5 py-6">
-            <h2 className="font-[family-name:var(--font-driven-display)] text-xl italic text-driven-ink">
-              Questions &amp; comments
-            </h2>
-            <p className="mt-3 text-sm text-driven-muted">
-              Buyer questions, comments, and seller replies aren&apos;t available on auctions yet — we&apos;ll add a
-              threaded Q&amp;A area in a future release.
-            </p>
-          </section>
+          <DrivenAuctionQaSection
+            auctionId={d.auctionId}
+            ownerId={d.ownerId}
+            canPost={Boolean(session?.user?.id)}
+          />
         </div>
 
         <aside className="space-y-6">

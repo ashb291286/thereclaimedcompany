@@ -313,6 +313,7 @@ export function YardStockAlertToggle({
 
   return (
     <form action={toggleYardStockAlertAction} className="inline">
+      <input type="hidden" name="callbackUrl" value={`/yards/${yardSlug}`} />
       <input type="hidden" name="sellerId" value={sellerId} />
       <input type="hidden" name="yardSlug" value={yardSlug} />
       <input type="hidden" name="categoryId" value="all" />

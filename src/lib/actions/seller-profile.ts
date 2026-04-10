@@ -83,6 +83,47 @@ export async function updateYardProfileAction(formData: FormData): Promise<void>
   const social = yardSocialFromForm(formData);
   const vatRegistered = String(formData.get("vatRegistered") ?? "no") === "yes";
 
+  const yardMaterial1 = String(formData.get("yardMaterial1") ?? "").trim();
+  const yardMaterial2 = String(formData.get("yardMaterial2") ?? "").trim();
+  const yardMaterial3 = String(formData.get("yardMaterial3") ?? "").trim();
+  const yardPrimaryMaterials = [yardMaterial1, yardMaterial2, yardMaterial3].filter(Boolean);
+
+  const yardCustomTrustLine = (formData.get("yardCustomTrustLine") as string)?.trim() || null;
+  const yardTrustFlagsJson: Prisma.InputJsonValue = {
+    familyRun: formData.get("trust_familyRun") === "on",
+    tradeCounter: formData.get("trust_tradeCounter") === "on",
+    delivery: formData.get("trust_delivery") === "on",
+    onsiteParking: formData.get("trust_onsiteParking") === "on",
+    inspectionWelcome: formData.get("trust_inspectionWelcome") === "on",
+  };
+
+  const deliveryCollect = formData.get("delivery_collect") === "on";
+  const deliveryDeliver = formData.get("delivery_deliver") === "on";
+  const radiusRaw = String(formData.get("delivery_radius_miles") ?? "").trim();
+  const minOrderRaw = String(formData.get("delivery_min_order_gbp") ?? "").trim();
+  const deliveryNotesField = String(formData.get("delivery_notes") ?? "").trim();
+  const radiusMiles = radiusRaw === "" ? null : Number(radiusRaw);
+  const minOrderGbp = minOrderRaw === "" ? null : Number(minOrderRaw);
+  const yardDeliveryOptionsJson: Prisma.InputJsonValue = {
+    collection: deliveryCollect,
+    delivery: deliveryDeliver,
+    radiusMiles: radiusMiles != null && Number.isFinite(radiusMiles) ? radiusMiles : null,
+    minOrderGbp: minOrderGbp != null && Number.isFinite(minOrderGbp) ? minOrderGbp : null,
+    notes: deliveryNotesField || null,
+  };
+
+  const yardServiceAreas = (formData.get("yardServiceAreas") as string)?.trim() || null;
+  const yardWhatsApp = (formData.get("yardWhatsApp") as string)?.trim() || null;
+  const yearEstablishedRaw = String(formData.get("yearEstablished") ?? "").trim();
+  const yearEstablishedParsed = yearEstablishedRaw === "" ? null : Number.parseInt(yearEstablishedRaw, 10);
+  const yearEstablished =
+    yearEstablishedParsed != null && Number.isFinite(yearEstablishedParsed) ? yearEstablishedParsed : null;
+  const yardTradePublicRaw = String(formData.get("yardTradePublic") ?? "").trim();
+  const yardTradePublic = ["both", "trade", "public"].includes(yardTradePublicRaw)
+    ? yardTradePublicRaw
+    : null;
+  const yardResponseTimeNote = (formData.get("yardResponseTimeNote") as string)?.trim() || null;
+
   const previous = await prisma.sellerProfile.findUnique({
     where: { userId: session.user.id },
     select: { adminDistrict: true },

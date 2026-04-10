@@ -3,11 +3,20 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
-export async function toggleYardStockAlertAction(formData: FormData): Promise<{ ok: boolean; message?: string }> {
+function safeInternalPath(raw: string): string {
+  const t = raw.trim();
+  if (!t.startsWith("/") || t.startsWith("//")) return "/dashboard/stock-alerts";
+  return t;
+}
+
+/** Form actions must return void — use redirect only when sign-in is required. */
+export async function toggleYardStockAlertAction(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) {
-    return { ok: false, message: "Sign in to set stock alerts." };
+    const cb = safeInternalPath(String(formData.get("callbackUrl") ?? ""));
+    redirect(`/auth/signin?callbackUrl=${encodeURIComponent(cb)}`);
   }
 
   const sellerId = String(formData.get("sellerId") ?? "").trim();
@@ -15,17 +24,17 @@ export async function toggleYardStockAlertAction(formData: FormData): Promise<{ 
   const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   const categoryId = categoryIdRaw && categoryIdRaw !== "all" ? categoryIdRaw : null;
 
-  if (!sellerId || !yardSlug) return { ok: false, message: "Missing yard." };
+  if (!sellerId || !yardSlug) return;
 
   const yard = await prisma.sellerProfile.findUnique({
     where: { userId: sellerId },
     select: { yardSlug: true, user: { select: { role: true } } },
   });
   if (!yard || yard.user.role !== "reclamation_yard" || yard.yardSlug !== yardSlug) {
-    return { ok: false, message: "Yard not found." };
+    return;
   }
   if (sellerId === session.user.id) {
-    return { ok: false, message: "You cannot alert on your own yard." };
+    return;
   }
 
   const existing = await prisma.yardStockAlert.findFirst({
@@ -40,7 +49,7 @@ export async function toggleYardStockAlertAction(formData: FormData): Promise<{ 
     await prisma.yardStockAlert.delete({ where: { id: existing.id } });
     revalidatePath(`/yards/${yardSlug}`);
     revalidatePath("/dashboard/stock-alerts");
-    return { ok: true };
+    return;
   }
 
   await prisma.yardStockAlert.create({
@@ -52,5 +61,4 @@ export async function toggleYardStockAlertAction(formData: FormData): Promise<{ 
   });
   revalidatePath(`/yards/${yardSlug}`);
   revalidatePath("/dashboard/stock-alerts");
-  return { ok: true };
 }

@@ -10,6 +10,7 @@ export type AuctionDetailResult =
 function mapDbToViewModel(args: {
   auctionId: string;
   vehicleId: string;
+  ownerId: string;
   reservePrice: number;
   currentBid: number;
   bidCount: number;
@@ -75,6 +76,7 @@ function mapDbToViewModel(args: {
   return {
     auctionId: args.auctionId,
     vehicleId: args.vehicleId,
+    ownerId: args.ownerId,
     reclaimedPublicId: args.reclaimedPublicId,
     inspectionIsSelfAssessment: args.inspectionIsSelfAssessment,
     title: `${v.year} ${v.make} ${v.model}`,
@@ -131,6 +133,7 @@ export async function getAuctionDetail(id: string): Promise<AuctionDetailResult 
   const data = mapDbToViewModel({
     auctionId: row.id,
     vehicleId: v.id,
+    ownerId: v.ownerId,
     reservePrice: row.reservePrice,
     currentBid: row.currentBid,
     bidCount: row.bidCount,

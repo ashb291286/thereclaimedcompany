@@ -64,6 +64,7 @@ export default async function StockAlertsPage() {
                   </p>
                 </div>
                 <form action={toggleYardStockAlertAction}>
+                  <input type="hidden" name="callbackUrl" value="/dashboard/stock-alerts" />
                   <input type="hidden" name="sellerId" value={a.sellerId} />
                   <input type="hidden" name="yardSlug" value={slug ?? ""} />
                   <input type="hidden" name="categoryId" value={a.categoryId ?? "all"} />
