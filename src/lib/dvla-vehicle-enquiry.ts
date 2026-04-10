@@ -6,30 +6,105 @@
 const DEFAULT_PRODUCTION_URL =
   "https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles";
 
-export type DvlaVehicleEnquirySuccess = {
+/** Normalised successful VES payload (all fields optional except registration). */
+export type DvlaVehicleEnquiryData = {
   registrationNumber: string;
-  make?: string;
-  yearOfManufacture?: number;
-  colour?: string;
-  fuelType?: string;
+  taxStatus?: string;
+  taxDueDate?: string;
+  artEndDate?: string;
   motStatus?: string;
   motExpiryDate?: string;
-  taxStatus?: string;
-};
-
-type DvlaErrorBody = {
-  errors?: Array<{ status?: string; code?: string; title?: string; detail?: string }>;
+  make?: string;
+  monthOfFirstDvlaRegistration?: string;
+  monthOfFirstRegistration?: string;
+  yearOfManufacture?: number;
+  engineCapacity?: number;
+  co2Emissions?: number;
+  fuelType?: string;
+  markedForExport?: boolean;
+  colour?: string;
+  typeApproval?: string;
+  wheelplan?: string;
+  revenueWeight?: number;
+  /** RDE category — API may return number or string. */
+  realDrivingEmissions?: number | string;
+  dateOfLastV5CIssued?: string;
+  euroStatus?: string;
+  automatedVehicle?: boolean;
 };
 
 export function normaliseUkRegistration(raw: string): string {
   return raw.replace(/\s+/g, "").toUpperCase();
 }
 
+function pickStr(data: Record<string, unknown>, key: string): string | undefined {
+  const v = data[key];
+  if (typeof v === "string" && v.trim()) return v.trim();
+  return undefined;
+}
+
+function pickNum(data: Record<string, unknown>, key: string): number | undefined {
+  const v = data[key];
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim()) {
+    const n = Number(v.replace(/[^\d.-]/g, ""));
+    if (Number.isFinite(n)) return n;
+  }
+  return undefined;
+}
+
+function pickBool(data: Record<string, unknown>, key: string): boolean | undefined {
+  const v = data[key];
+  if (typeof v === "boolean") return v;
+  if (v === "true" || v === true) return true;
+  if (v === "false" || v === false) return false;
+  return undefined;
+}
+
+function pickRde(data: Record<string, unknown>): number | string | undefined {
+  const v = data.realDrivingEmissions;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim()) return v.trim();
+  return undefined;
+}
+
+function mapJsonToDvlaData(reg: string, data: Record<string, unknown>): DvlaVehicleEnquiryData {
+  const year = pickNum(data, "yearOfManufacture");
+  return {
+    registrationNumber: pickStr(data, "registrationNumber") ?? reg,
+    taxStatus: pickStr(data, "taxStatus"),
+    taxDueDate: pickStr(data, "taxDueDate"),
+    artEndDate: pickStr(data, "artEndDate"),
+    motStatus: pickStr(data, "motStatus"),
+    motExpiryDate: pickStr(data, "motExpiryDate"),
+    make: pickStr(data, "make"),
+    monthOfFirstDvlaRegistration: pickStr(data, "monthOfFirstDvlaRegistration"),
+    monthOfFirstRegistration: pickStr(data, "monthOfFirstRegistration"),
+    yearOfManufacture: year !== undefined ? Math.trunc(year) : undefined,
+    engineCapacity: pickNum(data, "engineCapacity"),
+    co2Emissions: pickNum(data, "co2Emissions"),
+    fuelType: pickStr(data, "fuelType"),
+    markedForExport: pickBool(data, "markedForExport"),
+    colour: pickStr(data, "colour"),
+    typeApproval: pickStr(data, "typeApproval"),
+    wheelplan: pickStr(data, "wheelplan") ?? pickStr(data, "wheelPlan"),
+    revenueWeight: pickNum(data, "revenueWeight"),
+    realDrivingEmissions: pickRde(data),
+    dateOfLastV5CIssued: pickStr(data, "dateOfLastV5CIssued"),
+    euroStatus: pickStr(data, "euroStatus"),
+    automatedVehicle: pickBool(data, "automatedVehicle"),
+  };
+}
+
+type DvlaErrorBody = {
+  errors?: Array<{ status?: string; code?: string; title?: string; detail?: string }>;
+};
+
 export async function fetchDvlaVehicleByRegistration(
   registrationNumber: string,
   apiKey: string
 ): Promise<
-  | { ok: true; data: DvlaVehicleEnquirySuccess }
+  | { ok: true; data: DvlaVehicleEnquiryData }
   | { ok: false; status: number; message: string; code?: string }
 > {
   const reg = normaliseUkRegistration(registrationNumber);
@@ -80,18 +155,6 @@ export async function fetchDvlaVehicleByRegistration(
   const data = json as Record<string, unknown>;
   return {
     ok: true,
-    data: {
-      registrationNumber: String(data.registrationNumber ?? reg),
-      make: typeof data.make === "string" ? data.make : undefined,
-      yearOfManufacture:
-        typeof data.yearOfManufacture === "number" && Number.isFinite(data.yearOfManufacture)
-          ? data.yearOfManufacture
-          : undefined,
-      colour: typeof data.colour === "string" ? data.colour : undefined,
-      fuelType: typeof data.fuelType === "string" ? data.fuelType : undefined,
-      motStatus: typeof data.motStatus === "string" ? data.motStatus : undefined,
-      motExpiryDate: typeof data.motExpiryDate === "string" ? data.motExpiryDate : undefined,
-      taxStatus: typeof data.taxStatus === "string" ? data.taxStatus : undefined,
-    },
+    data: mapJsonToDvlaData(reg, data),
   };
 }

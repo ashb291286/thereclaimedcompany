@@ -9,7 +9,7 @@ const REL_LABEL: Record<string, string> = {
   SOLD: "Sold",
 };
 
-type Props = { searchParams?: Promise<{ error?: string }> };
+type Props = { searchParams?: Promise<{ error?: string; deleted?: string }> };
 
 export default async function DrivenGaragePage({ searchParams }: Props) {
   const session = await auth();
@@ -19,7 +19,14 @@ export default async function DrivenGaragePage({ searchParams }: Props) {
   const listError =
     sp.error === "auction-missing-fields"
       ? "Something went wrong starting an auction. Open the vehicle and try again from List for auction."
-      : null;
+      : sp.error === "vehicle-not-found"
+        ? "That vehicle could not be found or you do not have access."
+        : sp.error === "delete-bad-request"
+          ? "Delete could not be completed. Open the vehicle from the garage and try again."
+          : sp.error === "missing-fields"
+            ? "Please fill in registration, make, model, and year."
+            : null;
+  const deletedOk = sp.deleted === "1";
 
   const rows = await prisma.drivenGarageEntry.findMany({
     where: { userId: session.user.id },
@@ -114,6 +121,9 @@ export default async function DrivenGaragePage({ searchParams }: Props) {
                       </Link>
                       {g.relationship === "OWNED" ? (
                         <>
+                          <Link href={`/driven/garage/${v.id}/edit`} className="text-driven-ink underline">
+                            Edit
+                          </Link>
                           <Link href={`/driven/garage/${v.id}/record`} className="text-driven-ink underline">
                             Record
                           </Link>

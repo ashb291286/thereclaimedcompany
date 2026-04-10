@@ -4,6 +4,12 @@ import { useRef, useState } from "react";
 import { createDrivenVehicleFromGarageAction } from "@/app/driven/actions";
 import { useFormStatus } from "react-dom";
 import { ListingImageCropModal } from "@/app/(dashboard)/dashboard/sell/ListingImageCropModal";
+import type { DvlaVehicleEnquiryData } from "@/lib/dvla-vehicle-enquiry";
+import {
+  DVLA_VES_DISPLAY_ORDER,
+  DVLA_VES_LABELS,
+  formatDvlaValueForDisplay,
+} from "@/lib/dvla-ves-display";
 
 function SubmitLabel() {
   const { pending } = useFormStatus();
@@ -32,8 +38,25 @@ const INSPECT_FIELDS = [
   { name: "inspectElectrics" as const, label: "Electrics" },
 ];
 
+type DvlaLookupJson = {
+  error?: string;
+  registration?: string;
+  make?: string | null;
+  model?: string | null;
+  year?: number | null;
+  colour?: string | null;
+  source?: string;
+  fuelType?: string | null;
+  motStatus?: string | null;
+  motExpiryDate?: string | null;
+  taxStatus?: string | null;
+  taxDueDate?: string | null;
+  dvla?: DvlaVehicleEnquiryData;
+};
+
 export function DrivenAddCarForm({ error }: { error?: string | null }) {
   const [reg, setReg] = useState("");
+  const [dvlaSnapshot, setDvlaSnapshot] = useState<DvlaVehicleEnquiryData | null>(null);
   const [lookupStatus, setLookupStatus] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -47,19 +70,19 @@ export function DrivenAddCarForm({ error }: { error?: string | null }) {
     setLookupStatus("Looking up…");
     try {
       const res = await fetch(`/api/driven/dvla?reg=${encodeURIComponent(reg.trim())}`);
-      const data = (await res.json()) as {
-        error?: string;
-        make?: string | null;
-        model?: string | null;
-        year?: number | null;
-        colour?: string | null;
-        source?: string;
-        fuelType?: string | null;
-        motStatus?: string | null;
-      };
+      const data = (await res.json()) as DvlaLookupJson;
       if (!res.ok) {
+        setDvlaSnapshot(null);
         setLookupStatus(data.error ?? "Lookup failed — enter details manually.");
         return;
+      }
+      if (data.registration) {
+        setReg(data.registration);
+      }
+      if (data.dvla) {
+        setDvlaSnapshot(data.dvla);
+      } else {
+        setDvlaSnapshot(null);
       }
       const mk = document.getElementById("driven-make") as HTMLInputElement | null;
       const md = document.getElementById("driven-model") as HTMLInputElement | null;
@@ -70,16 +93,19 @@ export function DrivenAddCarForm({ error }: { error?: string | null }) {
       if (yr && data.year != null) yr.value = String(data.year);
       if (cl && data.colour) cl.value = data.colour;
       if (data.source === "mock") {
-        setLookupStatus("Filled from demo lookup (set DVLA_API_KEY for live DVLA data).");
-      } else {
-        const extra = [data.fuelType, data.motStatus].filter(Boolean).join(" · ");
         setLookupStatus(
-          extra
-            ? `DVLA data applied. Model is not provided by DVLA — add it below. (${extra})`
-            : "DVLA data applied. Model is not provided by DVLA — add it below."
+          "Demo VES response applied — full field list below. Set DVLA_API_KEY for live DVLA data."
+        );
+      } else {
+        const bits = [data.taxStatus, data.motStatus, data.fuelType].filter(Boolean);
+        setLookupStatus(
+          bits.length
+            ? `DVLA data applied — check the record below. Model is not returned by DVLA; add it manually. (${bits.join(" · ")})`
+            : "DVLA data applied — check the record below. Model is not returned by DVLA; add it manually."
         );
       }
     } catch {
+      setDvlaSnapshot(null);
       setLookupStatus("Lookup failed — enter details manually.");
     }
   }
@@ -146,6 +172,7 @@ export function DrivenAddCarForm({ error }: { error?: string | null }) {
   return (
     <form action={createDrivenVehicleFromGarageAction} className="space-y-6 border border-driven-warm bg-white p-6">
       <input type="hidden" name="initialImageUrls" value={imageUrls.join(",")} />
+      <input type="hidden" name="dvlaSnapshotJson" value={dvlaSnapshot ? JSON.stringify(dvlaSnapshot) : ""} />
 
       {error ? (
         <p className="font-[family-name:var(--font-driven-mono)] text-xs text-driven-accent">{error}</p>
@@ -160,7 +187,16 @@ export function DrivenAddCarForm({ error }: { error?: string | null }) {
             id="driven-reg"
             name="registration"
             value={reg}
-            onChange={(e) => setReg(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setReg(next);
+              setDvlaSnapshot((prev) => {
+                if (!prev) return null;
+                const n = next.replace(/\s+/g, "").toUpperCase();
+                const p = prev.registrationNumber.replace(/\s+/g, "").toUpperCase();
+                return n === p ? prev : null;
+              });
+            }}
             required
             className="min-w-[8rem] flex-1 border border-driven-warm bg-driven-paper px-3 py-2 font-[family-name:var(--font-driven-mono)] text-sm uppercase text-driven-ink"
             placeholder="AB12 CDE"
@@ -174,6 +210,33 @@ export function DrivenAddCarForm({ error }: { error?: string | null }) {
           </button>
         </div>
         {lookupStatus ? <p className="mt-2 text-xs text-driven-muted">{lookupStatus}</p> : null}
+
+        {dvlaSnapshot ? (
+          <details className="mt-4 border border-driven-warm bg-driven-paper/50" open>
+            <summary className="cursor-pointer select-none px-3 py-2 font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide text-driven-ink hover:bg-driven-warm/30">
+              DVLA Vehicle Enquiry (reference)
+            </summary>
+            <p className="border-t border-driven-warm px-3 py-2 text-xs leading-relaxed text-driven-muted">
+              Official VES fields for this registration. Tax and MOT can change — confirm before you buy or sell. We
+              store this snapshot on your passport when you create the vehicle.
+            </p>
+            <dl className="grid gap-2 border-t border-driven-warm px-3 py-3 sm:grid-cols-2">
+              {DVLA_VES_DISPLAY_ORDER.map((key) => {
+                const val = dvlaSnapshot[key];
+                if (val === undefined || val === null) return null;
+                if (typeof val === "string" && val.trim() === "") return null;
+                return (
+                  <div key={key} className="min-w-0 border-b border-driven-warm/40 pb-2 sm:border-0 sm:pb-0">
+                    <dt className="font-[family-name:var(--font-driven-mono)] text-[9px] uppercase tracking-wider text-driven-muted">
+                      {DVLA_VES_LABELS[key] ?? key}
+                    </dt>
+                    <dd className="mt-0.5 text-sm text-driven-ink">{formatDvlaValueForDisplay(key, val)}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </details>
+        ) : null}
       </div>
 
       <div>

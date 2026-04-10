@@ -941,6 +941,8 @@ model DrivenVehicle {
   year              Int
   colour            String?
   mileage           Int?
+  /// Snapshot from DVLA VES at add time (tax, MOT, engine, emissions, etc.).
+  dvlaSnapshotJson  Json?
   imageUrls         String[]            @default([])
   ownerId           String
   passportScore     Int                 @default(0)

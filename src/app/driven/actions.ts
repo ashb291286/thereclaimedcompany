@@ -8,6 +8,8 @@ import { recalculatePassportScore } from "@/app/driven/_lib/recalculate-passport
 import type { DrivenEntryCategory } from "@/generated/prisma/client";
 import { allocateReclaimedPublicId } from "@/lib/driven-reclaimed-id";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
+import { Prisma } from "@/generated/prisma/client";
+import { normaliseUkRegistration } from "@/lib/dvla-vehicle-enquiry";
 
 function parseScore0to100(raw: string): number | null {
   const n = parseInt(raw.trim(), 10);
@@ -31,6 +33,19 @@ export async function createDrivenVehicleFromGarageAction(formData: FormData): P
 
   const imagesStr = String(formData.get("initialImageUrls") ?? "").trim();
   const imageUrls = imagesStr ? imagesStr.split(",").map((u) => u.trim()).filter(Boolean) : [];
+
+  let dvlaSnapshotJson: Prisma.InputJsonValue | undefined;
+  const snapRaw = String(formData.get("dvlaSnapshotJson") ?? "").trim();
+  if (snapRaw) {
+    try {
+      const parsed = JSON.parse(snapRaw) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        dvlaSnapshotJson = parsed as Prisma.InputJsonValue;
+      }
+    } catch {
+      /* ignore malformed snapshot */
+    }
+  }
 
   if (!registration || !make || !model || !Number.isFinite(year)) {
     redirect("/driven/garage/add?error=missing-fields");
@@ -92,6 +107,7 @@ export async function createDrivenVehicleFromGarageAction(formData: FormData): P
       imageUrls,
       ownerId: session.user.id,
       status: "PRIVATE",
+      ...(dvlaSnapshotJson !== undefined ? { dvlaSnapshotJson } : {}),
     },
   });
 
@@ -269,4 +285,90 @@ export async function createLineageEntryDraftAction(formData: FormData): Promise
   });
 
   redirect(`/driven/garage/${vehicleId}/upload?entryId=${encodeURIComponent(entry.id)}`);
+}
+
+export async function updateDrivenVehicleFromGarageAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/driven/garage");
+
+  const vehicleId = String(formData.get("vehicleId") ?? "").trim();
+  const registration = normaliseUkRegistration(String(formData.get("registration") ?? ""));
+  const make = String(formData.get("make") ?? "").trim();
+  const model = String(formData.get("model") ?? "").trim();
+  const year = parseInt(String(formData.get("year") ?? ""), 10);
+  const colour = String(formData.get("colour") ?? "").trim() || null;
+  const mileageRaw = String(formData.get("mileage") ?? "").trim();
+  const mileage = mileageRaw ? parseInt(mileageRaw, 10) : null;
+  const vin = String(formData.get("vin") ?? "").trim() || null;
+
+  if (!vehicleId || !registration || !make || !model || !Number.isFinite(year)) {
+    redirect(
+      vehicleId ? `/driven/garage/${vehicleId}/edit?error=missing-fields` : "/driven/garage?error=missing-fields"
+    );
+  }
+
+  const vehicle = await prisma.drivenVehicle.findFirst({
+    where: { id: vehicleId, ownerId: session.user.id },
+    include: { auction: { select: { id: true, status: true } } },
+  });
+  if (!vehicle) redirect("/driven/garage?error=vehicle-not-found");
+
+  await prisma.drivenVehicle.update({
+    where: { id: vehicleId },
+    data: {
+      registration,
+      make,
+      model,
+      year,
+      colour,
+      mileage: Number.isFinite(mileage ?? NaN) ? mileage : null,
+      vin,
+    },
+  });
+
+  revalidatePath("/driven/garage");
+  revalidatePath(`/driven/garage/${vehicleId}/edit`);
+  revalidatePath(`/driven/garage/${vehicleId}/record`);
+  revalidatePath(`/driven/garage/${vehicleId}/upload`);
+  revalidatePath(`/driven/lineage/${vehicleId}`);
+  if (vehicle.auction) {
+    revalidatePath(`/driven/auctions/${vehicle.auction.id}`);
+    revalidatePath("/driven/auctions");
+  }
+  redirect(`/driven/garage/${vehicleId}/edit?saved=1`);
+}
+
+export async function deleteDrivenVehicleFromGarageAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/driven/garage");
+
+  const vehicleId = String(formData.get("vehicleId") ?? "").trim();
+  const typed = normaliseUkRegistration(String(formData.get("confirmRegistration") ?? ""));
+
+  if (!vehicleId) {
+    redirect("/driven/garage?error=delete-bad-request");
+  }
+  if (!typed) {
+    redirect(`/driven/garage/${vehicleId}/edit?error=delete-missing-confirm`);
+  }
+
+  const vehicle = await prisma.drivenVehicle.findFirst({
+    where: { id: vehicleId, ownerId: session.user.id },
+    include: { auction: { select: { status: true } } },
+  });
+  if (!vehicle) redirect("/driven/garage?error=vehicle-not-found");
+
+  if (vehicle.auction?.status === "ACTIVE") {
+    redirect(`/driven/garage/${vehicleId}/edit?error=delete-active-auction`);
+  }
+
+  if (typed !== normaliseUkRegistration(vehicle.registration)) {
+    redirect(`/driven/garage/${vehicleId}/edit?error=delete-reg-mismatch`);
+  }
+
+  await prisma.drivenVehicle.delete({ where: { id: vehicleId } });
+
+  revalidatePath("/driven/garage");
+  revalidatePath("/driven/auctions");
+  redirect("/driven/garage?deleted=1");
 }

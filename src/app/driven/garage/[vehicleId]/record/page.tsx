@@ -60,6 +60,12 @@ export default async function DrivenGarageRecordPage({ params }: Props) {
             New entry + upload
           </Link>
           <Link
+            href={`/driven/garage/${vehicleId}/edit`}
+            className="border border-driven-warm px-4 py-2 font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide text-driven-ink"
+          >
+            Edit vehicle
+          </Link>
+          <Link
             href={`/driven/lineage/${vehicleId}`}
             className="border border-driven-warm px-4 py-2 font-[family-name:var(--font-driven-mono)] text-[10px] uppercase tracking-wide text-driven-ink"
           >
