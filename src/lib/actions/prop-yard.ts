@@ -20,6 +20,7 @@ import {
 import type { PropRentalBookingStatus, PropRentalFulfillment } from "@/generated/prisma/client";
 import { randomUUID } from "crypto";
 import { createNotification } from "@/lib/notifications";
+import { afterMarketplaceListingPersisted } from "@/lib/yard-listing-hooks";
 import { isCarbonAdmin } from "@/lib/admin";
 import { parsePropSetProductionType } from "@/lib/prop-yard-set-production";
 
@@ -517,6 +518,9 @@ export async function createPropComprehensiveListingAction(formData: FormData): 
 
   if (shouldPublish) {
     await prisma.propListingDraft.deleteMany({ where: { yardId: userId } });
+  }
+  if (shouldPublish) {
+    await afterMarketplaceListingPersisted(userId, listing.id, { wasLive: false });
   }
   revalidatePath("/dashboard/prop-yard");
   revalidatePath("/prop-yard/search");

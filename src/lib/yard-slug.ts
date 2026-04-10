@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 
-/** URL-safe slug for /reclamation-yard/[slug] */
+/** URL-safe slug for /yards/[slug] (legacy /reclamation-yard/:slug redirects). */
 export function slugifyYard(input: string): string {
   const s = input
     .trim()

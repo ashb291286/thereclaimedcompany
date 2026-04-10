@@ -132,6 +132,11 @@ model User {
   demolitionProjectsOrganized DemolitionProject[]
   demolitionElementsClaimed   DemolitionElement[]              @relation("DemolitionElementClaimedBy")
   demolitionElementInterests  DemolitionElementInterest[]
+
+  yardEnquiriesReceived YardEnquiry[]   @relation("YardEnquiriesReceived")
+  yardEnquiriesSent     YardEnquiry[]   @relation("YardEnquiriesSent")
+  yardStockAlerts       YardStockAlert[] @relation("YardStockAlertsByUser")
+  yardStockAlertFans    YardStockAlert[] @relation("YardStockAlertsForSeller")
 }
 
 model Account {
@@ -195,10 +200,64 @@ model SellerProfile {
   /// UK VAT-registered reclamation yards: listing prices stored ex VAT; buyers pay +20% at checkout.
   vatRegistered     Boolean   @default(false)
   stripeAccountId   String?   // Stripe Connect account id when onboarding complete
+  /// Up to three buyer-facing material labels (e.g. timber, brick) for SEO H2 and pills.
+  yardPrimaryMaterials      String[] @default([])
+  /// Enabled trust badges, e.g. { "familyRun": true, "delivery": true } — UI merges with defaults.
+  yardTrustFlagsJson        Json?
+  /// Extra single “why us” line shown in trust row + why-buy section.
+  yardCustomTrustLine       String?
+  /// Delivery / collection JSON: collect, deliver, radiusMiles, minOrderGbp, notes.
+  yardDeliveryOptionsJson   Json?
+  /// Free-text regions / counties served (map + copy).
+  yardServiceAreas          String?  @db.Text
+  /// E.164 or UK local digits for wa.me link.
+  yardWhatsApp              String?
+  yearEstablished           Int?
+  /// trade | public | both
+  yardTradePublic           String?
+  /// Shown near enquiry form, e.g. “Typically responds within 24 hours”.
+  yardResponseTimeNote      String?
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Buyer / guest message to a reclamation yard (public profile).
+model YardEnquiry {
+  id         String    @id @default(cuid())
+  yardUserId String
+  fromUserId String?
+  name       String
+  email      String
+  phone      String?
+  message    String    @db.Text
+  quantity   String?
+  imageUrl   String?
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  yardUser User  @relation("YardEnquiriesReceived", fields: [yardUserId], references: [id], onDelete: Cascade)
+  fromUser User? @relation("YardEnquiriesSent", fields: [fromUserId], references: [id], onDelete: SetNull)
+
+  @@index([yardUserId, createdAt])
+}
+
+/// Logged-in user wants notifications when a yard lists new stock (optionally per category).
+model YardStockAlert {
+  id         String   @id @default(cuid())
+  userId     String
+  sellerId   String
+  categoryId String?
+  createdAt  DateTime @default(now())
+
+  user     User      @relation("YardStockAlertsByUser", fields: [userId], references: [id], onDelete: Cascade)
+  seller   User      @relation("YardStockAlertsForSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([sellerId])
+  @@index([userId, createdAt])
 }
 
 // ---- Embodied carbon (ICE-style factors; admin-editable) ----
@@ -227,6 +286,7 @@ model Category {
   children  Category[] @relation("CategoryHierarchy")
   listings  Listing[]
   wantedAds WantedAd[]
+  yardStockAlerts YardStockAlert[]
   /// When true, new/updated active marketplace listings in this category sync to WooCommerce as external (affiliate) products.
   wooCommerceSyncEnabled  Boolean @default(false)
   /// WooCommerce product category term ID (integer) assigned to synced products.

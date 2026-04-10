@@ -142,3 +142,52 @@ export function openingHoursCompactLine(
   const t = legacy?.trim();
   return t ? t : null;
 }
+
+const SHORT_WEEKDAY_TO_KEY: Record<string, DayKey> = {
+  Mon: "mon",
+  Tue: "tue",
+  Wed: "wed",
+  Thu: "thu",
+  Fri: "fri",
+  Sat: "sat",
+  Sun: "sun",
+};
+
+function londonWeekdayAndMinutes(d: Date): { day: DayKey; minutes: number } | null {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    if (p.type !== "literal") map[p.type] = p.value;
+  }
+  const day = SHORT_WEEKDAY_TO_KEY[map.weekday ?? ""];
+  if (!day) return null;
+  const h = parseInt(map.hour ?? "0", 10);
+  const m = parseInt(map.minute ?? "0", 10);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return { day, minutes: h * 60 + m };
+}
+
+function hhmmToMinutes(t: string): number | null {
+  const m = TIME_RE.exec(t);
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+/** Whether the yard is open right now in Europe/London; null if schedule missing or unparsable. */
+export function isYardOpenNow(schedule: WeeklyOpeningHours | null, now = new Date()): boolean | null {
+  if (!schedule) return null;
+  const loc = londonWeekdayAndMinutes(now);
+  if (!loc) return null;
+  const day = schedule[loc.day];
+  if (day.closed) return false;
+  const openM = hhmmToMinutes(day.open!);
+  const closeM = hhmmToMinutes(day.close!);
+  if (openM == null || closeM == null) return null;
+  return loc.minutes >= openM && loc.minutes < closeM;
+}

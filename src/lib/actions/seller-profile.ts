@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
 import { slugifyAdminDistrict } from "@/lib/yard-area-seo";
+import { revalidateYardPublicPaths } from "@/lib/revalidate-yard";
 
 function normalizeWebsiteUrl(raw: string | null | undefined): string | null {
   const t = raw?.trim();
@@ -111,6 +112,15 @@ export async function updateYardProfileAction(formData: FormData): Promise<void>
         social === undefined ? Prisma.JsonNull : (social as Prisma.InputJsonValue),
       openingHoursSchedule: schedule as unknown as Prisma.InputJsonValue,
       openingHours: null,
+      yardPrimaryMaterials,
+      yardTrustFlagsJson,
+      yardDeliveryOptionsJson,
+      yardServiceAreas,
+      yardWhatsApp,
+      yearEstablished,
+      yardTradePublic: yardTradePublic || null,
+      yardCustomTrustLine,
+      yardResponseTimeNote,
     },
   });
 
@@ -125,6 +135,6 @@ export async function updateYardProfileAction(formData: FormData): Promise<void>
     revalidatePath(`/reclamation-yards/${slugifyAdminDistrict(resolvedPostcode.adminDistrict)}`);
   }
   revalidatePath(`/sellers/${session.user.id}`);
-  revalidatePath(`/reclamation-yard/${slugResult.slug}`);
+  revalidateYardPublicPaths(slugResult.slug);
   redirect("/dashboard/seller-profile?saved=1");
 }

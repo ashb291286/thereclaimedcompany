@@ -28,7 +28,7 @@ export default async function SellerPage({
   const isYard = seller.role === "reclamation_yard";
 
   if (isYard && profile.yardSlug) {
-    permanentRedirect(`/reclamation-yard/${profile.yardSlug}`);
+    permanentRedirect(`/yards/${profile.yardSlug}`);
   }
 
   return (

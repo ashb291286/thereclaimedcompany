@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { slugifyAdminDistrict } from "@/lib/yard-area-seo";
+import { revalidateYardPublicPaths } from "@/lib/revalidate-yard";
 import type { UserRole } from "@/generated/prisma/client";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
 import { defaultYardOpeningHours, parseOpeningHoursSchedule } from "@/lib/opening-hours";
@@ -90,6 +91,9 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   if (sellerType === "reclamation_yard" && resolved.adminDistrict?.trim()) {
     revalidatePath("/reclamation-yards");
     revalidatePath(`/reclamation-yards/${slugifyAdminDistrict(resolved.adminDistrict)}`);
+  }
+  if (sellerType === "reclamation_yard" && yardSlug) {
+    revalidateYardPublicPaths(yardSlug);
   }
 
   redirect("/dashboard/onboarding?phase=payments");

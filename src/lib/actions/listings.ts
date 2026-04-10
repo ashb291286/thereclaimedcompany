@@ -21,6 +21,7 @@ import {
 import { computeListingCarbonSnapshot } from "@/lib/carbon/listing";
 import { syncListingLocalYardAlerts } from "@/lib/listing-local-yard-alerts";
 import { syncListingToWooCommerce } from "@/lib/listing-woocommerce-sync";
+import { afterMarketplaceListingPersisted } from "@/lib/yard-listing-hooks";
 
 type ParsedListing = {
   listingKind: ListingKind;
@@ -407,6 +408,8 @@ export async function createListing(formData: FormData) {
   await syncListingLocalYardAlerts(created.id);
   await syncListingToWooCommerce(created.id);
 
+  await afterMarketplaceListingPersisted(session.user.id, created.id, { wasLive: false });
+
   redirect(`/dashboard?justAdded=${encodeURIComponent(created.id)}`);
 }
 
@@ -549,6 +552,8 @@ export async function updateListing(id: string, formData: FormData) {
 
   await syncListingLocalYardAlerts(id);
   await syncListingToWooCommerce(id);
+
+  await afterMarketplaceListingPersisted(session.user.id, id, { wasLive });
 
   redirect("/dashboard");
 }

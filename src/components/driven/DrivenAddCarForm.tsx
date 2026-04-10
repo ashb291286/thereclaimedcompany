@@ -45,21 +45,37 @@ export function DrivenAddCarForm({ error }: { error?: string | null }) {
     try {
       const res = await fetch(`/api/driven/dvla?reg=${encodeURIComponent(reg.trim())}`);
       const data = (await res.json()) as {
+        error?: string;
         make?: string | null;
         model?: string | null;
         year?: number | null;
         colour?: string | null;
         source?: string;
+        fuelType?: string | null;
+        motStatus?: string | null;
       };
+      if (!res.ok) {
+        setLookupStatus(data.error ?? "Lookup failed — enter details manually.");
+        return;
+      }
       const mk = document.getElementById("driven-make") as HTMLInputElement | null;
       const md = document.getElementById("driven-model") as HTMLInputElement | null;
       const yr = document.getElementById("driven-year") as HTMLInputElement | null;
       const cl = document.getElementById("driven-colour") as HTMLInputElement | null;
       if (mk && data.make) mk.value = data.make;
       if (md && data.model) md.value = data.model;
-      if (yr && data.year) yr.value = String(data.year);
+      if (yr && data.year != null) yr.value = String(data.year);
       if (cl && data.colour) cl.value = data.colour;
-      setLookupStatus(data.source === "mock" ? "Filled from demo lookup (set DVLA_API_KEY for live data)." : "Lookup complete.");
+      if (data.source === "mock") {
+        setLookupStatus("Filled from demo lookup (set DVLA_API_KEY for live DVLA data).");
+      } else {
+        const extra = [data.fuelType, data.motStatus].filter(Boolean).join(" · ");
+        setLookupStatus(
+          extra
+            ? `DVLA data applied. Model is not provided by DVLA — add it below. (${extra})`
+            : "DVLA data applied. Model is not provided by DVLA — add it below."
+        );
+      }
     } catch {
       setLookupStatus("Lookup failed — enter details manually.");
     }

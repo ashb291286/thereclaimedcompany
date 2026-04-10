@@ -7,7 +7,7 @@ export function publicSellerPath(input: {
   yardSlug: string | null | undefined;
 }): string {
   if (input.role === "reclamation_yard" && input.yardSlug) {
-    return `/reclamation-yard/${input.yardSlug}`;
+    return `/yards/${input.yardSlug}`;
   }
   return `/sellers/${input.sellerId}`;
 }
