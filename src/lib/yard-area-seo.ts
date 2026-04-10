@@ -80,6 +80,7 @@ export async function getYardsInAreaBySlug(areaSlug: string): Promise<{
       postcode: true,
       adminDistrict: true,
       region: true,
+      postcodeLocality: true,
       yardTagline: true,
     },
     orderBy: { displayName: "asc" },
