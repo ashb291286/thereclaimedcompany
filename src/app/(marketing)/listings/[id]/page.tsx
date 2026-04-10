@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { auth } from "@/auth";
 import { ListingCheckoutActions } from "./ListingCheckoutActions";
 import { HaggleForm } from "./HaggleForm";
@@ -31,6 +30,7 @@ import { ListingLocalYardsForOwner } from "@/components/ListingLocalYardsForOwne
 import { ListingPricingMode } from "@/lib/listing-client-enums";
 import { DisplayPrice } from "@/components/currency/DisplayPrice";
 import { AuctionWinCheckoutButton } from "./AuctionWinCheckoutButton";
+import { ListingImageGallery } from "./ListingImageGallery";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -294,34 +294,19 @@ export default async function ListingPage({
         <div className="min-w-0 flex-1 lg:max-w-[min(100%,calc(100%-22rem))]">
           <div className={`${sectionClass} p-4 sm:p-5`}>
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Photos</p>
-            <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-100">
-              {listing.images[0] ? (
-                <Image
-                  src={listing.images[0]}
-                  alt={listing.title}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-zinc-500">
-                  No image
-                </div>
-              )}
-            </div>
-            {listing.images.length > 1 && (
-              <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-                {listing.images.slice(1, 5).map((url) => (
-                  <div
-                    key={url}
-                    className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100"
-                  >
-                    <Image src={url} alt="" fill className="object-cover" unoptimized />
-                  </div>
-                ))}
-              </div>
-            )}
+            <ListingImageGallery images={listing.images} title={listing.title} />
           </div>
+
+          <section className={`${sectionClass} mt-5 sm:mt-6`}>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">About this item</h2>
+            {carbonImpact ? (
+              <p className="mt-4 text-sm leading-relaxed text-emerald-900/90">{carbonSeoSentence(carbonImpact)}</p>
+            ) : null}
+            <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-zinc-700">
+              {listing.description}
+            </p>
+          </section>
+
           {carbonImpact ? (
             <div className="mt-5 sm:mt-6">
               <CarbonBadge impact={carbonImpact} />
@@ -758,16 +743,6 @@ export default async function ListingPage({
         )}
         </aside>
       </div>
-
-      <section className={`${sectionClass} mt-10 max-w-4xl`}>
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">About this item</h2>
-        {carbonImpact ? (
-          <p className="mt-4 text-sm leading-relaxed text-emerald-900/90">{carbonSeoSentence(carbonImpact)}</p>
-        ) : null}
-        <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-zinc-700">
-          {listing.description}
-        </p>
-      </section>
     </div>
   );
 }
