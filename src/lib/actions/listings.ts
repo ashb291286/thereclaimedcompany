@@ -20,6 +20,7 @@ import {
 } from "@/lib/delivery-carriers";
 import { computeListingCarbonSnapshot } from "@/lib/carbon/listing";
 import { syncListingLocalYardAlerts } from "@/lib/listing-local-yard-alerts";
+import { syncListingToWooCommerce } from "@/lib/listing-woocommerce-sync";
 
 type ParsedListing = {
   listingKind: ListingKind;
@@ -544,6 +545,7 @@ export async function updateListing(id: string, formData: FormData) {
   });
 
   await syncListingLocalYardAlerts(id);
+  await syncListingToWooCommerce(id);
 
   redirect("/dashboard");
 }

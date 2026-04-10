@@ -224,6 +224,10 @@ model Category {
   children  Category[] @relation("CategoryHierarchy")
   listings  Listing[]
   wantedAds WantedAd[]
+  /// When true, new/updated active marketplace listings in this category sync to WooCommerce as external (affiliate) products.
+  wooCommerceSyncEnabled  Boolean @default(false)
+  /// WooCommerce product category term ID (integer) assigned to synced products.
+  wooCommerceCategoryId   Int?
 }
 
 // ---- Listings ----
@@ -337,6 +341,10 @@ model Listing {
   seenOnScreenProductions String[] @default([])
   propListingStatus      PropListingStatus @default(DRAFT)
   publishedAt            DateTime?
+  /// WooCommerce external product ID when synced (see Category.wooCommerceSyncEnabled).
+  wooCommerceProductId   Int?      @unique
+  wooCommerceSyncedAt    DateTime?
+  wooCommerceLastError   String?   @db.Text
   createdAt            DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
