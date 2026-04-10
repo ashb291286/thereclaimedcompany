@@ -88,6 +88,7 @@ function mapDbToViewModel(args: {
     year: v.year,
     colour: v.colour,
     mileage: v.mileage,
+    imageUrls: [...v.imageUrls],
     reservePrice: args.reservePrice,
     currentBid: args.currentBid,
     bidCount: args.bidCount,
