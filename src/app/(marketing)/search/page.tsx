@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { SearchForm } from "./SearchForm";
+import { BrowseSortSelect } from "./BrowseSortSelect";
 import { BuyerWelcomeModal } from "./BuyerWelcomeModal";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { parseBrowseRadiusParam } from "@/lib/browse-radius";
