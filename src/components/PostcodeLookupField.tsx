@@ -37,6 +37,9 @@ export function PostcodeLookupField({
   className = "",
   "aria-describedby": ariaDescribedBy,
   onValueChange,
+  showDefaultAssistiveText = true,
+  dataSearchPostcode,
+  onKeyDown,
 }: Props) {
   const onValueChangeRef = useRef(onValueChange);
   useEffect(() => {
@@ -143,7 +146,7 @@ export function PostcodeLookupField({
           if (value.trim().length >= 2) runSuggest(value);
         }}
         onKeyDown={(e) => {
-          onKeyDownProp?.(e);
+          onKeyDown?.(e);
         }}
         onBlur={() => {
           setTimeout(() => setOpen(false), 200);
