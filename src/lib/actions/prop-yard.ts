@@ -255,6 +255,7 @@ export async function createPropOnlyListingAndOfferAction(formData: FormData): P
         lng: p.lng,
         adminDistrict: p.adminDistrict,
         region: p.region,
+        postcodeLocality: p.postcodeLocality,
         images,
         status: ListingStatus.active,
         listingKind: "sell",
@@ -460,6 +461,7 @@ export async function createPropComprehensiveListingAction(formData: FormData): 
       lng: resolvedPostcode?.lng ?? null,
       adminDistrict: resolvedPostcode?.adminDistrict ?? null,
       region: resolvedPostcode?.region ?? null,
+      postcodeLocality: resolvedPostcode?.postcodeLocality ?? null,
     },
   });
 

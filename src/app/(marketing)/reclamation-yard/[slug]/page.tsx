@@ -8,6 +8,7 @@ import { OpeningHoursBlock } from "@/components/OpeningHoursBlock";
 import { buildYardStoreJsonLd, getSiteUrl } from "@/lib/yard-json-ld";
 import { scheduleFromDbField } from "@/lib/opening-hours";
 import { parseYardSocialJson } from "@/lib/yard-social";
+import { formatUkLocationLine } from "@/lib/postcode-uk";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -30,7 +31,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!profile) return { title: "Yard not found" };
 
   const titleName = profile.businessName?.trim() || profile.displayName;
-  const place = [profile.adminDistrict, profile.region, profile.postcode].filter(Boolean).join(", ");
+  const place = formatUkLocationLine({
+    postcodeLocality: profile.postcodeLocality,
+    adminDistrict: profile.adminDistrict,
+    region: profile.region,
+    postcode: profile.postcode,
+  });
   const title = `${titleName} | Reclamation yard${place ? ` · ${place}` : ""} | Reclaimed Marketplace`;
   const descSource =
     profile.yardAbout?.trim() ||
@@ -89,7 +95,12 @@ export default async function ReclamationYardPublicPage({ params }: Props) {
   const seller = profile.user;
   const listings = seller.listings;
   const displayTitle = profile.businessName?.trim() || profile.displayName;
-  const placeLine = [profile.adminDistrict, profile.region].filter(Boolean).join(" · ");
+  const placeLine = formatUkLocationLine({
+    postcodeLocality: profile.postcodeLocality,
+    adminDistrict: profile.adminDistrict,
+    region: profile.region,
+    postcode: profile.postcode,
+  });
   const social = parseYardSocialJson(profile.yardSocialJson);
   const sameAs = [
     social.instagram,

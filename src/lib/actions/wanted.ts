@@ -39,6 +39,7 @@ export async function createWantedAd(formData: FormData) {
   let lng: number | null = null;
   let adminDistrict: string | null = null;
   let region: string | null = null;
+  let postcodeLocality: string | null = null;
   if (postcodeRaw) {
     const resolved = await lookupUkPostcode(postcodeRaw);
     if (!resolved) {
@@ -52,6 +53,7 @@ export async function createWantedAd(formData: FormData) {
     lng = resolved.lng;
     adminDistrict = resolved.adminDistrict;
     region = resolved.region;
+    postcodeLocality = resolved.postcodeLocality;
   }
 
   const wanted = await prisma.wantedAd.create({
@@ -65,6 +67,7 @@ export async function createWantedAd(formData: FormData) {
       lng,
       adminDistrict,
       region,
+      postcodeLocality,
       budgetMaxPence,
       status: "active",
     },

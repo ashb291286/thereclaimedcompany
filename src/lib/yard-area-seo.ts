@@ -55,6 +55,7 @@ export type YardInArea = {
   postcode: string;
   adminDistrict: string | null;
   region: string | null;
+  postcodeLocality: string | null;
   yardTagline: string | null;
 };
 
@@ -98,6 +99,7 @@ export async function getYardsInAreaBySlug(areaSlug: string): Promise<{
         postcode: p.postcode,
         adminDistrict: p.adminDistrict,
         region: p.region,
+        postcodeLocality: p.postcodeLocality,
         yardTagline: p.yardTagline,
       });
       if (!label) label = d;

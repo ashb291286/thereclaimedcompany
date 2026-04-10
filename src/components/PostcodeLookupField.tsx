@@ -6,6 +6,7 @@ type Suggestion = {
   postcode: string;
   adminDistrict: string | null;
   region: string | null;
+  postcodeLocality: string | null;
 };
 
 type Props = {
@@ -105,7 +106,8 @@ export function PostcodeLookupField({
   }, [optional]);
 
   function pickSuggestion(s: Suggestion) {
-    const line = [s.adminDistrict, s.region].filter(Boolean).join(", ");
+    const line =
+      s.postcodeLocality?.trim() || [s.adminDistrict, s.region].filter(Boolean).join(", ");
     setValue(s.postcode);
     onValueChangeRef.current?.(s.postcode);
     setSuggestions([]);
@@ -153,7 +155,8 @@ export function PostcodeLookupField({
           role="listbox"
         >
           {suggestions.map((s) => {
-            const sub = [s.adminDistrict, s.region].filter(Boolean).join(", ");
+            const sub =
+              s.postcodeLocality?.trim() || [s.adminDistrict, s.region].filter(Boolean).join(", ");
             return (
               <li key={s.postcode} role="option">
                 <button

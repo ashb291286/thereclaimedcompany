@@ -126,6 +126,7 @@ export async function createDemolitionProjectAction(formData: FormData): Promise
       lng: resolved.lng,
       adminDistrict: resolved.adminDistrict,
       region: resolved.region,
+      postcodeLocality: resolved.postcodeLocality,
       accessWhereWhen,
       conditionsGeneral,
       images,

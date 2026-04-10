@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
+import { formatUkLocationLine } from "@/lib/postcode-uk";
 
 export const metadata: Metadata = {
   title: "Demolition & refurb alerts | Salvage lots before they go to waste",
@@ -74,12 +75,19 @@ export default async function DemolitionAlertsPage() {
                     <h2 className="font-semibold text-zinc-900">{p.title}</h2>
                     <p className="mt-1 line-clamp-2 text-sm text-zinc-600">{p.description}</p>
                     <p className="mt-2 text-xs text-zinc-500">
-                      {p.postcode}
-                      {p.adminDistrict ? ` · ${p.adminDistrict}` : ""}
-                      {" · "}
-                      {p.elements.length} lot{p.elements.length === 1 ? "" : "s"}
-                      {avail > 0 ? ` · ${avail} available` : ""}
-                      {reserved > 0 ? ` · ${reserved} reserved` : ""}
+                      {[
+                        formatUkLocationLine({
+                          postcodeLocality: p.postcodeLocality,
+                          adminDistrict: p.adminDistrict,
+                          region: p.region,
+                          postcode: p.postcode,
+                        }),
+                        `${p.elements.length} lot${p.elements.length === 1 ? "" : "s"}`,
+                        avail > 0 ? `${avail} available` : "",
+                        reserved > 0 ? `${reserved} reserved` : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                   </div>
                 </Link>

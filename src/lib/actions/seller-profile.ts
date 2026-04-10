@@ -98,6 +98,7 @@ export async function updateYardProfileAction(formData: FormData): Promise<void>
       lng: resolvedPostcode.lng,
       adminDistrict: resolvedPostcode.adminDistrict,
       region: resolvedPostcode.region,
+      postcodeLocality: resolvedPostcode.postcodeLocality,
       yardSlug: slugResult.slug,
       yardTagline,
       yardAbout,

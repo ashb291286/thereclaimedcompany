@@ -377,6 +377,7 @@ export async function createListing(formData: FormData) {
       lng: resolvedPostcode.lng,
       adminDistrict: resolvedPostcode.adminDistrict,
       region: resolvedPostcode.region,
+      postcodeLocality: resolvedPostcode.postcodeLocality,
       images,
       listingKind,
       freeToCollector,
@@ -404,6 +405,7 @@ export async function createListing(formData: FormData) {
   });
 
   await syncListingLocalYardAlerts(created.id);
+  await syncListingToWooCommerce(created.id);
 
   redirect(`/dashboard?justAdded=${encodeURIComponent(created.id)}`);
 }
@@ -518,6 +520,7 @@ export async function updateListing(id: string, formData: FormData) {
       lng: resolvedPostcode.lng,
       adminDistrict: resolvedPostcode.adminDistrict,
       region: resolvedPostcode.region,
+      postcodeLocality: resolvedPostcode.postcodeLocality,
       images,
       listingKind,
       freeToCollector,

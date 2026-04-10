@@ -9,6 +9,7 @@ import {
   expressDemolitionInterestAction,
 } from "@/lib/actions/demolition-alerts";
 import { formatDemolitionPricePence } from "@/lib/demolition-display";
+import { formatUkLocationLine } from "@/lib/postcode-uk";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -78,8 +79,13 @@ export default async function DemolitionAlertDetailPage({ params, searchParams }
 
       <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900">{project.title}</h1>
       <p className="mt-2 text-sm text-zinc-500">
-        Organised by {organizerLabel} · {project.postcode}
-        {project.adminDistrict ? ` · ${project.adminDistrict}` : ""}
+        Organised by {organizerLabel} ·{" "}
+        {formatUkLocationLine({
+          postcodeLocality: project.postcodeLocality,
+          adminDistrict: project.adminDistrict,
+          region: project.region,
+          postcode: project.postcode,
+        })}
       </p>
 
       {project.images.length > 0 ? (

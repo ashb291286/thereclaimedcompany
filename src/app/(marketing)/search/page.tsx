@@ -8,6 +8,7 @@ import { SearchForm } from "./SearchForm";
 import { BuyerWelcomeModal } from "./BuyerWelcomeModal";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { searchListings } from "@/lib/listing-search";
+import { formatUkLocationLine } from "@/lib/postcode-uk";
 import { formatMiles } from "@/lib/geo";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat, vatLabelSuffix } from "@/lib/vat-pricing";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
@@ -54,15 +55,9 @@ export default async function SearchPage({
   searchParams: Promise<{
     q?: string;
     categoryId?: string;
-    condition?: string;
     postcode?: string;
     radius?: string;
     sellerType?: string;
-    conditionGrade?: string;
-    era?: string;
-    genre?: string;
-    setting?: string;
-    material?: string;
     hireOnly?: string;
     availableNow?: string;
     page?: string;
@@ -106,13 +101,7 @@ export default async function SearchPage({
     searchListings({
       q: params.q,
       categoryId: params.categoryId,
-      condition: params.condition,
       sellerType: params.sellerType,
-      conditionGrade: params.conditionGrade,
-      eraCsv: params.era,
-      genreCsv: params.genre,
-      settingCsv: params.setting,
-      materialCsv: params.material,
       hireOnly: params.hireOnly === "1",
       availableNow: params.availableNow === "1",
       postcode: params.postcode,
@@ -152,15 +141,9 @@ export default async function SearchPage({
   const paramRecord: Record<string, string | undefined> = {
     q: params.q,
     categoryId: params.categoryId,
-    condition: params.condition,
     postcode: params.postcode,
     radius: params.radius ?? (params.postcode?.trim() ? String(radiusMiles) : undefined),
     sellerType: params.sellerType,
-    conditionGrade: params.conditionGrade,
-    era: yardsBrowse ? undefined : params.era,
-    genre: yardsBrowse ? undefined : params.genre,
-    setting: params.setting,
-    material: yardsBrowse ? undefined : params.material,
     hireOnly: params.hireOnly,
     availableNow: params.availableNow,
     ids: params.ids,
@@ -232,7 +215,7 @@ export default async function SearchPage({
         <aside className="lg:sticky lg:top-24">
           {fromImage ? (
             <p className="mb-3 rounded-lg border border-brand/20 bg-brand-soft px-4 py-3 text-sm text-zinc-900">
-              Showing listings ranked by visual similarity to your photo. Add keywords or filters below to narrow results.
+              Showing listings ranked by visual similarity to your photo. Use location, keywords, or category below to narrow results.
             </p>
           ) : null}
           <SearchForm
@@ -240,16 +223,10 @@ export default async function SearchPage({
             categories={categories}
             defaultQ={params.q}
             defaultCategoryId={params.categoryId}
-            defaultCondition={params.condition}
             defaultPostcode={params.postcode?.trim() ? params.postcode : userPrefs?.homePostcode ?? undefined}
             defaultRadius={String(radiusMiles)}
             defaultSellerType={params.sellerType}
-        defaultConditionGrade={params.conditionGrade}
-        defaultEra={params.era}
-        defaultGenre={params.genre}
-        defaultSetting={params.setting}
-        defaultMaterial={params.material}
-        defaultHireOnly={params.hireOnly === "1"}
+            defaultHireOnly={params.hireOnly === "1"}
             defaultAvailableNow={params.availableNow === "1"}
             yardsBrowseMode={yardsBrowse}
           />
@@ -292,15 +269,9 @@ export default async function SearchPage({
                 query={{
                   q: params.q,
                   categoryId: params.categoryId,
-                  condition: params.condition,
                   postcode: params.postcode,
                   radius: params.radius ?? (params.postcode?.trim() ? String(radiusMiles) : undefined),
                   sellerType: params.sellerType,
-                  conditionGrade: params.conditionGrade,
-                  era: yardsBrowse ? undefined : params.era,
-                  genre: yardsBrowse ? undefined : params.genre,
-                  setting: params.setting,
-                  material: yardsBrowse ? undefined : params.material,
                   hireOnly: params.hireOnly,
                   availableNow: params.availableNow,
                   ids: params.ids,
@@ -377,12 +348,17 @@ export default async function SearchPage({
                             categoryName={l.category.name}
                             conditionExtra={l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
                           />
-                          {(l.adminDistrict || l.region || l.postcode) && (
-                            <p className="mt-1 truncate text-xs text-zinc-500">
-                              {[l.adminDistrict, l.region].filter(Boolean).join(" · ")}
-                              {l.postcode ? ` · ${l.postcode}` : ""}
-                            </p>
-                          )}
+                          {(() => {
+                            const locLine = formatUkLocationLine({
+                              postcodeLocality: l.postcodeLocality,
+                              adminDistrict: l.adminDistrict,
+                              region: l.region,
+                              postcode: l.postcode,
+                            });
+                            return locLine ? (
+                              <p className="mt-1 truncate text-xs text-zinc-500">{locLine}</p>
+                            ) : null;
+                          })()}
                           {impact ? (
                             <div className="mt-2">
                               <CarbonBadge impact={impact} variant="compact" />

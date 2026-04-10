@@ -10,6 +10,7 @@ import { parseYardSocialJson } from "@/lib/yard-social";
 import { publicSellerPath } from "@/lib/yard-public-path";
 import { getSiteUrl } from "@/lib/yard-json-ld";
 import { PostcodeLookupField } from "@/components/PostcodeLookupField";
+import { formatUkLocationLine } from "@/lib/postcode-uk";
 
 export default async function SellerProfileSettingsPage({
   searchParams,
@@ -158,11 +159,15 @@ export default async function SellerProfileSettingsPage({
             required
             placeholder="e.g. M1 1AE"
           />
-          {(profile.adminDistrict || profile.region) && (
+          {(profile.postcodeLocality || profile.adminDistrict || profile.region || profile.postcode) && (
             <p className="text-xs text-zinc-600">
               <span className="font-medium text-zinc-800">Shown to visitors:</span>{" "}
-              {[profile.adminDistrict, profile.region].filter(Boolean).join(" · ")}
-              {profile.postcode ? ` · ${profile.postcode}` : ""}
+              {formatUkLocationLine({
+                postcodeLocality: profile.postcodeLocality,
+                adminDistrict: profile.adminDistrict,
+                region: profile.region,
+                postcode: profile.postcode,
+              })}
             </p>
           )}
         </section>

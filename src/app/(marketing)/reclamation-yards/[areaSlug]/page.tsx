@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAllYardAreaSlugs, getYardsInAreaBySlug } from "@/lib/yard-area-seo";
 import { publicSellerPath } from "@/lib/yard-public-path";
+import { formatUkLocationLine } from "@/lib/postcode-uk";
 
 type Props = { params: Promise<{ areaSlug: string }> };
 
@@ -60,7 +61,12 @@ export default async function ReclamationYardsAreaPage({ params }: Props) {
             role: "reclamation_yard",
             yardSlug: y.yardSlug,
           });
-          const sub = [y.adminDistrict, y.region].filter(Boolean).join(" · ");
+          const locLine = formatUkLocationLine({
+            postcodeLocality: y.postcodeLocality,
+            adminDistrict: y.adminDistrict,
+            region: y.region,
+            postcode: y.postcode,
+          });
           return (
             <li key={y.userId}>
               <Link
@@ -72,9 +78,7 @@ export default async function ReclamationYardsAreaPage({ params }: Props) {
                   <p className="text-sm text-zinc-600">{y.businessName}</p>
                 ) : null}
                 {y.yardTagline ? <p className="mt-2 text-sm text-zinc-600">{y.yardTagline}</p> : null}
-                <p className="mt-2 text-xs text-zinc-500">
-                  {[sub, y.postcode].filter(Boolean).join(" · ")}
-                </p>
+                <p className="mt-2 text-xs text-zinc-500">{locLine}</p>
               </Link>
             </li>
           );

@@ -6,6 +6,7 @@ import { TestimonialMarqueeFeed } from "./TestimonialMarqueeFeed";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
+import { formatUkLocationLine } from "@/lib/postcode-uk";
 
 function auctionCountdownLabel(endsAt: Date | null): string | null {
   if (!endsAt) return null;
@@ -231,8 +232,12 @@ export default async function HomePage() {
                     >
                       <p className="line-clamp-2 font-semibold text-zinc-900">{d.title}</p>
                       <p className="mt-2 text-xs text-zinc-600">
-                        {d.postcode}
-                        {d.adminDistrict ? ` · ${d.adminDistrict}` : ""}
+                        {formatUkLocationLine({
+                          postcodeLocality: d.postcodeLocality,
+                          adminDistrict: d.adminDistrict,
+                          region: d.region,
+                          postcode: d.postcode,
+                        })}
                       </p>
                       <p className="mt-2 text-xs font-medium text-amber-900">
                         {d.elements.length} lot{d.elements.length === 1 ? "" : "s"}

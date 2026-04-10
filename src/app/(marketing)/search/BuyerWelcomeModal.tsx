@@ -114,7 +114,7 @@ export function BuyerWelcomeModal({ open }: { open: boolean }) {
             <ul className="mt-4 space-y-3 text-sm text-zinc-700">
               <li className="flex gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
-                <span>Use filters on the left to narrow by category, condition, era, materials, and more.</span>
+                <span>Use filters on the left to narrow by location, category, keywords, and more.</span>
               </li>
               <li className="flex gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />

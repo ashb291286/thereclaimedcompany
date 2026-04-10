@@ -24,6 +24,7 @@ export async function saveBuyerHomePostcode(rawPostcode: string) {
       homeLng: lookup.lng,
       homeAdminDistrict: lookup.adminDistrict,
       homeRegion: lookup.region,
+      homePostcodeLocality: lookup.postcodeLocality,
       buyerWelcomeCompletedAt: new Date(),
     },
   });

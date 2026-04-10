@@ -77,6 +77,7 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
         lng: resolved.lng,
         adminDistrict: resolved.adminDistrict,
         region: resolved.region,
+        postcodeLocality: resolved.postcodeLocality,
         businessName: sellerType === "reclamation_yard" ? (businessName?.trim() || null) : null,
         openingHours: null,
         openingHoursSchedule,

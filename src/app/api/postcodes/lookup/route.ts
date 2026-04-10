@@ -1,4 +1,4 @@
-import { lookupUkPostcode, formatUkAreaLine } from "@/lib/postcode-uk";
+import { lookupUkPostcode, formatUkAreaLine, formatUkLocationLine } from "@/lib/postcode-uk";
 import { NextRequest, NextResponse } from "next/server";
 
 /** Public read-only: validate postcode and return coordinates + area labels (postcodes.io). */
@@ -15,6 +15,13 @@ export async function GET(req: NextRequest) {
     lng: result.lng,
     adminDistrict: result.adminDistrict,
     region: result.region,
+    postcodeLocality: result.postcodeLocality,
     areaLine: formatUkAreaLine(result),
+    locationLine: formatUkLocationLine({
+      postcodeLocality: result.postcodeLocality,
+      adminDistrict: result.adminDistrict,
+      region: result.region,
+      postcode: result.postcode,
+    }),
   });
 }

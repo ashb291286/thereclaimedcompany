@@ -30,6 +30,7 @@ import { ListingLocalYardsForOwner } from "@/components/ListingLocalYardsForOwne
 import { ListingPricingMode } from "@/lib/listing-client-enums";
 import { DisplayPrice } from "@/components/currency/DisplayPrice";
 import { AuctionWinCheckoutButton } from "./AuctionWinCheckoutButton";
+import { formatUkLocationLine } from "@/lib/postcode-uk";
 import { ListingImageGallery } from "./ListingImageGallery";
 import type { Metadata } from "next";
 
@@ -390,17 +391,20 @@ export default async function ListingPage({
             <p className="mt-3 text-sm text-zinc-500">
               {listing.category.name} · {CONDITION_LABELS[listing.condition]}
             </p>
-            {(listing.postcode || listing.adminDistrict || listing.region) && (
-              <p className="mt-3 border-t border-zinc-100 pt-3 text-sm text-zinc-600">
-                <span className="font-medium text-zinc-800">Location</span>
-                <span className="mt-1 block">
-                  {[listing.adminDistrict, listing.region].filter(Boolean).join(" · ")}
-                  {listing.postcode
-                    ? `${listing.adminDistrict || listing.region ? " · " : ""}${listing.postcode}`
-                    : ""}
-                </span>
-              </p>
-            )}
+            {(() => {
+              const locLine = formatUkLocationLine({
+                postcodeLocality: listing.postcodeLocality,
+                adminDistrict: listing.adminDistrict,
+                region: listing.region,
+                postcode: listing.postcode,
+              });
+              return locLine ? (
+                <p className="mt-3 border-t border-zinc-100 pt-3 text-sm text-zinc-600">
+                  <span className="font-medium text-zinc-800">Location</span>
+                  <span className="mt-1 block">{locLine}</span>
+                </p>
+              ) : null;
+            })()}
           </section>
 
           <section className={sectionClass}>
@@ -722,11 +726,17 @@ export default async function ListingPage({
               {sellerProfile.businessName && ` · ${sellerProfile.businessName}`}
             </Link>
             <p className="mt-2 text-sm text-zinc-500">
-              {[sellerProfile.adminDistrict, sellerProfile.region].filter(Boolean).join(" · ")}
-              {sellerProfile.postcode
-                ? `${sellerProfile.adminDistrict || sellerProfile.region ? " · " : ""}${sellerProfile.postcode}`
-                : ""}
-              {sellerHoursLine ? ` · ${sellerHoursLine}` : ""}
+              {[
+                formatUkLocationLine({
+                  postcodeLocality: sellerProfile.postcodeLocality,
+                  adminDistrict: sellerProfile.adminDistrict,
+                  region: sellerProfile.region,
+                  postcode: sellerProfile.postcode,
+                }),
+                sellerHoursLine,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
             {listing.seller?.role === "reclamation_yard" &&
             (sellerProfile.openingHoursSchedule != null || sellerProfile.openingHours) ? (

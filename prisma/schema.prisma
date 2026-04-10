@@ -117,6 +117,8 @@ model User {
   homeLng              Float?
   homeAdminDistrict    String?
   homeRegion           String?
+  /// Town / built-up area label from postcodes.io (bua or ttwa) for friendlier UI than council name.
+  homePostcodeLocality String?
   buyerWelcomeCompletedAt DateTime?
 
   stripeCustomerId     String? @unique // platform Customer for saved auction payment method
@@ -175,8 +177,9 @@ model SellerProfile {
   postcode          String
   lat               Float?
   lng               Float?
-  adminDistrict     String?   // town / borough (postcodes.io admin_district)
+  adminDistrict     String?   // council / borough (postcodes.io admin_district)
   region            String?   // e.g. England region / London
+  postcodeLocality  String?   // town / BUA / TTWA from postcodes.io — shown to users
   openingHours         String?  // legacy free text (optional fallback)
   openingHoursSchedule Json?    // structured Mon–Sun for reclamation yards
   yardSlug             String?  @unique // public SEO URL for reclamation yards only
@@ -246,6 +249,7 @@ model Listing {
   lng               Float?
   adminDistrict     String?
   region            String?
+  postcodeLocality  String?  // town / BUA label for browse cards (postcodes.io)
   images            String[] // blob URLs
   status            ListingStatus @default(draft)
   listingKind       ListingKind   @default(sell)
@@ -672,8 +676,9 @@ model WantedAd {
   postcode       String?
   lat            Float?
   lng            Float?
-  adminDistrict  String?
-  region         String?
+  adminDistrict     String?
+  region            String?
+  postcodeLocality  String?
   status         WantedAdStatus @default(active)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -697,6 +702,7 @@ model DemolitionProject {
   lng                 Float?
   adminDistrict       String?
   region              String?
+  postcodeLocality    String?
   /// Site access: where to meet, gate times, induction, etc.
   accessWhereWhen     String?                 @db.Text
   /// Insurance, method statements, general strip-out rules.

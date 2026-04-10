@@ -16,6 +16,8 @@ export type UkPostcodeLookup = {
   adminCounty: string | null;
   region: string | null;
   parish: string | null;
+  /** Built-up area or travel-to-work area name — friendlier than admin_district (e.g. Halifax vs Calderdale). */
+  postcodeLocality: string | null;
 };
 
 type PostcodesIoResultRow = {
@@ -26,6 +28,8 @@ type PostcodesIoResultRow = {
   admin_county?: string | null;
   region?: string | null;
   parish?: string | null;
+  bua?: string | null;
+  ttwa?: string | null;
 };
 
 type PostcodesIoSingle = {
@@ -38,6 +42,21 @@ type PostcodesIoQuery = {
   result?: PostcodesIoResultRow[];
 };
 
+/** Prefer human BUA name; fall back to TTWA (e.g. Scotland where bua is often null). */
+function postcodeLocalityFromRow(r: PostcodesIoResultRow): string | null {
+  const bua = r.bua;
+  if (typeof bua === "string") {
+    const t = bua.trim();
+    if (t.length > 0) return t;
+  }
+  const ttwa = r.ttwa;
+  if (typeof ttwa === "string") {
+    const t = ttwa.trim();
+    if (t.length > 0) return t;
+  }
+  return null;
+}
+
 function mapResult(r: PostcodesIoResultRow): UkPostcodeLookup {
   return {
     postcode: r.postcode,
@@ -47,6 +66,7 @@ function mapResult(r: PostcodesIoResultRow): UkPostcodeLookup {
     adminCounty: r.admin_county ?? null,
     region: r.region ?? null,
     parish: r.parish ?? null,
+    postcodeLocality: postcodeLocalityFromRow(r),
   };
 }
 
@@ -77,6 +97,7 @@ export type UkPostcodeSuggestion = {
   postcode: string;
   adminDistrict: string | null;
   region: string | null;
+  postcodeLocality: string | null;
 };
 
 /**
@@ -102,11 +123,38 @@ export async function suggestUkPostcodes(query: string, limit = 8): Promise<UkPo
     postcode: r.postcode,
     adminDistrict: r.admin_district ?? null,
     region: r.region ?? null,
+    postcodeLocality: postcodeLocalityFromRow(r),
   }));
 }
 
-/** Human-readable area line for UI, e.g. "Westminster · London". */
-export function formatUkAreaLine(lookup: Pick<UkPostcodeLookup, "adminDistrict" | "region">): string {
+type AreaFields = Pick<UkPostcodeLookup, "postcodeLocality" | "adminDistrict" | "region">;
+
+/**
+ * Short area line for hints and API: town/BUA when available, else council · region.
+ */
+export function formatUkAreaLine(lookup: AreaFields): string {
+  const loc = lookup.postcodeLocality?.trim();
+  if (loc) return loc;
   const parts = [lookup.adminDistrict, lookup.region].filter(Boolean);
   return parts.join(" · ");
+}
+
+/**
+ * One line for listing cards and detail: area + postcode (e.g. "Halifax · HX1 1QE").
+ */
+export function formatUkLocationLine(p: {
+  postcodeLocality?: string | null;
+  adminDistrict?: string | null;
+  region?: string | null;
+  postcode?: string | null;
+}): string {
+  const area = formatUkAreaLine({
+    postcodeLocality: p.postcodeLocality ?? null,
+    adminDistrict: p.adminDistrict ?? null,
+    region: p.region ?? null,
+  });
+  const pc = p.postcode?.trim();
+  if (area && pc) return `${area} · ${pc}`;
+  if (pc) return pc;
+  return area;
 }
