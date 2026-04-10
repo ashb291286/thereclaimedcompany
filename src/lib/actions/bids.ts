@@ -98,6 +98,18 @@ export async function placeBid(listingId: string, bidPounds: number) {
     });
   }
 
+  const bidDisplayPence = buyerGrossPenceFromSellerNetPence(amountPence, bidChargesVat);
+  const bidDisplay = `£${(bidDisplayPence / 100).toFixed(2)}${bidChargesVat ? " (incl. VAT)" : ""}`;
+  await createNotification({
+    userId: listing.sellerId,
+    type: "auction_new_bid",
+    title: "New bid on your auction",
+    body: `Someone bid ${bidDisplay} on “${listing.title}”.`,
+    linkUrl: `/listings/${listingId}`,
+  });
+
   revalidatePath(`/listings/${listingId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/my-bids");
   return { ok: true as const };
 }

@@ -54,9 +54,12 @@ export function MarketingShell({
                   <Link href="/dashboard" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
                     Dashboard
                   </Link>
-                  <span className="hidden max-w-[10rem] truncate text-sm text-zinc-500 md:block">
-                    {session.user?.email}
-                  </span>
+                  <Link
+                    href="/dashboard/sell"
+                    className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
+                  >
+                    Add Listing
+                  </Link>
                 </>
               ) : (
                 <>

@@ -25,10 +25,13 @@ export function DashboardSidebar({
   isYardAccount,
   carbonAdmin,
   unreadCount,
+  myBidsOutbidUnread = 0,
 }: {
   isYardAccount: boolean;
   carbonAdmin: boolean;
   unreadCount: number;
+  /** Unread “you’ve been outbid” notifications — surfaced on My bids. */
+  myBidsOutbidUnread?: number;
 }) {
   const pathname = usePathname();
 
@@ -37,6 +40,11 @@ export function DashboardSidebar({
     { href: "/dashboard/account", label: "Account management" },
     { href: "/dashboard/sell", label: "Sell" },
     { href: "/dashboard/offers", label: "Offers" },
+    {
+      href: "/dashboard/my-bids",
+      label: "My bids",
+      badge: myBidsOutbidUnread > 0 ? String(Math.min(99, myBidsOutbidUnread)) : null,
+    },
     { href: "/dashboard/wanted", label: "My wanted" },
     { href: "/dashboard/demolition-alerts", label: "Demolition alerts" },
     { href: "/orders", label: "Orders" },

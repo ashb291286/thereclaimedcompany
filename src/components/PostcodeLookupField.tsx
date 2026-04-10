@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEventHandler } from "react";
 
 type Suggestion = {
   postcode: string;
@@ -20,6 +20,11 @@ type Props = {
   "aria-describedby"?: string;
   /** Fired when the postcode value changes (typing, pick, or successful lookup). */
   onValueChange?: (value: string) => void;
+  /** When false, the grey “Start typing for suggestions…” line is omitted unless there is a lookup hint. */
+  showDefaultAssistiveText?: boolean;
+  /** Marks the input for `document.querySelector("[data-search-postcode]")` (e.g. browse Apply button). */
+  dataSearchPostcode?: boolean;
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 };
 
 export function PostcodeLookupField({
@@ -124,6 +129,7 @@ export function PostcodeLookupField({
         required={required}
         autoComplete="postal-code"
         value={value}
+        {...(dataSearchPostcode ? { "data-search-postcode": true } : {})}
         onChange={(e) => {
           const v = e.target.value;
           setValue(v);
@@ -135,6 +141,9 @@ export function PostcodeLookupField({
         }}
         onFocus={() => {
           if (value.trim().length >= 2) runSuggest(value);
+        }}
+        onKeyDown={(e) => {
+          onKeyDownProp?.(e);
         }}
         onBlur={() => {
           setTimeout(() => setOpen(false), 200);
@@ -180,11 +189,11 @@ export function PostcodeLookupField({
         >
           {hint}
         </p>
-      ) : (
+      ) : showDefaultAssistiveText ? (
         <p className="mt-1 text-xs text-zinc-500">
           Start typing for suggestions. Uses free UK postcode data (town / city / region).
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

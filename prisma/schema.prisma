@@ -768,7 +768,7 @@ model DemolitionElementInterest {
 model Notification {
   id        String    @id @default(cuid())
   userId    String
-  type      String // wanted_ad_posted | offer_received | offer_accepted | offer_declined | auction_outbid | auction_won
+  type      String // wanted_ad_posted | offer_* | auction_outbid | auction_new_bid | auction_won | auction_ended_* …
   title     String
   body      String
   linkUrl   String?

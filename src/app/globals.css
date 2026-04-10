@@ -1,4 +1,3 @@
-@import url("https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -9,10 +8,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* Must reference next/font variables; those are defined on <html> so they resolve everywhere */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: "Satoshi", var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  /* Shared with Driven / Prop Yard (next/font on <html>) */
+  --font-sans: var(--font-driven-body), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-driven-display), ui-serif, Georgia, serif;
+  --font-mono: var(--font-driven-mono), ui-monospace, monospace;
   /* Primary UI (buttons, links, focus) */
   --color-brand: #014e6d;
   --color-brand-hover: #01354a;
@@ -119,7 +118,7 @@
   body {
     background: var(--background);
     color: var(--foreground);
-    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-driven-body), ui-sans-serif, system-ui, sans-serif;
   }
 
   h1,
@@ -128,6 +127,6 @@
   h4,
   h5,
   h6 {
-    font-family: "Satoshi", var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-driven-display), ui-serif, Georgia, serif;
   }
 }

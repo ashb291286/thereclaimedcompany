@@ -236,6 +236,12 @@ export default async function ListingPage({
     session?.user?.id === topBid.bidderId &&
     listing.status === "payment_pending";
 
+  const userLeadingLiveAuction =
+    !!topBid &&
+    session?.user?.id === topBid.bidderId &&
+    auctionLive &&
+    listing.status === "active";
+
   const structuredDelivery: DeliveryOptionStored[] | null =
     Array.isArray(listing.deliveryOptions) && listing.deliveryOptions.length > 0
       ? (listing.deliveryOptions as DeliveryOptionStored[])
@@ -555,6 +561,8 @@ export default async function ListingPage({
                 listingId={listing.id}
                 minimumPounds={minNextPounds}
                 hasBidPaymentMethod={!!buyerBidPay?.bidPaymentMethodId}
+                chargesVat={chargesVat}
+                isLeadingBidder={userLeadingLiveAuction}
               />
             )}
 

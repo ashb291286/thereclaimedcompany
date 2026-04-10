@@ -107,6 +107,7 @@ export default async function DashboardPage({
     localStockPendingCount,
     pendingBuyerOffersAsSeller,
     pendingSellerCountersAsBuyer,
+    auctionBidCounts,
   ] = await Promise.all([
     prisma.sellerProfile.findUnique({ where: { userId: session.user.id } }),
     prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }),
@@ -155,10 +156,18 @@ export default async function DashboardPage({
         buyerId: session.user.id,
       },
     }),
+    prisma.bid.groupBy({
+      by: ["listingId"],
+      where: {
+        listing: { sellerId: session.user.id, listingKind: "auction" },
+      },
+      _count: { _all: true },
+    }),
   ]);
 
   const totalViewsByListing = new Map(viewsTotal.map((v) => [v.listingId, v._count._all]));
   const views7dByListing = new Map(views7d.map((v) => [v.listingId, v._count._all]));
+  const bidCountByListing = new Map(auctionBidCounts.map((x) => [x.listingId, x._count._all]));
 
   const justAddedParam = typeof justAdded === "string" ? justAdded.trim() : "";
   const justAddedRow =
@@ -506,9 +515,23 @@ export default async function DashboardPage({
                     </form>
                     <Link
                       href={`/listings/${l.id}`}
-                      className="rounded-lg border border-zinc-300 px-2 py-1.5 text-center text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                      className={`relative rounded-lg border px-2 py-1.5 text-center text-xs font-medium hover:bg-zinc-50 ${
+                        l.listingKind === "auction" && (bidCountByListing.get(l.id) ?? 0) > 0
+                          ? "border-amber-400 bg-amber-50 text-amber-950 ring-1 ring-amber-200"
+                          : "border-zinc-300 text-zinc-700"
+                      }`}
+                      title={
+                        l.listingKind === "auction" && (bidCountByListing.get(l.id) ?? 0) > 0
+                          ? `${bidCountByListing.get(l.id)} bid(s) — open listing for activity`
+                          : "View listing & stats"
+                      }
                     >
                       Stats
+                      {l.listingKind === "auction" && (bidCountByListing.get(l.id) ?? 0) > 0 ? (
+                        <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-600 px-1 text-[9px] font-bold text-white">
+                          {bidCountByListing.get(l.id)! > 9 ? "9+" : bidCountByListing.get(l.id)}
+                        </span>
+                      ) : null}
                     </Link>
                   </div>
                   {l.propRentalOffer ? (

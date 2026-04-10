@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import type { Condition, Prisma } from "@/generated/prisma/client";
 import { haversineMiles, latLngBoundingBoxMiles } from "@/lib/geo";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
+import { buyerGrossPenceFromSellerNetPence, sellerChargesVat } from "@/lib/vat-pricing";
 
 const searchListingInclude = {
   category: true,
@@ -25,7 +26,11 @@ export type ListingSearchParams = {
   materialCsv?: string;
   hireOnly?: boolean;
   availableNow?: boolean;
+  /** auction | buy_now (fixed-price sell) | free_collect */
+  listingType?: string;
   radiusMiles: number;
+  /** No distance cap when sorting/filtering from a search origin (UK-wide). */
+  radiusNationwide?: boolean;
   idList?: string[];
   skip: number;
   take: number;
@@ -33,10 +38,147 @@ export type ListingSearchParams = {
   viewerHomeLat?: number | null;
   viewerHomeLng?: number | null;
   viewerHomePostcode?: string | null;
+  /** recommended | nearest | price_asc | price_desc | newest (from query string). */
+  sort?: string;
 };
 
+export type BrowseListingSort = "recommended" | "nearest" | "price_asc" | "price_desc" | "newest";
+
+/** Normalise listing type filter for URLs and `<select>` value. */
+export function browseListingTypeQueryParam(raw: string | undefined): string {
+  const v = (raw ?? "").trim();
+  if (v === "auction" || v === "buy_now" || v === "free_collect") return v;
+  return "";
+}
+
+/** Normalise `sort` query for client UI (hides invalid values; nearest when no location). */
+export function browseSortQueryParam(raw: string | undefined, nearestAvailable: boolean): string {
+  const v = (raw ?? "").trim();
+  if (!v) return "";
+  if (v === "nearest" && !nearestAvailable) return "";
+  if (v === "nearest" || v === "price_asc" || v === "price_desc" || v === "newest") return v;
+  return "";
+}
+
+function browseSortPricePenceGbp(l: SearchListingRow): number {
+  const v = sellerChargesVat({
+    sellerRole: l.seller.role,
+    vatRegistered: l.seller.sellerProfile?.vatRegistered,
+  });
+  return buyerGrossPenceFromSellerNetPence(l.price, v);
+}
+
+/** In-memory sort for bbox / id-list results. */
+function sortSearchRows(rows: SearchListingRow[], mode: BrowseListingSort): void {
+  switch (mode) {
+    case "recommended":
+      rows.sort((a, b) => {
+        const at = a.boostedUntil?.getTime() ?? 0;
+        const bt = b.boostedUntil?.getTime() ?? 0;
+        if (at !== bt) return bt - at;
+        return b.updatedAt.getTime() - a.updatedAt.getTime();
+      });
+      break;
+    case "nearest":
+      rows.sort((a, b) => {
+        const da = a.distanceMiles ?? 1e9;
+        const db = b.distanceMiles ?? 1e9;
+        if (da !== db) return da - db;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+      break;
+    case "price_asc":
+      rows.sort(
+        (a, b) =>
+          browseSortPricePenceGbp(a) - browseSortPricePenceGbp(b) || b.createdAt.getTime() - a.createdAt.getTime()
+      );
+      break;
+    case "price_desc":
+      rows.sort(
+        (a, b) =>
+          browseSortPricePenceGbp(b) - browseSortPricePenceGbp(a) || b.createdAt.getTime() - a.createdAt.getTime()
+      );
+      break;
+    case "newest":
+      rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      break;
+    default:
+      break;
+  }
+}
+
+export function parseBrowseSort(raw: string | undefined, canNearest: boolean): BrowseListingSort {
+  if (raw === "nearest" && canNearest) return "nearest";
+  if (raw === "nearest" && !canNearest) return "recommended";
+  if (raw === "price_asc" || raw === "price_desc" || raw === "newest") return raw;
+  return "recommended";
+}
+
+/** All active listings with coordinates, distances from centre (no radius cap). */
+async function fetchListingsAllWithDistance(
+  base: Prisma.ListingWhereInput,
+  centerLat: number,
+  centerLng: number
+): Promise<SearchListingRow[]> {
+  const where: Prisma.ListingWhereInput = {
+    ...base,
+    lat: { not: null },
+    lng: { not: null },
+  };
+  const candidates = await prisma.listing.findMany({
+    where,
+    include: searchListingInclude,
+  });
+  return candidates.map((l) => {
+    const distanceMiles = haversineMiles(centerLat, centerLng, l.lat!, l.lng!);
+    return { ...l, distanceMiles } as SearchListingRow;
+  });
+}
+
+async function fetchListingsInRadiusBbox(
+  base: Prisma.ListingWhereInput,
+  centerLat: number,
+  centerLng: number,
+  radiusMiles: number
+): Promise<SearchListingRow[]> {
+  const bb = latLngBoundingBoxMiles(centerLat, centerLng, radiusMiles);
+  const where: Prisma.ListingWhereInput = {
+    ...base,
+    lat: { not: null },
+    lng: { not: null },
+    AND: [
+      { lat: { gte: bb.minLat, lte: bb.maxLat } },
+      { lng: { gte: bb.minLng, lte: bb.maxLng } },
+    ],
+  };
+  const candidates = await prisma.listing.findMany({
+    where,
+    include: searchListingInclude,
+  });
+  return candidates
+    .map((l) => {
+      const distanceMiles = haversineMiles(centerLat, centerLng, l.lat!, l.lng!);
+      return { ...l, distanceMiles } as SearchListingRow;
+    })
+    .filter((l) => (l.distanceMiles ?? Infinity) <= radiusMiles);
+}
+
 function buildBaseWhere(
-  params: Pick<ListingSearchParams, "q" | "categoryId" | "condition" | "conditionGrade" | "sellerType" | "eraCsv" | "genreCsv" | "settingCsv" | "materialCsv" | "hireOnly" | "availableNow">
+  params: Pick<
+    ListingSearchParams,
+    | "q"
+    | "categoryId"
+    | "condition"
+    | "conditionGrade"
+    | "sellerType"
+    | "eraCsv"
+    | "genreCsv"
+    | "settingCsv"
+    | "materialCsv"
+    | "hireOnly"
+    | "availableNow"
+    | "listingType"
+  >
 ): Prisma.ListingWhereInput {
   const where: Prisma.ListingWhereInput = { status: "active", visibleOnMarketplace: true };
   if (params.q?.trim()) {
@@ -63,6 +205,16 @@ function buildBaseWhere(
   if (materials.length) where.propMaterials = { hasSome: materials };
   if (params.hireOnly) where.hireEnabled = true;
   if (params.availableNow) where.propListingStatus = "ACTIVE" as never;
+  const lt = browseListingTypeQueryParam(params.listingType);
+  if (lt === "auction") {
+    where.listingKind = "auction";
+  } else if (lt === "buy_now") {
+    where.listingKind = "sell";
+    where.freeToCollector = false;
+  } else if (lt === "free_collect") {
+    where.listingKind = "sell";
+    where.freeToCollector = true;
+  }
   return where;
 }
 
@@ -103,6 +255,9 @@ export async function searchListings(params: ListingSearchParams): Promise<{
     origin?.postcode ??
     (usingSavedHomeForDistance ? p.viewerHomePostcode?.trim() || null : null);
 
+  const canNearest = !!origin || !!viewerRef;
+  const effectiveSort = parseBrowseSort(p.sort, canNearest);
+
   function milesFromRef(l: { lat: number | null; lng: number | null }): number | null {
     if (!distanceRef || l.lat == null || l.lng == null) return null;
     return haversineMiles(distanceRef.lat, distanceRef.lng, l.lat, l.lng);
@@ -120,11 +275,14 @@ export async function searchListings(params: ListingSearchParams): Promise<{
       ...l,
       distanceMiles: milesFromRef(l),
     }));
+    if (effectiveSort !== "recommended") {
+      sortSearchRows(withDist, effectiveSort);
+    }
     const pageSlice = withDist.slice(p.skip, p.skip + p.take);
     return {
       listings: pageSlice,
       total: count,
-      sortByDistance: false,
+      sortByDistance: effectiveSort === "nearest",
       searchOriginPostcode: origin?.postcode ?? null,
       usingSavedHomeForDistance,
       distanceNotePostcode,
@@ -132,44 +290,41 @@ export async function searchListings(params: ListingSearchParams): Promise<{
   }
 
   if (origin) {
-    const bb = latLngBoundingBoxMiles(origin.lat, origin.lng, p.radiusMiles);
-    const where: Prisma.ListingWhereInput = {
-      ...base,
-      lat: { not: null },
-      lng: { not: null },
-      AND: [
-        { lat: { gte: bb.minLat, lte: bb.maxLat } },
-        { lng: { gte: bb.minLng, lte: bb.maxLng } },
-      ],
+    const ranked = p.radiusNationwide
+      ? await fetchListingsAllWithDistance(base, origin.lat, origin.lng)
+      : await fetchListingsInRadiusBbox(base, origin.lat, origin.lng, p.radiusMiles);
+    if (effectiveSort === "recommended" || effectiveSort === "nearest") {
+      sortSearchRows(ranked, "nearest");
+    } else {
+      sortSearchRows(ranked, effectiveSort);
+    }
+    const sortByDistance = effectiveSort === "recommended" || effectiveSort === "nearest";
+    const total = ranked.length;
+    const listings = ranked.slice(p.skip, p.skip + p.take);
+    return {
+      listings,
+      total,
+      sortByDistance,
+      searchOriginPostcode: origin.postcode,
+      usingSavedHomeForDistance: false,
+      distanceNotePostcode: origin.postcode,
     };
+  }
 
-    const candidates = await prisma.listing.findMany({
-      where,
-      include: searchListingInclude,
-    });
-
-    const ranked = candidates
-      .map((l) => {
-        const distanceMiles = haversineMiles(origin.lat, origin.lng, l.lat!, l.lng!);
-        return { ...l, distanceMiles } as SearchListingRow;
-      })
-      .filter((l) => (l.distanceMiles ?? Infinity) <= p.radiusMiles)
-      .sort((a, b) => {
-        const da = a.distanceMiles ?? 0;
-        const db = b.distanceMiles ?? 0;
-        if (da !== db) return da - db;
-        return b.createdAt.getTime() - a.createdAt.getTime();
-      });
-
+  if (viewerRef && effectiveSort === "nearest") {
+    const ranked = p.radiusNationwide
+      ? await fetchListingsAllWithDistance(base, viewerRef.lat, viewerRef.lng)
+      : await fetchListingsInRadiusBbox(base, viewerRef.lat, viewerRef.lng, p.radiusMiles);
+    sortSearchRows(ranked, "nearest");
     const total = ranked.length;
     const listings = ranked.slice(p.skip, p.skip + p.take);
     return {
       listings,
       total,
       sortByDistance: true,
-      searchOriginPostcode: origin.postcode,
-      usingSavedHomeForDistance: false,
-      distanceNotePostcode: origin.postcode,
+      searchOriginPostcode: null,
+      usingSavedHomeForDistance: true,
+      distanceNotePostcode: p.viewerHomePostcode?.trim() || null,
     };
   }
 
@@ -178,10 +333,22 @@ export async function searchListings(params: ListingSearchParams): Promise<{
     Object.assign(where, postcodePrefixWhere(postcodeRaw));
   }
 
+  let orderBy: Prisma.ListingOrderByWithRelationInput[] = [
+    { boostedUntil: "desc" },
+    { updatedAt: "desc" },
+  ];
+  if (effectiveSort === "newest") {
+    orderBy = [{ createdAt: "desc" }];
+  } else if (effectiveSort === "price_asc") {
+    orderBy = [{ price: "asc" }, { createdAt: "desc" }];
+  } else if (effectiveSort === "price_desc") {
+    orderBy = [{ price: "desc" }, { createdAt: "desc" }];
+  }
+
   const [listings, total] = await Promise.all([
     prisma.listing.findMany({
       where,
-      orderBy: [{ boostedUntil: "desc" }, { updatedAt: "desc" }],
+      orderBy,
       skip: p.skip,
       take: p.take,
       include: searchListingInclude,

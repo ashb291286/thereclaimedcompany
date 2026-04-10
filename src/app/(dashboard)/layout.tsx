@@ -11,18 +11,21 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  const [unreadCount, dbRole] =
+  const [unreadCount, unreadOutbidCount, dbRole] =
     session?.user?.id != null
       ? await Promise.all([
           prisma.notification.count({
             where: { userId: session.user.id, readAt: null },
           }),
+          prisma.notification.count({
+            where: { userId: session.user.id, readAt: null, type: "auction_outbid" },
+          }),
           prisma.user.findUnique({
             where: { id: session.user.id },
             select: { role: true },
           }),
-        ]).then(([count, user]) => [count, user?.role ?? null] as const)
-      : [0, null];
+        ]).then(([count, outbid, user]) => [count, outbid, user?.role ?? null] as const)
+      : [0, 0, null];
   const isYardAccount = (session?.user?.role ?? dbRole) === "reclamation_yard";
   const carbonAdmin = session ? isCarbonAdmin(session) : false;
 
@@ -54,7 +57,12 @@ export default async function DashboardLayout({
                 </span>
               )}
             </Link>
-            <span className="hidden text-sm text-zinc-500 sm:inline">{session?.user?.email}</span>
+            <Link
+              href="/dashboard/sell"
+              className="inline-flex items-center rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-hover"
+            >
+              Add Listing
+            </Link>
             <Link href="/dashboard/account" className="text-sm text-zinc-600 hover:text-zinc-900">
               Account
             </Link>
@@ -73,7 +81,12 @@ export default async function DashboardLayout({
       </header>
       <main className="mx-auto max-w-[1400px] px-4 py-8">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[250px_minmax(0,1fr)]">
-          <DashboardSidebar isYardAccount={isYardAccount} carbonAdmin={carbonAdmin} unreadCount={unreadCount} />
+          <DashboardSidebar
+            isYardAccount={isYardAccount}
+            carbonAdmin={carbonAdmin}
+            unreadCount={unreadCount}
+            myBidsOutbidUnread={unreadOutbidCount}
+          />
           <div>{children}</div>
         </div>
       </main>

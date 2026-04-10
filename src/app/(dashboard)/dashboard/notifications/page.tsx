@@ -1,4 +1,4 @@
-﻿import { auth } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -31,7 +31,12 @@ export default async function NotificationsPage() {
         </form>
       </div>
       <p className="mt-2 text-sm text-zinc-600">
-        Wanted ads, offers, and auction updates appear here.
+        Wanted ads, offers, new bids on your auctions, and outbid alerts appear here. For a live view of
+        auctions you&apos;re in, open{" "}
+        <Link href="/dashboard/my-bids" className="font-medium text-brand hover:underline">
+          My bids
+        </Link>
+        .
       </p>
       {items.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-500">You’re all caught up.</p>

@@ -1,5 +1,8 @@
+import { parseBrowseRadiusParam } from "@/lib/browse-radius";
 import { searchListings } from "@/lib/listing-search";
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -7,10 +10,9 @@ export async function GET(req: NextRequest) {
   const categoryId = searchParams.get("categoryId") ?? "";
   const condition = searchParams.get("condition") ?? "";
   const postcode = searchParams.get("postcode") ?? "";
-  const radiusRaw = parseInt(searchParams.get("radius") ?? "50", 10);
-  const radiusMiles = Number.isFinite(radiusRaw)
-    ? Math.min(100, Math.max(5, radiusRaw))
-    : 50;
+  const { miles: radiusMiles, nationwide: radiusNationwide } = parseBrowseRadiusParam(
+    searchParams.get("radius") ?? undefined
+  );
   const sellerType = searchParams.get("sellerType") ?? "";
   const conditionGrade = searchParams.get("conditionGrade") ?? "";
   const isYardSellerFilter = sellerType === "reclamation_yard";
@@ -30,6 +32,14 @@ export async function GET(req: NextRequest) {
   const pageSize = Math.min(24, parseInt(searchParams.get("pageSize") ?? "12", 10));
   const skip = (page - 1) * pageSize;
 
+  const session = await auth();
+  const userPrefs = session?.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { homePostcode: true, homeLat: true, homeLng: true },
+      })
+    : null;
+
   const { listings, total, sortByDistance, searchOriginPostcode } = await searchListings({
     q,
     categoryId: categoryId || undefined,
@@ -44,9 +54,15 @@ export async function GET(req: NextRequest) {
     sellerType: sellerType || undefined,
     postcode: postcode || undefined,
     radiusMiles,
+    radiusNationwide,
     idList: idList.length > 0 ? idList : undefined,
     skip,
     take: pageSize,
+    viewerHomeLat: userPrefs?.homeLat ?? undefined,
+    viewerHomeLng: userPrefs?.homeLng ?? undefined,
+    viewerHomePostcode: userPrefs?.homePostcode ?? undefined,
+    sort: searchParams.get("sort") ?? undefined,
+    listingType: searchParams.get("listingType") ?? undefined,
   });
 
   return NextResponse.json({

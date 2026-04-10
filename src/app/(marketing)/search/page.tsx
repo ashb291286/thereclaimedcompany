@@ -7,7 +7,8 @@ import { auth } from "@/auth";
 import { SearchForm } from "./SearchForm";
 import { BuyerWelcomeModal } from "./BuyerWelcomeModal";
 import { CONDITION_LABELS } from "@/lib/constants";
-import { searchListings } from "@/lib/listing-search";
+import { parseBrowseRadiusParam } from "@/lib/browse-radius";
+import { browseListingTypeQueryParam, browseSortQueryParam, searchListings } from "@/lib/listing-search";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
 import { formatMiles } from "@/lib/geo";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat, vatLabelSuffix } from "@/lib/vat-pricing";
@@ -64,6 +65,8 @@ export default async function SearchPage({
     ids?: string;
     fromImage?: string;
     welcome?: string;
+    sort?: string;
+    listingType?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -78,10 +81,7 @@ export default async function SearchPage({
       .filter(Boolean)
       .slice(0, 48) ?? [];
 
-  const radiusRaw = parseInt(params.radius ?? "50", 10);
-  const radiusMiles = Number.isFinite(radiusRaw)
-    ? Math.min(100, Math.max(5, radiusRaw))
-    : 50;
+  const { miles: radiusMiles, nationwide: radiusNationwide } = parseBrowseRadiusParam(params.radius);
 
   const session = await auth();
   const userPrefs = session?.user?.id
@@ -97,6 +97,16 @@ export default async function SearchPage({
       })
     : null;
 
+  const nearestAvailable =
+    Boolean(params.postcode?.trim()) ||
+    (userPrefs?.homeLat != null &&
+      userPrefs?.homeLng != null &&
+      Number.isFinite(userPrefs.homeLat) &&
+      Number.isFinite(userPrefs.homeLng));
+
+  const sortQuery = browseSortQueryParam(params.sort, nearestAvailable);
+  const listingTypeQuery = browseListingTypeQueryParam(params.listingType);
+
   const [searchResult, categories] = await Promise.all([
     searchListings({
       q: params.q,
@@ -104,14 +114,17 @@ export default async function SearchPage({
       sellerType: params.sellerType,
       hireOnly: params.hireOnly === "1",
       availableNow: params.availableNow === "1",
+      listingType: params.listingType,
       postcode: params.postcode,
       radiusMiles,
+      radiusNationwide,
       idList: idList.length > 0 ? idList : undefined,
       skip,
       take: pageSize,
       viewerHomeLat: userPrefs?.homeLat ?? undefined,
       viewerHomeLng: userPrefs?.homeLng ?? undefined,
       viewerHomePostcode: userPrefs?.homePostcode ?? undefined,
+      sort: params.sort,
     }),
     prisma.category.findMany({
       where: { parentId: null },
@@ -142,12 +155,20 @@ export default async function SearchPage({
     q: params.q,
     categoryId: params.categoryId,
     postcode: params.postcode,
-    radius: params.radius ?? (params.postcode?.trim() ? String(radiusMiles) : undefined),
+    radius:
+      params.radius?.trim() ||
+      (params.postcode?.trim()
+        ? radiusNationwide
+          ? "nationwide"
+          : String(radiusMiles)
+        : undefined),
     sellerType: params.sellerType,
     hireOnly: params.hireOnly,
     availableNow: params.availableNow,
     ids: params.ids,
     fromImage: params.fromImage,
+    sort: sortQuery || undefined,
+    listingType: listingTypeQuery || undefined,
   };
 
   function paginationQuery(pageNum: number) {
@@ -190,7 +211,7 @@ export default async function SearchPage({
   let locationNote: string | null = null;
   if (params.postcode?.trim()) {
     if (sortByDistance && searchOriginPostcode) {
-      locationNote = `Sorted by distance from ${searchOriginPostcode} (within ${radiusMiles} mi). Listings need coordinates — older ones may be missing until edited.`;
+      locationNote = `Sorted by distance from ${searchOriginPostcode} (${radiusNationwide ? "nationwide" : `within ${radiusMiles} mi`}). Listings need coordinates — older ones may be missing until edited.`;
     } else if (!searchOriginPostcode && !idList.length) {
       locationNote =
         "That postcode wasn’t recognised; showing listings whose postcode starts with your search instead.";
@@ -198,7 +219,11 @@ export default async function SearchPage({
       locationNote = `Distances from ${searchOriginPostcode} (photo-matched order kept).`;
     }
   } else if (usingSavedHomeForDistance && distanceNotePostcode) {
-    locationNote = `Approximate distance from your saved postcode (${distanceNotePostcode}). Listings need coordinates — older ones may not show miles until the seller adds them.`;
+    if (sortByDistance && !params.postcode?.trim()) {
+      locationNote = `Sorted by distance from ${distanceNotePostcode} (${radiusNationwide ? "nationwide" : `within ${radiusMiles} mi`}). Listings need coordinates — older ones may be missing until edited.`;
+    } else {
+      locationNote = `Approximate distance from your saved postcode (${distanceNotePostcode}). Listings need coordinates — older ones may not show miles until the seller adds them.`;
+    }
   }
 
   return (
@@ -224,10 +249,11 @@ export default async function SearchPage({
             defaultQ={params.q}
             defaultCategoryId={params.categoryId}
             defaultPostcode={params.postcode?.trim() ? params.postcode : userPrefs?.homePostcode ?? undefined}
-            defaultRadius={String(radiusMiles)}
+            defaultRadius={params.postcode?.trim() ? params.radius?.trim() || "50" : params.radius?.trim() || ""}
             defaultSellerType={params.sellerType}
             defaultHireOnly={params.hireOnly === "1"}
             defaultAvailableNow={params.availableNow === "1"}
+            defaultListingType={listingTypeQuery}
             yardsBrowseMode={yardsBrowse}
           />
           <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
@@ -250,9 +276,14 @@ export default async function SearchPage({
               {locationNote}
             </p>
           ) : null}
-          <p className="mt-4 text-sm text-zinc-500">
-            {total} listing{total !== 1 ? "s" : ""} found
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-zinc-500">
+              {total} listing{total !== 1 ? "s" : ""} found
+            </p>
+            <Suspense fallback={null}>
+              <BrowseSortSelect value={sortQuery} nearestAvailable={nearestAvailable} />
+            </Suspense>
+          </div>
           {total > 0 ? (
             <p className="mt-1 text-xs text-zinc-500 md:hidden">
               Swipe cards vertically — full-screen previews, then open a listing.
@@ -270,12 +301,20 @@ export default async function SearchPage({
                   q: params.q,
                   categoryId: params.categoryId,
                   postcode: params.postcode,
-                  radius: params.radius ?? (params.postcode?.trim() ? String(radiusMiles) : undefined),
+                  radius:
+                    params.radius?.trim() ||
+                    (params.postcode?.trim()
+                      ? radiusNationwide
+                        ? "nationwide"
+                        : String(radiusMiles)
+                      : undefined),
                   sellerType: params.sellerType,
                   hireOnly: params.hireOnly,
                   availableNow: params.availableNow,
                   ids: params.ids,
                   fromImage: params.fromImage,
+                  sort: sortQuery || undefined,
+                  listingType: listingTypeQuery || undefined,
                 }}
                 profileHref={session?.user?.id ? "/dashboard" : "/auth/signin?callbackUrl=%2Fsearch"}
               />

@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { DM_Mono, DM_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+/** Same stack as Driven · Reclaimed & The Prop Yard — loaded once for the whole app. */
+const playfair = Playfair_Display({
   subsets: ["latin"],
+  variable: "--font-driven-display",
+  style: ["normal", "italic"],
   display: "swap",
 });
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
+const dmSans = DM_Sans({
   subsets: ["latin"],
+  variable: "--font-driven-body",
   display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const dmMono = DM_Mono({
   subsets: ["latin"],
+  variable: "--font-driven-mono",
+  display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -34,10 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${plusJakartaSans.variable} ${geistMono.variable}`}
-    >
+    <html lang="en" className={`${playfair.variable} ${dmSans.variable} ${dmMono.variable}`}>
       <body className="antialiased">{children}</body>
     </html>
   );

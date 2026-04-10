@@ -33,6 +33,8 @@ type FeedQuery = {
   availableNow?: string;
   ids?: string;
   fromImage?: string;
+  sort?: string;
+  listingType?: string;
 };
 
 type ApiListingRow = {
@@ -168,6 +170,8 @@ export function BrowseMobileReels({
     if (query.availableNow) sp.set("availableNow", query.availableNow);
     if (query.ids) sp.set("ids", query.ids);
     if (query.fromImage) sp.set("fromImage", query.fromImage);
+    if (query.sort) sp.set("sort", query.sort);
+    if (query.listingType) sp.set("listingType", query.listingType);
     return sp.toString();
   }, [query]);
 

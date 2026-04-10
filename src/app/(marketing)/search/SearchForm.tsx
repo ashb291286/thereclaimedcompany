@@ -1,8 +1,14 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { Prisma } from "@/generated/prisma/client";
+import { PostcodeLookupField } from "@/components/PostcodeLookupField";
+import {
+  browseRadiusLabel,
+  browseRadiusQueryFromSlider,
+  browseRadiusSliderFromParam,
+} from "@/lib/browse-radius";
 
 type Category = Prisma.CategoryGetPayload<object>;
 
@@ -16,6 +22,68 @@ const STRIP_LEGACY_FILTERS: Record<string, string> = {
   material: "",
 };
 
+function readRadiusQueryFromDom(fallbackSlider: number): string {
+  const el = document.querySelector("[data-search-radius]") as HTMLInputElement | null;
+  const n = Number(el?.value);
+  return browseRadiusQueryFromSlider(Number.isFinite(n) ? n : fallbackSlider);
+}
+
+function SearchRadiusSlider({
+  defaultRadius,
+  isYards,
+  updateQuery,
+}: {
+  defaultRadius: string;
+  isYards: boolean;
+  updateQuery: (updates: Record<string, string>) => void;
+}) {
+  const valRef = useRef(browseRadiusSliderFromParam(defaultRadius));
+  const [val, setVal] = useState(() => browseRadiusSliderFromParam(defaultRadius));
+
+  useEffect(() => {
+    const next = browseRadiusSliderFromParam(defaultRadius);
+    valRef.current = next;
+    setVal(next);
+  }, [defaultRadius]);
+
+  const commit = useCallback(() => {
+    const postcode = (document.querySelector("[data-search-postcode]") as HTMLInputElement)?.value?.trim();
+    if (!postcode) return;
+    const r = browseRadiusQueryFromSlider(valRef.current);
+    const patch: Record<string, string> = {
+      radius: r,
+      postcode,
+      ...STRIP_LEGACY_FILTERS,
+    };
+    if (isYards) patch.sellerType = "reclamation_yard";
+    updateQuery(patch);
+  }, [isYards, updateQuery]);
+
+  return (
+    <div className="min-w-[200px] flex-1 sm:max-w-[240px]">
+      <label className="mb-1 block text-xs font-semibold text-zinc-800">Radius</label>
+      <input
+        type="range"
+        min={10}
+        max={201}
+        step={1}
+        value={val}
+        aria-valuetext={browseRadiusLabel(val)}
+        data-search-radius
+        onInput={(e) => {
+          const v = Number((e.target as HTMLInputElement).value);
+          valRef.current = v;
+          setVal(v);
+        }}
+        onPointerUp={commit}
+        className="mt-1 h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-200 accent-brand"
+      />
+      <p className="mt-1 text-center text-xs font-semibold text-zinc-800">{browseRadiusLabel(val)}</p>
+      <p className="text-center text-[10px] leading-tight text-zinc-500">10–200 mi, or Nationwide</p>
+    </div>
+  );
+}
+
 export function SearchForm({
   id,
   categories,
@@ -26,6 +94,7 @@ export function SearchForm({
   defaultSellerType,
   defaultHireOnly,
   defaultAvailableNow,
+  defaultListingType,
   yardsBrowseMode,
 }: {
   id?: string;
@@ -37,6 +106,7 @@ export function SearchForm({
   defaultSellerType?: string;
   defaultHireOnly?: boolean;
   defaultAvailableNow?: boolean;
+  defaultListingType?: string;
   /** Reclamation-yard browse: postcode-first UI; lock seller type. */
   yardsBrowseMode?: boolean;
 }) {
@@ -69,13 +139,11 @@ export function SearchForm({
       if (e.key !== "Enter") return;
       e.preventDefault();
       const v = (e.target as HTMLInputElement).value.trim();
-      const radius =
-        (document.querySelector("[data-search-radius]") as HTMLSelectElement)?.value ??
-        defaultRadius ??
-        "50";
+      const fallbackSlider = browseRadiusSliderFromParam(defaultRadius);
+      const radiusQ = v ? readRadiusQueryFromDom(fallbackSlider) : "";
       const patch: Record<string, string> = {
         postcode: v,
-        ...(v ? { radius } : { radius: "" }),
+        ...(v ? { radius: radiusQ } : { radius: "" }),
         ...STRIP_LEGACY_FILTERS,
       };
       if (isYards) {
@@ -85,6 +153,8 @@ export function SearchForm({
     },
     [defaultRadius, isYards, updateQuery]
   );
+
+  const defaultRadiusStr = defaultRadius ?? "";
 
   const locationHighlightClass =
     "mb-4 rounded-xl border-2 border-brand bg-brand-soft/60 p-4";
@@ -106,43 +176,17 @@ export function SearchForm({
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <div className="min-w-[160px] flex-1">
               <label className="mb-1 block text-xs font-semibold text-zinc-800">Your postcode</label>
-              <input
-                type="text"
-                defaultValue={defaultPostcode}
-                data-search-postcode
+              <PostcodeLookupField
+                optional
+                defaultValue={defaultPostcode ?? ""}
                 placeholder="e.g. YO1 6GA"
-                className="w-full rounded-lg border-2 border-brand/40 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
+                dataSearchPostcode
+                showDefaultAssistiveText={false}
                 onKeyDown={postcodeEnter}
+                className="w-full rounded-lg border-2 border-brand/40 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
               />
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-zinc-800">Radius</label>
-              <select
-                defaultValue={defaultRadius ?? "50"}
-                data-search-radius
-                className="rounded-lg border-2 border-brand/40 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900"
-                onChange={(e) => {
-                  const postcode = (
-                    document.querySelector("[data-search-postcode]") as HTMLInputElement
-                  )?.value?.trim();
-                  if (!postcode) return;
-                  const patch: Record<string, string> = {
-                    radius: e.target.value,
-                    postcode,
-                    ...STRIP_LEGACY_FILTERS,
-                  };
-                  if (isYards) {
-                    patch.sellerType = "reclamation_yard";
-                  }
-                  updateQuery(patch);
-                }}
-              >
-                <option value="10">10 mi</option>
-                <option value="25">25 mi</option>
-                <option value="50">50 mi</option>
-                <option value="100">100 mi</option>
-              </select>
-            </div>
+            <SearchRadiusSlider defaultRadius={defaultRadiusStr} isYards={isYards} updateQuery={updateQuery} />
           </div>
         </div>
       ) : (
@@ -155,39 +199,17 @@ export function SearchForm({
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <div className="min-w-[160px] flex-1">
               <label className="mb-1 block text-xs font-semibold text-zinc-800">Postcode</label>
-              <input
-                type="text"
-                defaultValue={defaultPostcode}
-                data-search-postcode
+              <PostcodeLookupField
+                optional
+                defaultValue={defaultPostcode ?? ""}
                 placeholder="e.g. SW1A 1AA"
-                className="w-full rounded-lg border-2 border-brand/40 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
+                dataSearchPostcode
+                showDefaultAssistiveText={false}
                 onKeyDown={postcodeEnter}
+                className="w-full rounded-lg border-2 border-brand/40 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
               />
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-zinc-800">Radius</label>
-              <select
-                defaultValue={defaultRadius ?? "50"}
-                data-search-radius
-                className="rounded-lg border-2 border-brand/40 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900"
-                onChange={(e) => {
-                  const postcode = (
-                    document.querySelector("[data-search-postcode]") as HTMLInputElement
-                  )?.value?.trim();
-                  if (!postcode) return;
-                  updateQuery({
-                    radius: e.target.value,
-                    postcode,
-                    ...STRIP_LEGACY_FILTERS,
-                  });
-                }}
-              >
-                <option value="10">10 mi</option>
-                <option value="25">25 mi</option>
-                <option value="50">50 mi</option>
-                <option value="100">100 mi</option>
-              </select>
-            </div>
+            <SearchRadiusSlider defaultRadius={defaultRadiusStr} isYards={isYards} updateQuery={updateQuery} />
           </div>
         </div>
       )}
@@ -225,6 +247,22 @@ export function SearchForm({
             ))}
           </select>
         </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">Listing type</label>
+          <select
+            data-search-listing-type
+            defaultValue={defaultListingType ?? ""}
+            onChange={(e) =>
+              updateQuery({ listingType: e.target.value, ...STRIP_LEGACY_FILTERS })
+            }
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+          >
+            <option value="">All</option>
+            <option value="auction">Auction</option>
+            <option value="buy_now">Buy now</option>
+            <option value="free_collect">Free to collect</option>
+          </select>
+        </div>
         {!isYards ? (
           <div>
             <label className="mb-1 block text-xs font-medium text-zinc-500">Seller type</label>
@@ -259,17 +297,21 @@ export function SearchForm({
             const postcode = (
               document.querySelector("[data-search-postcode]") as HTMLInputElement
             )?.value?.trim();
-            const radius = (document.querySelector("[data-search-radius]") as HTMLSelectElement)?.value;
+            const fallbackSlider = browseRadiusSliderFromParam(defaultRadiusStr);
+            const radiusQ = postcode ? readRadiusQueryFromDom(fallbackSlider) : "";
             const hireOnly = (document.querySelector("[data-search-hire-only]") as HTMLInputElement)?.checked;
             const availableNow = (document.querySelector("[data-search-available-now]") as HTMLInputElement)
               ?.checked;
+            const listingType =
+              (document.querySelector("[data-search-listing-type]") as HTMLSelectElement)?.value ?? "";
             const updates: Record<string, string> = {
               q: q ?? "",
               postcode: postcode ?? "",
               ...STRIP_LEGACY_FILTERS,
               hireOnly: hireOnly ? "1" : "",
               availableNow: availableNow ? "1" : "",
-              ...(postcode ? { radius: radius ?? "50" } : { radius: "" }),
+              listingType,
+              ...(postcode ? { radius: radiusQ } : { radius: "" }),
             };
             if (isYards) {
               updates.sellerType = "reclamation_yard";
@@ -282,7 +324,8 @@ export function SearchForm({
         </button>
       </div>
       <p className="mt-2 text-xs text-zinc-500">
-        Full UK postcode finds town or city and sorts by road distance. Partial codes fall back to prefix matching.
+        Start typing a postcode for suggestions. A full UK postcode finds town or city and sorts by road distance;
+        use the radius slider (10–200 miles or Nationwide). Partial codes fall back to prefix matching.
       </p>
     </div>
   );
