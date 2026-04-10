@@ -51,6 +51,7 @@ export function DashboardSidebar({
   if (carbonAdmin) {
     items.push({ href: "/dashboard/admin/carbon-factors", label: "Carbon data", accent: "admin" });
     items.push({ href: "/dashboard/admin/seen-on-screen", label: "Seen on screen queue", accent: "admin" });
+    items.push({ href: "/dashboard/admin/marketplace-categories", label: "Categories", accent: "admin" });
     items.push({ href: "/dashboard/admin/woocommerce-sync", label: "WooCommerce sync", accent: "admin" });
   }
 

@@ -39,6 +39,14 @@ export default async function AdminWooCommerceSyncPage({
 
   return (
     <div>
+      <p className="mb-4 text-sm text-zinc-600">
+        Need a new browse category first?{" "}
+        <Link href="/dashboard/admin/marketplace-categories" className="font-medium text-brand hover:underline">
+          Add marketplace categories
+        </Link>
+        .
+      </p>
+
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">WooCommerce affiliate sync</h1>
