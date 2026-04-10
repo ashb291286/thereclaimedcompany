@@ -22,6 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       postcode: true,
       adminDistrict: true,
       region: true,
+      postcodeLocality: true,
       yardTagline: true,
       yardAbout: true,
       yardLogoUrl: true,
