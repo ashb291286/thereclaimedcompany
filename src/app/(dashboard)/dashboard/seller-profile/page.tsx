@@ -40,6 +40,10 @@ export default async function SellerProfileSettingsPage({
     yardSlug: profile.yardSlug,
   });
   const siteUrl = getSiteUrl();
+  const completeness = yardProfileCompletenessPercent(profile);
+  const trustSaved = parseYardTrustFlagsJson(profile.yardTrustFlagsJson);
+  const deliverySaved = parseYardDeliveryOptionsJson(profile.yardDeliveryOptionsJson);
+  const mats = profile.yardPrimaryMaterials ?? [];
 
   return (
     <div className="mx-auto max-w-2xl">
