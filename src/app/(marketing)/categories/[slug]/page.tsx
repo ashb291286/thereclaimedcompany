@@ -64,7 +64,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: Props
 
   const sortQuery = browseSortQueryParam(sp.sort, nearestAvailable);
   const listingTypeQuery = browseListingTypeQueryParam(undefined);
-  const { miles: radiusMiles } = parseBrowseRadiusParam(undefined);
+  const { miles: radiusMiles, nationwide: radiusNationwide } = parseBrowseRadiusParam(undefined);
 
   const searchResult = await searchListings({
     categoryId: category.id,
