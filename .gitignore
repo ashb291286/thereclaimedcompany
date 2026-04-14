@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Local legacy site / DB dumps (large; keep outside git)
+thereclaimedcompany.com-99c2-2026-04-08/
