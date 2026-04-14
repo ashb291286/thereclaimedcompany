@@ -1,0 +1,2 @@
+seller_email,seller_display_name,seller_role,seller_business_name,seller_postcode,title,description,condition,category_slug,price_gbp,image_urls,postcode,seller_reference,pricing_mode,units_available,free_to_collector,visible_on_marketplace
+"seller@example.com","Example Seller","individual","","YO1 7HD","Reclaimed door","Solid oak, good condition","used","other","120.00","https://example.com/door1.jpg|https://example.com/door2.jpg","YO1 7HD","SKU-100","LOT","","false","true"

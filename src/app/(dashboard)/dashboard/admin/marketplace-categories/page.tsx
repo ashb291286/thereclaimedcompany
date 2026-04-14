@@ -39,6 +39,10 @@ export default async function AdminMarketplaceCategoriesPage({
             affiliate products, use{" "}
             <Link href="/dashboard/admin/woocommerce-sync" className="font-medium text-brand hover:underline">
               WooCommerce sync
+            </Link>{" "}
+            or{" "}
+            <Link href="/dashboard/admin/bulk-listings" className="font-medium text-brand hover:underline">
+              bulk listing CSV (admin)
             </Link>
             .
           </p>
