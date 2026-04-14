@@ -14,7 +14,7 @@ export default async function ReclamationYardsHubPage() {
   const areas = await getYardAreaIndex();
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-[30px] py-8 sm:py-10">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
         Reclamation yards near you
       </h1>

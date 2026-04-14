@@ -71,6 +71,18 @@ export default async function SearchPage({
   }>;
 }) {
   const params = await searchParams;
+  const categoryRaw = params.category?.trim() || params.categoryId?.trim();
+  const activeCategoryRow = await resolveCategoryBrowseRow(categoryRaw || undefined);
+  if (params.categoryId?.trim() && !params.category?.trim() && activeCategoryRow) {
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (k === "categoryId") continue;
+      if (v === undefined || v === null || v === "") continue;
+      sp.set(k, String(v));
+    }
+    sp.set("category", activeCategoryRow.slug);
+    redirect(`/search?${sp.toString()}`);
+  }
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
   const pageSize = 12;
   const skip = (page - 1) * pageSize;
@@ -154,7 +166,7 @@ export default async function SearchPage({
 
   const paramRecord: Record<string, string | undefined> = {
     q: params.q,
-    categoryId: params.categoryId,
+    ...(activeCategoryRow ? { category: activeCategoryRow.slug } : {}),
     postcode: params.postcode,
     radius:
       params.radius?.trim() ||
@@ -248,7 +260,7 @@ export default async function SearchPage({
             id="search-filters"
             categories={categories}
             defaultQ={params.q}
-            defaultCategoryId={params.categoryId}
+            defaultCategorySlug={activeCategoryRow?.slug ?? ""}
             defaultPostcode={params.postcode?.trim() ? params.postcode : userPrefs?.homePostcode ?? undefined}
             defaultRadius={params.postcode?.trim() ? params.radius?.trim() || "50" : params.radius?.trim() || ""}
             defaultSellerType={params.sellerType}
@@ -300,7 +312,7 @@ export default async function SearchPage({
                 totalPages={totalPages}
                 query={{
                   q: params.q,
-                  categoryId: params.categoryId,
+                  category: activeCategoryRow?.slug,
                   postcode: params.postcode,
                   radius:
                     params.radius?.trim() ||
@@ -319,97 +331,7 @@ export default async function SearchPage({
                 }}
                 profileHref={session?.user?.id ? "/dashboard" : "/auth/signin?callbackUrl=%2Fsearch"}
               />
-              <ul className="mt-6 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                {listingsOrdered.map((l) => {
-                  const impact = parseStoredCarbonImpact(l);
-                  const auctionCountdown = l.listingKind === "auction" ? auctionCountdownLabel(l.auctionEndsAt) : null;
-                  const gridVat = sellerChargesVat({
-                    sellerRole: l.seller.role,
-                    vatRegistered: l.seller.sellerProfile?.vatRegistered,
-                  });
-                  const gridBuyerPence = buyerGrossPenceFromSellerNetPence(l.price, gridVat);
-                  const gridVatBit = vatLabelSuffix(gridVat);
-                  return (
-                    <li key={l.id}>
-                      <Link
-                        href={`/listings/${l.id}`}
-                        className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
-                      >
-                        <div className="relative aspect-square bg-zinc-200">
-                          {auctionCountdown ? (
-                            <span className="absolute right-2 top-2 z-10 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
-                              {auctionCountdown}
-                            </span>
-                          ) : null}
-                          {l.images[0] ? (
-                            <Image
-                              src={l.images[0]}
-                              alt={l.title}
-                              fill
-                              className="object-cover"
-                              sizes="(max-width: 640px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                              unoptimized
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-zinc-400">
-                              No image
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-3">
-                          <div className="mb-1 flex min-h-[18px] flex-wrap content-start items-start gap-1">
-                            {l.listingKind === "auction" && (
-                              <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
-                                Auction
-                              </span>
-                            )}
-                            {l.listingKind === "sell" && l.freeToCollector && (
-                              <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
-                                Free
-                              </span>
-                            )}
-                            {l.offersDelivery && (
-                              <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-sky-900">
-                                Delivers
-                              </span>
-                            )}
-                            {l.distanceMiles != null && (
-                              <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
-                                {formatMiles(l.distanceMiles)}
-                              </span>
-                            )}
-                          </div>
-                          <p className="truncate font-medium text-zinc-900">{l.title}</p>
-                          <BrowseListingPriceLine
-                            listingKind={l.listingKind}
-                            freeToCollector={l.freeToCollector}
-                            buyerPenceGbp={gridBuyerPence}
-                            vatSuffix={gridVatBit}
-                            categoryName={l.category.name}
-                            conditionExtra={l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
-                          />
-                          {(() => {
-                            const locLine = formatUkLocationLine({
-                              postcodeLocality: l.postcodeLocality,
-                              adminDistrict: l.adminDistrict,
-                              region: l.region,
-                              postcode: l.postcode,
-                            });
-                            return locLine ? (
-                              <p className="mt-1 truncate text-xs text-zinc-500">{locLine}</p>
-                            ) : null;
-                          })()}
-                          {impact ? (
-                            <div className="mt-2">
-                              <CarbonBadge impact={impact} variant="compact" />
-                            </div>
-                          ) : null}
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+              <BrowseListingGrid listings={listingsOrdered} />
             </>
           )}
         </section>

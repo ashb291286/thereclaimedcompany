@@ -1,4 +1,5 @@
 import { parseBrowseRadiusParam } from "@/lib/browse-radius";
+import { resolveCategoryBrowseRow } from "@/lib/category-browse";
 import { searchListings } from "@/lib/listing-search";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
 
   const { listings, total, sortByDistance, searchOriginPostcode } = await searchListings({
     q,
-    categoryId: categoryId || undefined,
+    categoryId: categoryRow?.id,
     condition: condition || undefined,
     conditionGrade: conditionGrade || undefined,
     eraCsv: era || undefined,

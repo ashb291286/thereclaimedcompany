@@ -21,7 +21,7 @@ export function YardMaterialPillsSection({
         {categories.map((c) => (
           <Link
             key={c.id}
-            href={`/search?sellerType=reclamation_yard&categoryId=${encodeURIComponent(c.id)}&postcode=${encodeURIComponent(yardPostcode)}&radius=50`}
+            href={`/search?sellerType=reclamation_yard&category=${encodeURIComponent(c.slug)}&postcode=${encodeURIComponent(yardPostcode)}&radius=50`}
             className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm hover:border-brand/40 hover:text-brand"
           >
             {c.name}

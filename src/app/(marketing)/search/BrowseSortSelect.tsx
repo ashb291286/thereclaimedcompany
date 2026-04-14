@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export function BrowseSortSelect({
   value,
@@ -10,6 +10,7 @@ export function BrowseSortSelect({
   nearestAvailable: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   function applySort(next: string) {
@@ -18,7 +19,11 @@ export function BrowseSortSelect({
     else sp.delete("sort");
     sp.delete("page");
     const qs = sp.toString();
-    router.push(qs ? `/search?${qs}` : "/search");
+    const base =
+      pathname.startsWith("/categories/") && pathname.length > "/categories/".length + 1
+        ? pathname
+        : "/search";
+    router.push(qs ? `${base}?${qs}` : base);
   }
 
   const nearestDisabled = !nearestAvailable;

@@ -88,7 +88,7 @@ export function SearchForm({
   id,
   categories,
   defaultQ,
-  defaultCategoryId,
+  defaultCategorySlug,
   defaultPostcode,
   defaultRadius,
   defaultSellerType,
@@ -233,15 +233,20 @@ export function SearchForm({
         <div>
           <label className="mb-1 block text-xs font-medium text-zinc-500">Category</label>
           <select
-            defaultValue={defaultCategoryId ?? ""}
+            key={defaultCategorySlug ?? ""}
+            defaultValue={defaultCategorySlug ?? ""}
             onChange={(e) =>
-              updateQuery({ categoryId: e.target.value, ...STRIP_LEGACY_FILTERS })
+              updateQuery({
+                category: e.target.value,
+                categoryId: "",
+                ...STRIP_LEGACY_FILTERS,
+              })
             }
             className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
           >
             <option value="">All</option>
             {categories.map((c) => (
-              <option key={c.id} value={c.id}>
+              <option key={c.id} value={c.slug}>
                 {c.name}
               </option>
             ))}

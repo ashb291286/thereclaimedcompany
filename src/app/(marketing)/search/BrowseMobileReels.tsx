@@ -25,7 +25,8 @@ export type ReelListing = {
 
 type FeedQuery = {
   q?: string;
-  categoryId?: string;
+  /** Category slug (preferred for URLs and `/api/listings`). */
+  category?: string;
   postcode?: string;
   radius?: string;
   sellerType?: string;
@@ -162,7 +163,7 @@ export function BrowseMobileReels({
   const queryString = useMemo(() => {
     const sp = new URLSearchParams();
     if (query.q) sp.set("q", query.q);
-    if (query.categoryId) sp.set("categoryId", query.categoryId);
+    if (query.category) sp.set("category", query.category);
     if (query.postcode) sp.set("postcode", query.postcode);
     if (query.radius) sp.set("radius", query.radius);
     if (query.sellerType) sp.set("sellerType", query.sellerType);

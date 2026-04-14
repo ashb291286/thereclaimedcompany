@@ -33,7 +33,7 @@ export default async function ReclamationYardsAreaPage({ params }: Props) {
   const searchNearHref = `/search?sellerType=reclamation_yard`;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-[30px] py-8 sm:py-10">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <nav className="text-sm text-zinc-500">
         <Link href="/reclamation-yards" className="hover:text-zinc-800">
           Reclamation yards

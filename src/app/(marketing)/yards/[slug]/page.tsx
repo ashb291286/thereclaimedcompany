@@ -290,7 +290,7 @@ export default async function YardPublicPage({ params }: Props) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
-          <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 sm:flex-row sm:items-end sm:justify-between sm:px-6">
             <div className="flex items-end gap-4">
               {profile.yardLogoUrl ? (
                 <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-white/20 bg-white shadow-xl sm:h-24 sm:w-24">
@@ -356,7 +356,7 @@ export default async function YardPublicPage({ params }: Props) {
       </div>
 
       {trustPills.length > 0 ? (
-        <div className="mb-8 flex gap-2 overflow-x-auto pb-1">
+        <div className="mx-auto mb-8 flex w-full max-w-6xl gap-2 overflow-x-auto px-4 pb-1 sm:px-6">
           {trustPills.map((pill) => (
             <span
               key={pill}
@@ -368,7 +368,7 @@ export default async function YardPublicPage({ params }: Props) {
         </div>
       ) : null}
 
-      <div className="mx-auto grid max-w-4xl gap-8 lg:grid-cols-[1fr_320px]">
+      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-10">
           <div className="grid gap-8 lg:grid-cols-2">
             <section aria-labelledby="about-heading">

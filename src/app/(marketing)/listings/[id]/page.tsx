@@ -32,6 +32,7 @@ import { DisplayPrice } from "@/components/currency/DisplayPrice";
 import { AuctionWinCheckoutButton } from "./AuctionWinCheckoutButton";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
 import { ListingImageGallery } from "./ListingImageGallery";
+import { ListingQaSection } from "@/components/listings/ListingQaSection";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -285,10 +286,7 @@ export default async function ListingPage({
         <span aria-hidden className="text-zinc-300">
           /
         </span>
-        <Link
-          href={`/search?categoryId=${listing.categoryId}`}
-          className="hover:text-zinc-800"
-        >
+        <Link href={`/categories/${listing.category.slug}`} className="hover:text-zinc-800">
           {listing.category.name}
         </Link>
         <span aria-hidden className="text-zinc-300">
@@ -761,6 +759,13 @@ export default async function ListingPage({
         )}
         </aside>
       </div>
+
+      <ListingQaSection
+        listingId={id}
+        sellerId={listing.sellerId}
+        canPost={canPostListingQa}
+        postingClosedNote={listingQaClosedNote}
+      />
     </div>
   );
 }

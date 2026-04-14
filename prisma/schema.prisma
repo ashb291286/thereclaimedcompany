@@ -410,6 +410,9 @@ model Listing {
   wooCommerceProductId   Int?      @unique
   wooCommerceSyncedAt    DateTime?
   wooCommerceLastError   String?   @db.Text
+  /// AI-generated neutral summary of the public Q&A thread (regenerated when comments change).
+  qaAiOverview          String?   @db.Text
+  qaAiOverviewUpdatedAt DateTime?
   createdAt            DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -643,6 +646,23 @@ model PropRentalBooking {
   @@index([hireStart, hireEnd])
   @@index([hireRequestBatchId])
   @@index([propRentalSetId])
+}
+
+/// Public threaded questions & comments on a marketplace listing.
+model ListingQaComment {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    ListingQaComment?  @relation("ListingQaCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   ListingQaComment[] @relation("ListingQaCommentReplies")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([listingId, createdAt])
+  @@index([parentId])
 }
 
 model ListingFavorite {

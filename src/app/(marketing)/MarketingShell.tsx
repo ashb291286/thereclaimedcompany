@@ -28,6 +28,9 @@ export function MarketingShell({
               <Link href="/search" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
                 Browse
               </Link>
+              <Link href="/categories" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
+                Categories
+              </Link>
               <Link href="/reclamation-yards" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
                 Yards
               </Link>
