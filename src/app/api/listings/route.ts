@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const q = searchParams.get("q") ?? "";
+  const category = searchParams.get("category") ?? "";
   const categoryId = searchParams.get("categoryId") ?? "";
   const condition = searchParams.get("condition") ?? "";
   const postcode = searchParams.get("postcode") ?? "";
@@ -40,6 +41,9 @@ export async function GET(req: NextRequest) {
         select: { homePostcode: true, homeLat: true, homeLng: true },
       })
     : null;
+
+  const categoryRaw = category.trim() || categoryId.trim();
+  const categoryRow = await resolveCategoryBrowseRow(categoryRaw || undefined);
 
   const { listings, total, sortByDistance, searchOriginPostcode } = await searchListings({
     q,
