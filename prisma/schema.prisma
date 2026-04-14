@@ -138,6 +138,7 @@ model User {
   yardStockAlerts       YardStockAlert[] @relation("YardStockAlertsByUser")
   yardStockAlertFans    YardStockAlert[] @relation("YardStockAlertsForSeller")
   drivenAuctionComments DrivenAuctionComment[]
+  listingQaComments     ListingQaComment[]
 }
 
 model Account {
@@ -427,6 +428,7 @@ model Listing {
   propRentalOffer PropRentalOffer?
   propListingDrafts PropListingDraft[]
   seenOnScreenRequests SeenOnScreenVerificationRequest[]
+  qaComments           ListingQaComment[]
 
   @@index([sellerId])
   @@index([categoryId])
