@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { SearchForm } from "./SearchForm";
@@ -56,6 +57,7 @@ export default async function SearchPage({
 }: {
   searchParams: Promise<{
     q?: string;
+    category?: string;
     categoryId?: string;
     postcode?: string;
     radius?: string;
@@ -123,7 +125,7 @@ export default async function SearchPage({
   const [searchResult, categories] = await Promise.all([
     searchListings({
       q: params.q,
-      categoryId: params.categoryId,
+      categoryId: activeCategoryRow?.id ?? params.categoryId,
       sellerType: params.sellerType,
       hireOnly: params.hireOnly === "1",
       availableNow: params.availableNow === "1",
