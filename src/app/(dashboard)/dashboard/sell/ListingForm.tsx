@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { createListing } from "@/lib/actions/listings";
 import type { Prisma } from "@/generated/prisma/client";
 import {
@@ -429,6 +430,18 @@ export function ListingForm({
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
+
+      {!isEdit ? (
+        <p className="text-sm text-zinc-600">
+          <Link
+            href="/dashboard/sell/bulk"
+            className="font-medium text-brand underline hover:text-brand-hover"
+          >
+            Want to upload in bulk?
+          </Link>{" "}
+          Add many fixed-price listings from a CSV (saved as drafts).
+        </p>
+      ) : null}
 
       <FormSection
         step={1}

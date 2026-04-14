@@ -1,0 +1,2 @@
+title,description,condition,category_slug,price_gbp,image_urls,postcode,seller_reference,pricing_mode,units_available,free_to_collector,visible_on_marketplace
+"Sample reclaimed item","Describe the item honestly. Buyers see this on the listing.","used","other","49.99","https://example.com/photo1.jpg|https://example.com/photo2.jpg","YO1 7HD","SKU-001","LOT","","false","true"
