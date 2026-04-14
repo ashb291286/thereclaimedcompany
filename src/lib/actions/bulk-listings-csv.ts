@@ -186,17 +186,25 @@ export async function bulkImportListingsCsvAction(
       errors.push({ line: lineNo, message: "image_urls must include at least one URL (use | between URLs)." });
       continue;
     }
+    let invalidImage = false;
     for (const url of images) {
       if (!/^https?:\/\//i.test(url)) {
-        errors.push({ line: lineNo, message: `Invalid image URL (must start with http): ${url.slice(0, 60)}…` });
-        continue;
+        errors.push({
+          line: lineNo,
+          message: `Invalid image URL (must start with http/https): ${url.slice(0, 80)}`,
+        });
+        invalidImage = true;
+        break;
       }
     }
-    if (errors.some((e) => e.line === lineNo)) continue;
+    if (invalidImage) continue;
 
     let pricingMode: ListingPricingMode = ListingPricingMode.LOT;
     let unitsAvailable: number | null = null;
-    if (pricingModeRaw === "PER_UNIT") {
+    if (freeToCollector) {
+      pricingMode = ListingPricingMode.LOT;
+      unitsAvailable = null;
+    } else if (pricingModeRaw === "PER_UNIT") {
       pricingMode = ListingPricingMode.PER_UNIT;
       const u = parseInt(unitsRaw, 10);
       if (!Number.isFinite(u) || u < 1) {
@@ -204,7 +212,7 @@ export async function bulkImportListingsCsvAction(
         continue;
       }
       unitsAvailable = u;
-    } else if (pricingModeRaw !== "LOT") {
+    } else if (pricingModeRaw !== "LOT" && pricingModeRaw !== "") {
       errors.push({ line: lineNo, message: 'pricing_mode must be LOT or PER_UNIT (or leave blank for LOT).' });
       continue;
     }
