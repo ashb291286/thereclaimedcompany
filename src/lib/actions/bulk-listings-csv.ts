@@ -167,11 +167,8 @@ export async function bulkImportListingsCsvAction(
       continue;
     }
 
-    const category = await prisma.category.findUnique({
-      where: { slug: categorySlug },
-      select: { id: true },
-    });
-    if (!category) {
+    const resolvedCategoryId = categoriesBySlug.get(categorySlug);
+    if (!resolvedCategoryId) {
       errors.push({ line: lineNo, message: `Unknown category_slug "${categorySlug}".` });
       continue;
     }
@@ -242,7 +239,7 @@ export async function bulkImportListingsCsvAction(
           description: description.trim(),
           price: pricePence,
           condition,
-          categoryId,
+          categoryId: resolvedCategoryId,
           pricingMode,
           unitsAvailable,
           postcode: resolvedPostcode.postcode,
