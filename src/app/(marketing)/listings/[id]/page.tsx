@@ -131,6 +131,18 @@ export default async function ListingPage({
     notFound();
   }
 
+  const listingQaAuctionEnded =
+    listing.listingKind === "auction" && Boolean(listing.auctionEndsAt && listing.auctionEndsAt <= new Date());
+  const canPostListingQa = Boolean(session?.user?.id) && listing.status === "active" && !listingQaAuctionEnded;
+  const listingQaClosedNote =
+    !session?.user?.id
+      ? "Sign in to post a question or comment."
+      : listing.status !== "active"
+        ? "Comments are closed for this listing."
+        : listingQaAuctionEnded
+          ? "This auction has ended - the Q&A thread is read-only."
+          : null;
+
   const sellerProfile = listing.seller?.sellerProfile;
   const sellerHoursLine = sellerProfile
     ? openingHoursCompactLine(
