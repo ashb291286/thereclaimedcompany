@@ -100,7 +100,7 @@ export function SearchForm({
   id?: string;
   categories: Category[];
   defaultQ?: string;
-  defaultCategoryId?: string;
+  defaultCategorySlug?: string;
   defaultPostcode?: string;
   defaultRadius?: string;
   defaultSellerType?: string;
