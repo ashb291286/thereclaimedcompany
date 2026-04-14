@@ -35,9 +35,11 @@ export default async function SellBulkPage() {
         >
           Download CSV template
         </a>{" "}
-        (opens a sample row you can copy). Top-level category slugs match the category picker on the single-item
-        form (e.g. <code className="rounded bg-zinc-100 px-1 text-xs">other</code>,{" "}
-        <code className="rounded bg-zinc-100 px-1 text-xs">roof-tiles-slates</code>).
+        (opens sample rows you can copy). Use <code className="rounded bg-zinc-100 px-1 text-xs">category_slug</code>{" "}
+        like the picker (e.g. <code className="rounded bg-zinc-100 px-1 text-xs">other</code>) — if the slug is new,
+        we create a top-level category automatically. Optional{" "}
+        <code className="rounded bg-zinc-100 px-1 text-xs">category_name</code> sets the display name; otherwise we
+        derive a title from the slug.
       </p>
       <BulkCsvUploadForm />
     </div>

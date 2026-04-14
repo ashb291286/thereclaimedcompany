@@ -1,2 +1,3 @@
-title,description,condition,category_slug,price_gbp,image_urls,postcode,seller_reference,pricing_mode,units_available,free_to_collector,visible_on_marketplace
-"Sample reclaimed item","Describe the item honestly. Buyers see this on the listing.","used","other","49.99","https://example.com/photo1.jpg|https://example.com/photo2.jpg","YO1 7HD","SKU-001","LOT","","false","true"
+title,description,condition,category_slug,category_name,price_gbp,image_urls,postcode,seller_reference,pricing_mode,units_available,free_to_collector,visible_on_marketplace
+"Sample reclaimed item","Describe the item honestly. Buyers see this on the listing.","used","other","","49.99","https://example.com/photo1.jpg|https://example.com/photo2.jpg","YO1 7HD","SKU-001","LOT","","false","true"
+"New category example","If category_slug is new, we create it. Optional category_name sets the display name.","used","my-custom-slug","My custom category","19.99","https://example.com/a.jpg","YO1 7HD","","LOT","","false","true"

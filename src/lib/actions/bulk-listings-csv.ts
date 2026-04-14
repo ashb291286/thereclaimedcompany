@@ -88,14 +88,14 @@ export async function bulkImportListingsCsvAction(
     distanceSavedKm: null,
   });
 
-  const categoriesBySlug = new Map(
+  const categoryIdBySlugCache = new Map(
     (await prisma.category.findMany({ select: { id: true, slug: true } })).map((c) => [c.slug, c.id])
   );
 
   const { created, errors } = await runBulkListingCsvImport({
     matrix,
     headerCells,
-    categoriesBySlug,
+    categoryIdBySlugCache,
     carbon,
     resolveSeller: async () => ({
       ok: true,

@@ -10,6 +10,49 @@ import {
   type Condition,
 } from "@/generated/prisma/client";
 import { computeListingCarbonSnapshot } from "@/lib/carbon/listing";
+import { slugifyCategoryName } from "@/lib/category-suggest";
+
+function displayNameFromCategorySlug(slug: string): string {
+  const n = slug
+    .split("-")
+    .filter(Boolean)
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ""))
+    .join(" ")
+    .trim();
+  return (n || slug).slice(0, 120);
+}
+
+/** Resolve category id; create top-level category when slug is new (mutates cache). */
+export async function resolveOrCreateBulkCategoryId(
+  slugRaw: string,
+  categoryNameOverride: string | null,
+  cache: Map<string, string>
+): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+  const canonical = slugifyCategoryName(slugRaw);
+  if (!canonical) {
+    return {
+      ok: false,
+      message: "category_slug is not valid — use letters, numbers, and hyphens (e.g. reclaimed-doors).",
+    };
+  }
+
+  const hit = cache.get(canonical);
+  if (hit) return { ok: true, id: hit };
+
+  const name =
+    (categoryNameOverride?.trim() && categoryNameOverride.trim().slice(0, 120)) ||
+    displayNameFromCategorySlug(canonical);
+
+  const row = await prisma.category.upsert({
+    where: { slug: canonical },
+    create: { slug: canonical, name: name || canonical },
+    update: {},
+    select: { id: true },
+  });
+
+  cache.set(canonical, row.id);
+  return { ok: true, id: row.id };
+}
 
 export const BULK_CSV_MAX_ROWS = 150;
 export const BULK_CSV_MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -54,19 +97,20 @@ export type BulkCsvSellerResolveResult =
   | { ok: true; seller: BulkImportRowSeller }
   | { ok: false; message: string };
 
-type CarbonSnap = Awaited<ReturnType<typeof computeListingCarbonSnapshot>>;
+export type BulkListingCarbonSnap = Awaited<ReturnType<typeof computeListingCarbonSnapshot>>;
 
 export async function runBulkListingCsvImport(options: {
   matrix: string[][];
   headerCells: string[];
-  categoriesBySlug: Map<string, string>;
+  /** Mutable slug → id; seeded with existing categories; new slugs are inserted and cached. */
+  categoryIdBySlugCache: Map<string, string>;
   carbon: BulkListingCarbonSnap;
   resolveSeller: (
     row: Record<string, string>,
     lineNo: number
   ) => Promise<BulkCsvSellerResolveResult>;
 }): Promise<{ created: number; errors: { line: number; message: string }[] }> {
-  const { matrix, headerCells, categoriesBySlug, carbon, resolveSeller } = options;
+  const { matrix, headerCells, categoryIdBySlugCache, carbon, resolveSeller } = options;
   const errors: { line: number; message: string }[] = [];
   let created = 0;
 
@@ -109,11 +153,16 @@ export async function runBulkListingCsvImport(options: {
       continue;
     }
 
-    const resolvedCategoryId = categoriesBySlug.get(categorySlug);
-    if (!resolvedCategoryId) {
-      errors.push({ line: lineNo, message: `Unknown category_slug "${categorySlug}".` });
+    const catRes = await resolveOrCreateBulkCategoryId(
+      categorySlug,
+      categoryNameOverride,
+      categoryIdBySlugCache
+    );
+    if (!catRes.ok) {
+      errors.push({ line: lineNo, message: catRes.message });
       continue;
     }
+    const resolvedCategoryId = catRes.id;
 
     let pricePence = Math.round(parseFloat(priceRaw) * 100);
     if (freeToCollector) {

@@ -50,8 +50,10 @@ export default async function AdminBulkListingsPage() {
       <p className="mt-10 text-xs text-zinc-500">
         Columns: <strong>seller_email</strong> (required), optional <strong>seller_display_name</strong>,{" "}
         <strong>seller_role</strong> (individual | reclamation_yard), <strong>seller_business_name</strong>,{" "}
-        <strong>seller_postcode</strong>; plus the same listing columns as the seller template (title, description,
-        condition, category_slug, price_gbp, image_urls, etc.).
+        <strong>seller_postcode</strong>; plus listing columns (title, description, condition,{" "}
+        <strong>category_slug</strong>, optional <strong>category_name</strong>, price_gbp, image_urls, etc.). Unknown{" "}
+        <strong>category_slug</strong> values create a new top-level category (name from{" "}
+        <strong>category_name</strong> or derived from the slug).
       </p>
     </div>
   );
