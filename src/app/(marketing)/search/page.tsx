@@ -17,6 +17,7 @@ import { buyerGrossPenceFromSellerNetPence, sellerChargesVat, vatLabelSuffix } f
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
+import { resolveCategoryBrowseRow } from "@/lib/category-browse";
 import { BrowseMobileReels, type ReelListing } from "./BrowseMobileReels";
 import type { SearchListingRow } from "@/lib/listing-search";
 
