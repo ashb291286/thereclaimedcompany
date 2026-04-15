@@ -128,6 +128,7 @@ export async function runBulkListingCsvImport(options: {
     const description = row.description ?? "";
     const condition = (row.condition ?? "") as Condition;
     const categorySlug = (row.category_slug ?? "").trim();
+    const categoryNameOverride = (row.category_name ?? "").trim() || null;
     const priceRaw = (row.price_gbp ?? "").trim();
     const imageRaw = row.image_urls ?? "";
     const postcodeInput = (row.postcode ?? "").trim();
