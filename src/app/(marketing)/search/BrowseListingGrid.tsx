@@ -4,7 +4,7 @@ import { CONDITION_LABELS } from "@/lib/constants";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
 import { formatMiles } from "@/lib/geo";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat, vatLabelSuffix } from "@/lib/vat-pricing";
-import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
+import { parseStoredCarbonImpact } from "@/lib/carbon/stored-impact";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
 import type { SearchListingRow } from "@/lib/listing-search";
