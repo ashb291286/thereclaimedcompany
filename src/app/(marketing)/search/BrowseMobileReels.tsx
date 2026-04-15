@@ -429,7 +429,7 @@ export function BrowseMobileReels({
         ) : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-3 pb-[max(env(safe-area-inset-bottom),0.6rem)] pt-6">
+      <div className="fixed inset-x-0 bottom-0 z-50 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-6">
         <div className="mx-auto grid max-w-xl grid-cols-4 gap-1.5">
           <button
             type="button"
