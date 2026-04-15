@@ -39,6 +39,7 @@ export function DashboardSidebar({
     { href: "/dashboard", label: "Overview" },
     { href: "/dashboard/account", label: "Account management" },
     { href: "/dashboard/sell", label: "Sell" },
+    { href: "/dashboard/listings", label: "My listings" },
     { href: "/dashboard/offers", label: "Offers" },
     {
       href: "/dashboard/my-bids",

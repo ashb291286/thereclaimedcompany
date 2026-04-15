@@ -2,7 +2,6 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 
 export default async function DashboardFavouritesPage() {
   const session = await auth();
@@ -66,7 +65,7 @@ export default async function DashboardFavouritesPage() {
                   className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-zinc-100"
                 >
                   {img ? (
-                    <Image src={img} alt="" fill className="object-cover" sizes="112px" />
+                    <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
                   ) : (
                     <span className="flex h-full items-center justify-center text-xs text-zinc-400">No image</span>
                   )}
