@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Mono, DM_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 
 /** Same stack as Driven · Reclaimed & The Prop Yard — loaded once for the whole app. */
 const playfair = Playfair_Display({
@@ -30,6 +31,18 @@ export const metadata: Metadata = {
   },
   description:
     "Find local reclamation yards and buy reclaimed materials, architectural salvage, timber, bricks and more. List and sell as an individual or business.",
+  appleWebApp: {
+    capable: true,
+    title: "Reclaimed Marketplace",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f766e",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -39,7 +52,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${playfair.variable} ${dmSans.variable} ${dmMono.variable}`}>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        <PwaInstallPrompt />
+      </body>
     </html>
   );
 }

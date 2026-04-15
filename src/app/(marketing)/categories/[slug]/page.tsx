@@ -5,13 +5,8 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { parseBrowseRadiusParam } from "@/lib/browse-radius";
 import { browseListingTypeQueryParam, browseSortQueryParam, searchListings } from "@/lib/listing-search";
-import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
-import { buyerGrossPenceFromSellerNetPence, sellerChargesVat, vatLabelSuffix } from "@/lib/vat-pricing";
-import { CONDITION_LABELS } from "@/lib/constants";
 import { BrowseSortSelect } from "@/app/(marketing)/search/BrowseSortSelect";
-import { BrowseMobileReels, type ReelListing } from "@/app/(marketing)/search/BrowseMobileReels";
 import { BrowseListingGrid } from "@/app/(marketing)/search/BrowseListingGrid";
-import type { SearchListingRow } from "@/lib/listing-search";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string; sort?: string }> };
 
@@ -92,34 +87,6 @@ export default async function CategoryBrowsePage({ params, searchParams }: Props
     return p.toString();
   }
 
-  function toReelListing(l: SearchListingRow): ReelListing {
-    const carbon = parseStoredCarbonImpact(l);
-    const v = sellerChargesVat({
-      sellerRole: l.seller.role,
-      vatRegistered: l.seller.sellerProfile?.vatRegistered,
-    });
-    const buyerPence = buyerGrossPenceFromSellerNetPence(l.price, v);
-    const vatBit = vatLabelSuffix(v);
-    return {
-      id: l.id,
-      title: l.title,
-      imageUrl: l.images[0] ?? null,
-      auctionEndsAtIso: l.auctionEndsAt ? l.auctionEndsAt.toISOString() : null,
-      buyerPenceGbp: buyerPence,
-      vatSuffix: vatBit,
-      freeToCollectPrice: l.listingKind === "sell" && l.freeToCollector,
-      categoryName: l.category.name,
-      conditionLabel: CONDITION_LABELS[l.condition] ?? "Used",
-      listingKind: l.listingKind,
-      freeToCollector: l.freeToCollector,
-      offersDelivery: l.offersDelivery,
-      distanceLabel: null,
-      carbonSavedKg: carbon?.carbon_saved_kg ?? null,
-    };
-  }
-
-  const reelListings = listingsOrdered.map(toReelListing);
-
   let locationNote: string | null = null;
   if (sortByDistance && userPrefs?.homePostcode?.trim()) {
     locationNote = `Sorted by distance from your saved postcode (${userPrefs.homePostcode.trim()}). Add a postcode on search for a different origin.`;
@@ -167,20 +134,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: Props
         {listingsOrdered.length === 0 ? (
           <p className="mt-8 text-zinc-500">No active listings in this category yet.</p>
         ) : (
-          <>
-            <BrowseMobileReels
-              listings={reelListings}
-              initialPage={page}
-              totalPages={totalPages}
-              query={{
-                category: category.slug,
-                sort: sortQuery || undefined,
-                listingType: listingTypeQuery || undefined,
-              }}
-              profileHref={session?.user?.id ? "/dashboard" : "/auth/signin?callbackUrl=%2Fsearch"}
-            />
-            <BrowseListingGrid listings={listingsOrdered} />
-          </>
+          <BrowseListingGrid listings={listingsOrdered} visibility="always" />
         )}
       </section>
 

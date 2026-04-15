@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { isCarbonAdmin } from "@/lib/admin";
 import {
   adminDeleteListingAction,
+  adminPurgeReadNotificationsAction,
   adminSetListingStatusAction,
   adminSetListingVisibilityAction,
   adminToggleUserSuspensionAction,
@@ -12,7 +13,13 @@ import {
 export default async function AdminOverviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; userQ?: string; yardQ?: string; listingQ?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    userQ?: string;
+    yardQ?: string;
+    listingQ?: string;
+    notifQ?: string;
+  }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) return null;
@@ -25,11 +32,39 @@ export default async function AdminOverviewPage({
     );
   }
 
-  const { error, userQ: rawUserQ, yardQ: rawYardQ, listingQ: rawListingQ } = await searchParams;
+  const { error, userQ: rawUserQ, yardQ: rawYardQ, listingQ: rawListingQ, notifQ: rawNotifQ } =
+    await searchParams;
   const userQ = rawUserQ?.trim() ?? "";
   const yardQ = rawYardQ?.trim() ?? "";
   const listingQ = rawListingQ?.trim() ?? "";
-  const [users, yards, listings, bids, endedAuctions, myListings, stats] = await Promise.all([
+  const notifQ = rawNotifQ?.trim() ?? "";
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const notifSearchWhere = notifQ
+    ? {
+        OR: [
+          { id: { contains: notifQ } },
+          { type: { contains: notifQ, mode: "insensitive" as const } },
+          { title: { contains: notifQ, mode: "insensitive" as const } },
+          { body: { contains: notifQ, mode: "insensitive" as const } },
+          { user: { email: { contains: notifQ, mode: "insensitive" as const } } },
+          { user: { id: { contains: notifQ } } },
+        ],
+      }
+    : undefined;
+
+  const [
+    users,
+    yards,
+    listings,
+    bids,
+    endedAuctions,
+    myListings,
+    stats,
+    notifByType,
+    recentNotifications,
+    notificationTotal,
+    notificationUnread,
+  ] = await Promise.all([
     prisma.user.findMany({
       where: userQ
         ? {
@@ -142,9 +177,26 @@ export default async function AdminOverviewPage({
       prisma.listing.count({ where: { status: "active" } }),
       prisma.listing.count({ where: { listingKind: "auction", status: "active" } }),
     ]),
+    prisma.notification.groupBy({
+      by: ["type"],
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      _count: { id: true },
+    }),
+    prisma.notification.findMany({
+      where: notifSearchWhere,
+      take: 20,
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { id: true, email: true } } },
+    }),
+    prisma.notification.count(),
+    prisma.notification.count({ where: { readAt: null } }),
   ]);
 
   const [userCount, suspendedCount, yardCount, listingCount, activeListingCount, activeAuctionCount] = stats;
+  const notifByTypeSorted = [...notifByType].sort((a, b) => b._count.id - a._count.id);
+  const resendConfigured = Boolean(process.env.RESEND_API_KEY?.trim());
+  const resendFromPreview =
+    process.env.RESEND_FROM?.trim() || "Reclaimed Marketplace <onboarding@resend.dev>";
 
   return (
     <div>
@@ -193,6 +245,176 @@ export default async function AdminOverviewPage({
       </div>
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-zinc-900">Notifications &amp; email alerts</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          In-app notifications are stored per user. Operational email is optional and currently used for yard
+          enquiries only.
+        </p>
+        <div className="mt-4 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
+            <h3 className="text-sm font-semibold text-zinc-900">Email (Resend)</h3>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-700">
+              <li>
+                Status:{" "}
+                <span className={resendConfigured ? "font-medium text-emerald-800" : "font-medium text-amber-800"}>
+                  {resendConfigured ? "Configured (API key present)" : "Not configured — yard enquiry emails are skipped"}
+                </span>
+              </li>
+              <li>
+                Default / configured <code className="rounded bg-zinc-200 px-1 text-xs">RESEND_FROM</code>:{" "}
+                <span className="break-all">{resendFromPreview}</span>
+              </li>
+              <li>
+                Code path: <code className="rounded bg-zinc-200 px-1 text-xs">sendYardEnquiryEmail</code> — in-app
+                notification to the yard is always created; email sends only when{" "}
+                <code className="rounded bg-zinc-200 px-1 text-xs">RESEND_API_KEY</code> is set.
+              </li>
+            </ul>
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
+            <h3 className="text-sm font-semibold text-zinc-900">In-app notifications</h3>
+            <p className="mt-2 text-sm text-zinc-700">
+              <span className="font-medium text-zinc-900">{notificationTotal.toLocaleString()}</span> total rows ·{" "}
+              <span className="font-medium text-zinc-900">{notificationUnread.toLocaleString()}</span> unread
+            </p>
+            <p className="mt-2 text-xs text-zinc-600">
+              Users manage their own feed under{" "}
+              <Link href="/dashboard/notifications" className="font-medium text-brand hover:underline">
+                Dashboard → Notifications
+              </Link>
+              .
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-zinc-900">Notification types (last 30 days)</h3>
+          {notifByTypeSorted.length === 0 ? (
+            <p className="mt-2 text-sm text-zinc-500">No notifications in the last 30 days.</p>
+          ) : (
+            <div className="mt-2 overflow-x-auto rounded-lg border border-zinc-200">
+              <table className="min-w-full text-sm">
+                <thead className="text-left text-xs uppercase tracking-wide text-zinc-500">
+                  <tr>
+                    <th className="py-2 px-3">Type</th>
+                    <th className="py-2 px-3">Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {notifByTypeSorted.map((row) => (
+                    <tr key={row.type} className="border-t border-zinc-100">
+                      <td className="py-2 px-3 font-mono text-xs text-zinc-800">{row.type}</td>
+                      <td className="py-2 px-3 text-zinc-700">{row._count.id}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-zinc-900">Recent notifications (all users)</h3>
+          <p className="mt-1 text-xs text-zinc-600">Up to 20 rows, newest first. Search by type, title, body, user id/email, or notification id.</p>
+          <form className="mt-3 flex flex-wrap items-center gap-2">
+            <input type="hidden" name="userQ" value={userQ} />
+            <input type="hidden" name="yardQ" value={yardQ} />
+            <input type="hidden" name="listingQ" value={listingQ} />
+            <input
+              name="notifQ"
+              defaultValue={notifQ}
+              placeholder="Search notifications"
+              className="w-full max-w-sm rounded border border-zinc-300 px-3 py-2 text-sm"
+            />
+            <button type="submit" className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50">
+              Search
+            </button>
+            <Link
+              href={`/dashboard/admin${userQ || yardQ || listingQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(yardQ ? { yardQ } : {}), ...(listingQ ? { listingQ } : {}) }).toString()}` : ""}`}
+              className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+            >
+              Clear
+            </Link>
+          </form>
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-zinc-500">
+                <tr>
+                  <th className="py-2 pr-3">When</th>
+                  <th className="py-2 pr-3">User</th>
+                  <th className="py-2 pr-3">Type</th>
+                  <th className="py-2 pr-3">Title</th>
+                  <th className="py-2 pr-3">Read</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentNotifications.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center text-sm text-zinc-500">
+                      No notifications match this search.
+                    </td>
+                  </tr>
+                ) : (
+                  recentNotifications.map((n) => (
+                    <tr key={n.id} className="border-t border-zinc-100 align-top">
+                      <td className="py-2 pr-3 text-xs text-zinc-600">
+                        {n.createdAt.toISOString().replace("T", " ").slice(0, 16)}
+                      </td>
+                      <td className="py-2 pr-3 text-xs text-zinc-700">
+                        <span className="break-all">{n.user.email ?? n.user.id}</span>
+                      </td>
+                      <td className="py-2 pr-3 font-mono text-[11px] text-zinc-800">{n.type}</td>
+                      <td className="py-2 pr-3">
+                        <p className="font-medium text-zinc-900">{n.title}</p>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-zinc-600">{n.body}</p>
+                        <p className="mt-1 font-mono text-[10px] text-zinc-500">ID: {n.id}</p>
+                      </td>
+                      <td className="py-2 pr-3 text-zinc-700">{n.readAt ? "Yes" : "No"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+          <h3 className="text-sm font-semibold text-amber-950">Housekeeping: purge old read notifications</h3>
+          <p className="mt-1 text-xs text-amber-900/90">
+            Permanently deletes <strong>read</strong> in-app notifications older than the age you select. Unread rows
+            are never removed.
+          </p>
+          <form action={adminPurgeReadNotificationsAction} className="mt-3 flex flex-wrap items-end gap-3">
+            <div>
+              <label htmlFor="olderThanDays" className="block text-xs font-medium text-amber-950">
+                Older than (days)
+              </label>
+              <select
+                id="olderThanDays"
+                name="olderThanDays"
+                defaultValue="90"
+                className="mt-1 rounded border border-amber-300 bg-white px-2 py-1.5 text-sm text-amber-950"
+              >
+                <option value="90">90</option>
+                <option value="180">180</option>
+                <option value="365">365</option>
+              </select>
+            </div>
+            <label className="flex max-w-md items-start gap-2 text-xs text-amber-950">
+              <input type="checkbox" name="confirm" value="on" className="mt-0.5" required />
+              <span>I understand this permanently deletes matching read notifications.</span>
+            </label>
+            <button
+              type="submit"
+              className="rounded-lg border border-amber-800 bg-amber-900 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-950"
+            >
+              Run purge
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">Users</h2>
         <p className="mt-1 text-sm text-zinc-600">
           Showing up to 20 recent users. Search by email, name, yard details, or user ID.
@@ -200,6 +422,7 @@ export default async function AdminOverviewPage({
         <form className="mt-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="yardQ" value={yardQ} />
           <input type="hidden" name="listingQ" value={listingQ} />
+          <input type="hidden" name="notifQ" value={notifQ} />
           <input
             name="userQ"
             defaultValue={userQ}
@@ -210,7 +433,7 @@ export default async function AdminOverviewPage({
             Search
           </button>
           <Link
-            href={`/dashboard/admin${yardQ || listingQ ? `?${new URLSearchParams({ ...(yardQ ? { yardQ } : {}), ...(listingQ ? { listingQ } : {}) }).toString()}` : ""}`}
+            href={`/dashboard/admin${yardQ || listingQ || notifQ ? `?${new URLSearchParams({ ...(yardQ ? { yardQ } : {}), ...(listingQ ? { listingQ } : {}), ...(notifQ ? { notifQ } : {}) }).toString()}` : ""}`}
             className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
           >
             Clear
@@ -291,6 +514,7 @@ export default async function AdminOverviewPage({
         <form className="mt-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="userQ" value={userQ} />
           <input type="hidden" name="listingQ" value={listingQ} />
+          <input type="hidden" name="notifQ" value={notifQ} />
           <input
             name="yardQ"
             defaultValue={yardQ}
@@ -301,7 +525,7 @@ export default async function AdminOverviewPage({
             Search
           </button>
           <Link
-            href={`/dashboard/admin${userQ || listingQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(listingQ ? { listingQ } : {}) }).toString()}` : ""}`}
+            href={`/dashboard/admin${userQ || listingQ || notifQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(listingQ ? { listingQ } : {}), ...(notifQ ? { notifQ } : {}) }).toString()}` : ""}`}
             className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
           >
             Clear
@@ -407,6 +631,7 @@ export default async function AdminOverviewPage({
         <form className="mt-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="userQ" value={userQ} />
           <input type="hidden" name="yardQ" value={yardQ} />
+          <input type="hidden" name="notifQ" value={notifQ} />
           <input
             name="listingQ"
             defaultValue={listingQ}
@@ -417,7 +642,7 @@ export default async function AdminOverviewPage({
             Search
           </button>
           <Link
-            href={`/dashboard/admin${userQ || yardQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(yardQ ? { yardQ } : {}) }).toString()}` : ""}`}
+            href={`/dashboard/admin${userQ || yardQ || notifQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(yardQ ? { yardQ } : {}), ...(notifQ ? { notifQ } : {}) }).toString()}` : ""}`}
             className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
           >
             Clear
@@ -565,6 +790,10 @@ export default async function AdminOverviewPage({
           <li>Commission settings: currently code-configured (auction settlement constants).</li>
           <li>SEO settings: currently per-yard profile and category content, not global editable settings.</li>
           <li>Admin access controlled by <code className="rounded bg-zinc-100 px-1">ADMIN_EMAILS</code>.</li>
+          <li>
+            PWA: web app manifest is served automatically; mobile visitors see an install prompt (Chrome) or
+            Add-to-Home-Screen instructions (Safari).
+          </li>
         </ul>
       </section>
     </div>

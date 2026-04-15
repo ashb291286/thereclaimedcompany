@@ -257,7 +257,7 @@ export default async function SearchPage({
   }
 
   return (
-    <div className="mx-auto w-full overflow-x-hidden px-[30px] py-6 sm:py-8">
+    <div className="mx-auto w-full overflow-x-hidden px-0 py-0 md:px-[30px] md:py-8">
       {showBuyerWelcome ? (
         <Suspense fallback={null}>
           <BuyerWelcomeModal open />
@@ -304,7 +304,7 @@ export default async function SearchPage({
           </div>
         </aside>
 
-        <section>
+        <section className="px-4 md:px-0">
           {locationNote ? (
             <p className="hidden rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 md:block">
               {locationNote}
@@ -319,35 +319,38 @@ export default async function SearchPage({
             </Suspense>
           </div>
           {listingsOrdered.length === 0 ? (
-            <p className="mt-8 text-zinc-500">No listings match your filters.</p>
+            <p className="mt-8 px-4 text-zinc-500 md:px-0">No listings match your filters.</p>
           ) : (
             <>
-              <BrowseMobileReels
-                listings={reelListings}
-                initialPage={page}
-                totalPages={totalPages}
-                query={{
-                  q: params.q,
-                  category: activeCategoryRow?.slug,
-                  postcode: params.postcode,
-                  radius:
-                    params.radius?.trim() ||
-                    (params.postcode?.trim()
-                      ? radiusNationwide
-                        ? "nationwide"
-                        : String(radiusMiles)
-                      : undefined),
-                  sellerType: params.sellerType,
-                  hireOnly: params.hireOnly,
-                  availableNow: params.availableNow,
-                  ids: params.ids,
-                  fromImage: params.fromImage,
-                  sort: sortQuery || undefined,
-                  listingType: listingTypeQuery || undefined,
-                }}
-                profileHref={session?.user?.id ? "/dashboard" : "/auth/signin?callbackUrl=%2Fsearch"}
-                initialSearch={params.q}
-              />
+              {!activeCategoryRow ? (
+                <BrowseMobileReels
+                  listings={reelListings}
+                  initialPage={page}
+                  totalPages={totalPages}
+                  query={{
+                    q: params.q,
+                    postcode: params.postcode,
+                    radius:
+                      params.radius?.trim() ||
+                      (params.postcode?.trim()
+                        ? radiusNationwide
+                          ? "nationwide"
+                          : String(radiusMiles)
+                        : undefined),
+                    sellerType: params.sellerType,
+                    hireOnly: params.hireOnly,
+                    availableNow: params.availableNow,
+                    ids: params.ids,
+                    fromImage: params.fromImage,
+                    sort: sortQuery || undefined,
+                    listingType: listingTypeQuery || undefined,
+                  }}
+                  profileHref={session?.user?.id ? "/dashboard" : "/auth/signin?callbackUrl=%2Fsearch"}
+                  initialSearch={params.q}
+                  gridListings={listingsOrdered}
+                  enableSwipeCardsToggle
+                />
+              ) : null}
               <MobileFiltersDrawer>
                 <SearchForm
                   id="search-filters-mobile"
@@ -363,7 +366,10 @@ export default async function SearchPage({
                   sellerFocusedBrowseMode={sellerFocusedBrowse}
                 />
               </MobileFiltersDrawer>
-              <BrowseListingGrid listings={listingsOrdered} />
+              <BrowseListingGrid
+                listings={listingsOrdered}
+                visibility={activeCategoryRow ? "always" : "md-only"}
+              />
             </>
           )}
         </section>

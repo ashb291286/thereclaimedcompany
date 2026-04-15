@@ -1126,43 +1126,54 @@ export function ListingForm({
         </aside>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setPreviewOpen(true)}
-        className="fixed bottom-6 right-6 z-40 rounded-full bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-white/40 hover:bg-brand-hover lg:hidden"
-      >
-        Preview
-      </button>
+      {!previewOpen ? (
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="fixed bottom-6 right-6 z-40 rounded-full bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-white/40 hover:bg-brand-hover lg:hidden"
+        >
+          Preview
+        </button>
+      ) : null}
 
       {previewOpen ? (
         <div
-          className="fixed inset-0 z-50 lg:hidden"
+          className="fixed inset-0 z-[2100] flex justify-end lg:hidden"
           role="dialog"
           aria-modal="true"
           aria-labelledby="listing-preview-drawer-title"
         >
           <button
             type="button"
-            className="absolute inset-0 bg-zinc-900/50"
+            className="absolute inset-0 z-0 bg-zinc-900/50"
             aria-label="Close preview"
             onClick={() => setPreviewOpen(false)}
           />
-          <div className="absolute right-0 top-0 flex h-full w-[min(100%,380px)] max-w-full flex-col border-l border-zinc-200 bg-white shadow-2xl">
-            <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-4 py-3">
+          <div className="relative z-10 flex h-full w-[min(100%,380px)] max-w-full flex-col border-l border-zinc-200 bg-white shadow-2xl pt-[max(env(safe-area-inset-top),0px)]">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-200 px-3 py-3 sm:px-4">
               <h2 id="listing-preview-drawer-title" className="text-sm font-semibold text-zinc-900">
                 Buyer preview
               </h2>
               <button
                 type="button"
                 onClick={() => setPreviewOpen(false)}
-                className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
-                aria-label="Close"
+                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-sm font-semibold text-zinc-800 hover:bg-zinc-50"
+                aria-label="Close preview"
               >
-                <span className="text-xl leading-none">×</span>
+                Close
               </button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-3">
               <ListingLivePreview {...previewProps} sellerDisplayName={sellerDisplayName} />
+            </div>
+            <div className="shrink-0 border-t border-zinc-200 bg-white p-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                className="w-full rounded-lg border border-zinc-300 py-3 text-sm font-semibold text-zinc-900 hover:bg-zinc-50"
+              >
+                Close preview
+              </button>
             </div>
           </div>
         </div>

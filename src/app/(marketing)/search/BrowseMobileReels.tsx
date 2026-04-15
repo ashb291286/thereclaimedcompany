@@ -6,6 +6,11 @@ import { CONDITION_LABELS } from "@/lib/constants";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDisplayCurrency } from "@/components/currency/CurrencyProvider";
 import { useRouter } from "next/navigation";
+import { BrowseListingGrid } from "./BrowseListingGrid";
+import type { SearchListingRow } from "@/lib/listing-search";
+
+const MOBILE_BROWSE_LAYOUT_KEY = "reclaimed:browseMobileLayout";
+type MobileBrowseLayout = "swipe" | "cards";
 
 export type ReelListing = {
   id: string;
@@ -114,6 +119,8 @@ export function BrowseMobileReels({
   query,
   profileHref,
   initialSearch,
+  gridListings,
+  enableSwipeCardsToggle,
 }: {
   listings: ReelListing[];
   initialPage: number;
@@ -121,6 +128,9 @@ export function BrowseMobileReels({
   query: FeedQuery;
   profileHref: string;
   initialSearch?: string;
+  /** When set with `enableSwipeCardsToggle`, buyers can switch to a card grid on mobile. */
+  gridListings?: SearchListingRow[];
+  enableSwipeCardsToggle?: boolean;
 }) {
   const router = useRouter();
   const { formatPence } = useDisplayCurrency();
@@ -130,9 +140,30 @@ export function BrowseMobileReels({
   const [page, setPage] = useState(initialPage);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [mobileLayout, setMobileLayout] = useState<MobileBrowseLayout>("swipe");
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const hasMore = page < totalPages;
+  const showLayoutToggle = Boolean(enableSwipeCardsToggle && gridListings?.length);
+
+  useEffect(() => {
+    if (!showLayoutToggle) return;
+    try {
+      const raw = window.localStorage.getItem(MOBILE_BROWSE_LAYOUT_KEY);
+      if (raw === "swipe" || raw === "cards") setMobileLayout(raw);
+    } catch {
+      /* ignore */
+    }
+  }, [showLayoutToggle]);
+
+  const persistMobileLayout = useCallback((next: MobileBrowseLayout) => {
+    setMobileLayout(next);
+    try {
+      window.localStorage.setItem(MOBILE_BROWSE_LAYOUT_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     setItems(listings);
@@ -181,7 +212,10 @@ export function BrowseMobileReels({
     if (query.listingType) sp.set("listingType", query.listingType);
     return sp.toString();
   }, [query]);
-  const scrollKey = useMemo(() => `browse-mobile-scroll:${queryString}`, [queryString]);
+  const scrollKey = useMemo(
+    () => `browse-mobile-scroll:${mobileLayout}:${queryString}`,
+    [mobileLayout, queryString]
+  );
 
   useEffect(() => {
     const el = scrollContainerRef.current;
@@ -227,7 +261,7 @@ export function BrowseMobileReels({
   }, [hasMore, loadingMore, page, queryString]);
 
   useEffect(() => {
-    if (!hasMore || !sentinelRef.current) return;
+    if (mobileLayout !== "swipe" || !hasMore || !sentinelRef.current) return;
     const el = sentinelRef.current;
     const obs = new IntersectionObserver(
       (entries) => {
@@ -239,7 +273,7 @@ export function BrowseMobileReels({
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [hasMore, loadMore]);
+  }, [hasMore, loadMore, mobileLayout]);
 
   if (items.length === 0) return null;
 
@@ -250,7 +284,7 @@ export function BrowseMobileReels({
     >
       <div
         ref={scrollContainerRef}
-        className="mx-auto h-[100dvh] overflow-y-auto overscroll-y-contain snap-y snap-mandatory [scrollbar-width:none]"
+        className="mx-auto h-[100dvh] overflow-y-auto overscroll-y-contain bg-stone-50 snap-y snap-mandatory [scrollbar-width:none]"
         style={{ WebkitOverflowScrolling: "touch" }}
         onScroll={() => {
           const el = scrollContainerRef.current;
@@ -267,7 +301,7 @@ export function BrowseMobileReels({
             <button
               type="button"
               onClick={() => router.back()}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/45 bg-black/30 text-white backdrop-blur"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/45 bg-black/30 text-white backdrop-blur"
               aria-label="Back"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
@@ -281,7 +315,7 @@ export function BrowseMobileReels({
               </svg>
             </button>
             <form
-              className="flex-1"
+              className="min-w-0 flex-1"
               onSubmit={(e) => {
                 e.preventDefault();
                 const sp = new URLSearchParams(queryString);
@@ -299,9 +333,37 @@ export function BrowseMobileReels({
                 className="h-9 w-full rounded-full border border-white/45 bg-black/35 px-4 text-sm text-white placeholder:text-white/70 backdrop-blur focus:outline-none focus:ring-2 focus:ring-white/60"
               />
             </form>
+            {showLayoutToggle ? (
+              <div
+                className="flex shrink-0 rounded-full border border-white/45 bg-black/40 p-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur"
+                role="group"
+                aria-label="Listing view"
+              >
+                <button
+                  type="button"
+                  onClick={() => persistMobileLayout("swipe")}
+                  className={`rounded-full px-2 py-1.5 leading-none transition ${mobileLayout === "swipe" ? "bg-white/25 shadow-sm" : "text-white/80 hover:text-white"}`}
+                >
+                  Swipe
+                </button>
+                <button
+                  type="button"
+                  onClick={() => persistMobileLayout("cards")}
+                  className={`rounded-full px-2 py-1.5 leading-none transition ${mobileLayout === "cards" ? "bg-white/25 shadow-sm" : "text-white/80 hover:text-white"}`}
+                >
+                  Cards
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
-        <ul className="flex flex-col gap-3 pt-1">
+        {mobileLayout === "cards" && gridListings ? (
+          <div className="min-h-[100dvh] bg-stone-50 px-2 pb-36 pt-[calc(3.25rem+max(env(safe-area-inset-top),0.75rem))]">
+            <BrowseListingGrid listings={gridListings} visibility="always" className="mt-0" />
+          </div>
+        ) : (
+          <>
+        <ul className="flex flex-col gap-0">
           {items.map((l) => {
             const auctionCountdown =
               l.listingKind === "auction" ? auctionCountdownLabelFromIso(l.auctionEndsAtIso) : null;
@@ -427,6 +489,8 @@ export function BrowseMobileReels({
             {loadError}
           </button>
         ) : null}
+          </>
+        )}
       </div>
 
       <div className="fixed inset-x-0 z-50 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-3 pb-4 pt-6 [bottom:calc(env(safe-area-inset-bottom,0px)+0.75rem)]">

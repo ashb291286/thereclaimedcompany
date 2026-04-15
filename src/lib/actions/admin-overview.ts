@@ -68,3 +68,19 @@ export async function adminSetListingStatusAction(formData: FormData): Promise<v
   });
   revalidatePath("/dashboard/admin");
 }
+
+/** Deletes read in-app notifications older than the cutoff (housekeeping). */
+export async function adminPurgeReadNotificationsAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  if (String(formData.get("confirm") ?? "") !== "on") return;
+  const days = parseInt(String(formData.get("olderThanDays") ?? "90"), 10);
+  if (!Number.isFinite(days) || days < 30 || days > 730) return;
+  const cutoff = new Date(Date.now() - days * 86400000);
+  await prisma.notification.deleteMany({
+    where: {
+      readAt: { not: null },
+      createdAt: { lt: cutoff },
+    },
+  });
+  revalidatePath("/dashboard/admin");
+}

@@ -26,12 +26,15 @@ export function DashboardSidebar({
   carbonAdmin,
   unreadCount,
   myBidsOutbidUnread = 0,
+  onNavigate,
 }: {
   isYardAccount: boolean;
   carbonAdmin: boolean;
   unreadCount: number;
   /** Unread “you’ve been outbid” notifications — surfaced on My bids. */
   myBidsOutbidUnread?: number;
+  /** Called after a nav link is chosen (e.g. close mobile drawer). */
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
 
@@ -78,6 +81,7 @@ export function DashboardSidebar({
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => onNavigate?.()}
                 className={`flex items-center justify-between rounded-lg border px-2.5 py-2 text-sm transition ${itemClass(active, item.accent)}`}
               >
                 <span>{item.label}</span>

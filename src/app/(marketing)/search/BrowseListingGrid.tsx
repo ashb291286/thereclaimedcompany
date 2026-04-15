@@ -22,9 +22,22 @@ function auctionCountdownLabel(endsAt: Date | null): string | null {
   return `${Math.max(1, minutes)}m left`;
 }
 
-export function BrowseListingGrid({ listings }: { listings: SearchListingRow[] }) {
+export function BrowseListingGrid({
+  listings,
+  /** Default: grid only from `md` up (mobile uses swipe feed elsewhere). */
+  visibility = "md-only",
+  className,
+}: {
+  listings: SearchListingRow[];
+  visibility?: "md-only" | "always";
+  className?: string;
+}) {
+  const layoutClass =
+    visibility === "always"
+      ? "mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+      : "mt-6 hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5";
   return (
-    <ul className="mt-6 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+    <ul className={[layoutClass, className].filter(Boolean).join(" ")}>
       {listings.map((l) => {
         const impact = parseStoredCarbonImpact(l);
         const auctionCountdown = l.listingKind === "auction" ? auctionCountdownLabel(l.auctionEndsAt) : null;
