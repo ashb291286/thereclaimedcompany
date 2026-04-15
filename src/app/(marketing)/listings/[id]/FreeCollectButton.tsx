@@ -6,14 +6,21 @@ export function FreeCollectButton({
   listingId,
   quantity = 1,
   label,
+  isGuest = false,
 }: {
   listingId: string;
   quantity?: number;
   label?: string;
+  isGuest?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
 
   async function handleConfirm() {
+    if (isGuest) {
+      const returnPath = `/listings/${listingId}`;
+      window.location.href = `/auth/register?callbackUrl=${encodeURIComponent(returnPath)}`;
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", {

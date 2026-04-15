@@ -11,6 +11,8 @@ type Props = {
   disabledReason?: string;
   /** For per-unit listings (ignored when paying an offer or auction). */
   quantity?: number;
+  /** When true, send the visitor to register with a return URL instead of calling checkout. */
+  isGuest?: boolean;
 };
 
 export function BuyButton({
@@ -21,11 +23,17 @@ export function BuyButton({
   disabled,
   disabledReason,
   quantity = 1,
+  isGuest = false,
 }: Props) {
   const [loading, setLoading] = useState(false);
 
   async function handleClick() {
     if (disabled) return;
+    if (isGuest) {
+      const returnPath = `/listings/${listingId}`;
+      window.location.href = `/auth/register?callbackUrl=${encodeURIComponent(returnPath)}`;
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", {

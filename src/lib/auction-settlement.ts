@@ -44,7 +44,7 @@ export async function finalizeAuctionListing(listingId: string): Promise<void> {
       type: "auction_ended_no_bids",
       title: "Auction ended with no bids",
       body: `“${listing.title}” received no bids.`,
-      linkUrl: `/dashboard`,
+      linkUrl: `/dashboard/listings/${listingId}/edit`,
     });
     return;
   }

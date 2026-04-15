@@ -16,6 +16,7 @@ export function ListingCheckoutActions({
   offerPayLabel,
   offerPayPenceGbp,
   offerVatSuffix,
+  isGuest = false,
 }: {
   listingId: string;
   freeToCollector: boolean;
@@ -28,6 +29,7 @@ export function ListingCheckoutActions({
   offerPayLabel?: string;
   offerPayPenceGbp?: number;
   offerVatSuffix?: string;
+  isGuest?: boolean;
 }) {
   const { formatPence } = useDisplayCurrency();
   const [quantity, setQuantity] = useState(1);
@@ -55,7 +57,7 @@ export function ListingCheckoutActions({
         (offerPayLabel ?? "Pay agreed price")
       );
     return (
-      <BuyButton listingId={listingId} offerId={offerId} label={label} />
+      <BuyButton listingId={listingId} offerId={offerId} label={label} isGuest={isGuest} />
     );
   }
 
@@ -115,10 +117,10 @@ export function ListingCheckoutActions({
               unit{quantity === 1 ? "" : "s"})
             </p>
           ) : null}
-          <FreeCollectButton listingId={listingId} quantity={quantity} label={freeLabel} />
+          <FreeCollectButton listingId={listingId} quantity={quantity} label={freeLabel} isGuest={isGuest} />
         </div>
       ) : (
-        <BuyButton listingId={listingId} label={buyLabel} quantity={quantity} />
+        <BuyButton listingId={listingId} label={buyLabel} quantity={quantity} isGuest={isGuest} />
       )}
     </div>
   );

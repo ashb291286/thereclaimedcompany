@@ -541,9 +541,21 @@ export default async function ListingPage({
             </section>
           ) : null}
 
-          {!isOwner && session?.user?.id && (
+          {!isOwner && (
             <section className={`${sectionClass} space-y-4`}>
               <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Buy or bid</h2>
+              {!session?.user?.id ? (
+                <p className="text-xs text-zinc-600">
+                  <Link
+                    href={`/auth/signin?callbackUrl=${encodeURIComponent(`/listings/${id}`)}`}
+                    className="font-medium text-brand hover:underline"
+                  >
+                    Sign in
+                  </Link>{" "}
+                  or continue below — you&apos;ll be asked to create an account when it&apos;s time to pay, send an
+                  offer, or bid.
+                </p>
+              ) : null}
               <div className="space-y-4">
             {listing.status === "active" && listing.listingKind === "sell" && (
               <>
@@ -560,12 +572,14 @@ export default async function ListingPage({
                       : undefined
                   }
                   offerVatSuffix={acceptedMine ? vatLabelSuffix(chargesVat) : undefined}
+                  isGuest={!session?.user?.id}
                 />
                 {!listing.freeToCollector ? (
                   <HaggleForm
                     listingId={listing.id}
                     listPricePence={buyerListPricePence}
                     chargesVat={chargesVat}
+                    isGuest={!session?.user?.id}
                   />
                 ) : null}
               </>
@@ -578,6 +592,7 @@ export default async function ListingPage({
                 hasBidPaymentMethod={!!buyerBidPay?.bidPaymentMethodId}
                 chargesVat={chargesVat}
                 isLeadingBidder={userLeadingLiveAuction}
+                isGuest={!session?.user?.id}
               />
             )}
 
@@ -617,6 +632,19 @@ export default async function ListingPage({
                   ? "The highest bid was below your reserve — there was no sale."
                   : "There was no sale. Check your dashboard for next steps."}
             </p>
+            {!topBid ? (
+              <div className="mt-4">
+                <Link
+                  href={`/dashboard/listings/${listing.id}/edit`}
+                  className="inline-flex rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
+                >
+                  Relist auction
+                </Link>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Opens edit — choose a new end date and publish to put it live again.
+                </p>
+              </div>
+            ) : null}
           </section>
         )}
 
@@ -626,17 +654,6 @@ export default async function ListingPage({
             <p className="mt-1 text-amber-900/90">
               The winning bidder is completing payment (we tried their saved card first). You’ll see the
               sale in your dashboard when it succeeds.
-            </p>
-          </section>
-        )}
-
-        {!isOwner && !session?.user?.id && (
-          <section className={sectionClass}>
-            <p className="text-sm text-zinc-600">
-              <Link href="/auth/signin" className="font-medium text-brand hover:underline">
-                Sign in
-              </Link>{" "}
-              to buy, bid, or make an offer.
             </p>
           </section>
         )}

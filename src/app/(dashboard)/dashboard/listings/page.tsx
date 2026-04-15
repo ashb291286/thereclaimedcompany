@@ -34,6 +34,7 @@ export default async function DashboardListingsPage({
       price: true,
       freeToCollector: true,
       category: { select: { name: true } },
+      _count: { select: { bids: true } },
     },
   });
 
@@ -71,6 +72,10 @@ export default async function DashboardListingsPage({
                   ? `From £${(l.price / 100).toFixed(2)}`
                   : `£${(l.price / 100).toFixed(2)}`;
             const isBoosted = l.boostedUntil != null && l.boostedUntil > now;
+            const canRelistNoBidAuction =
+              l.listingKind === "auction" &&
+              l.status === "ended" &&
+              l._count.bids === 0;
 
             return (
               <li
@@ -118,6 +123,14 @@ export default async function DashboardListingsPage({
                   >
                     Edit
                   </Link>
+                  {canRelistNoBidAuction ? (
+                    <Link
+                      href={`/dashboard/listings/${l.id}/edit`}
+                      className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-hover"
+                    >
+                      Relist
+                    </Link>
+                  ) : null}
                   <form action={sellerBoostListingCheckoutAction} className="contents">
                     <input type="hidden" name="listingId" value={l.id} />
                     <input type="hidden" name="boostReturn" value="listings" />

@@ -32,9 +32,18 @@ const sellingBenefits = {
   ],
 };
 
-export function RegisterView({ register }: { register: RegisterAction }) {
+export function RegisterView({
+  register,
+  callbackUrl = "",
+}: {
+  register: RegisterAction;
+  /** Sanitized internal path only (from server). */
+  callbackUrl?: string;
+}) {
   const [accountIntent, setAccountIntent] = useState<"buying" | "selling">("buying");
   const copy = accountIntent === "buying" ? buyingBenefits : sellingBenefits;
+  const signInHref =
+    callbackUrl !== "" ? `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/signin";
 
   return (
     <div className="grid w-full grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10 lg:items-stretch">
@@ -70,11 +79,12 @@ export function RegisterView({ register }: { register: RegisterAction }) {
             register={register}
             accountIntent={accountIntent}
             onAccountIntentChange={setAccountIntent}
+            callbackUrl={callbackUrl}
           />
         </div>
         <p className="mt-6 text-center text-sm text-zinc-600">
           Already have an account?{" "}
-          <Link href="/auth/signin" className="font-medium text-brand hover:underline">
+          <Link href={signInHref} className="font-medium text-brand hover:underline">
             Sign in
           </Link>
         </p>

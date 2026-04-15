@@ -12,7 +12,7 @@ import {
 export default async function AdminOverviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; userQ?: string; yardQ?: string; listingQ?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) return null;
@@ -25,11 +25,34 @@ export default async function AdminOverviewPage({
     );
   }
 
-  const { error } = await searchParams;
+  const { error, userQ: rawUserQ, yardQ: rawYardQ, listingQ: rawListingQ } = await searchParams;
+  const userQ = rawUserQ?.trim() ?? "";
+  const yardQ = rawYardQ?.trim() ?? "";
+  const listingQ = rawListingQ?.trim() ?? "";
   const [users, yards, listings, bids, endedAuctions, myListings, stats] = await Promise.all([
     prisma.user.findMany({
+      where: userQ
+        ? {
+            OR: [
+              { id: { contains: userQ } },
+              { email: { contains: userQ, mode: "insensitive" } },
+              { name: { contains: userQ, mode: "insensitive" } },
+              {
+                sellerProfile: {
+                  is: {
+                    OR: [
+                      { displayName: { contains: userQ, mode: "insensitive" } },
+                      { businessName: { contains: userQ, mode: "insensitive" } },
+                      { yardSlug: { contains: userQ, mode: "insensitive" } },
+                    ],
+                  },
+                },
+              },
+            ],
+          }
+        : undefined,
       orderBy: { createdAt: "desc" },
-      take: 80,
+      take: 20,
       include: {
         sellerProfile: {
           select: { displayName: true, businessName: true, postcode: true, yardSlug: true },
@@ -40,8 +63,21 @@ export default async function AdminOverviewPage({
       },
     }),
     prisma.sellerProfile.findMany({
+      where: yardQ
+        ? {
+            OR: [
+              { id: { contains: yardQ } },
+              { displayName: { contains: yardQ, mode: "insensitive" } },
+              { businessName: { contains: yardQ, mode: "insensitive" } },
+              { yardSlug: { contains: yardQ, mode: "insensitive" } },
+              { postcode: { contains: yardQ, mode: "insensitive" } },
+              { user: { id: { contains: yardQ } } },
+              { user: { email: { contains: yardQ, mode: "insensitive" } } },
+            ],
+          }
+        : undefined,
       orderBy: { updatedAt: "desc" },
-      take: 60,
+      take: 20,
       include: {
         user: {
           select: {
@@ -54,8 +90,19 @@ export default async function AdminOverviewPage({
       },
     }),
     prisma.listing.findMany({
+      where: listingQ
+        ? {
+            OR: [
+              { id: { contains: listingQ } },
+              { title: { contains: listingQ, mode: "insensitive" } },
+              { sellerId: { contains: listingQ } },
+              { seller: { email: { contains: listingQ, mode: "insensitive" } } },
+              { category: { name: { contains: listingQ, mode: "insensitive" } } },
+            ],
+          }
+        : undefined,
       orderBy: { updatedAt: "desc" },
-      take: 100,
+      take: 20,
       include: {
         seller: { select: { id: true, email: true, suspendedAt: true } },
         category: { select: { name: true, slug: true } },
@@ -147,7 +194,28 @@ export default async function AdminOverviewPage({
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">Users</h2>
-        <p className="mt-1 text-sm text-zinc-600">Suspend/unsuspend access and inspect user-level activity counts.</p>
+        <p className="mt-1 text-sm text-zinc-600">
+          Showing up to 20 recent users. Search by email, name, yard details, or user ID.
+        </p>
+        <form className="mt-3 flex flex-wrap items-center gap-2">
+          <input type="hidden" name="yardQ" value={yardQ} />
+          <input type="hidden" name="listingQ" value={listingQ} />
+          <input
+            name="userQ"
+            defaultValue={userQ}
+            placeholder="Search users"
+            className="w-full max-w-sm rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+          <button type="submit" className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50">
+            Search
+          </button>
+          <Link
+            href={`/dashboard/admin${yardQ || listingQ ? `?${new URLSearchParams({ ...(yardQ ? { yardQ } : {}), ...(listingQ ? { listingQ } : {}) }).toString()}` : ""}`}
+            className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+          >
+            Clear
+          </Link>
+        </form>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-zinc-500">
@@ -217,7 +285,28 @@ export default async function AdminOverviewPage({
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">Yards and related listings</h2>
-        <p className="mt-1 text-sm text-zinc-600">Quick view of yard identity, location, and listing volume.</p>
+        <p className="mt-1 text-sm text-zinc-600">
+          Showing up to 20 recent yards. Search by yard name/slug, postcode, user email, or ID.
+        </p>
+        <form className="mt-3 flex flex-wrap items-center gap-2">
+          <input type="hidden" name="userQ" value={userQ} />
+          <input type="hidden" name="listingQ" value={listingQ} />
+          <input
+            name="yardQ"
+            defaultValue={yardQ}
+            placeholder="Search yards"
+            className="w-full max-w-sm rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+          <button type="submit" className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50">
+            Search
+          </button>
+          <Link
+            href={`/dashboard/admin${userQ || listingQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(listingQ ? { listingQ } : {}) }).toString()}` : ""}`}
+            className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+          >
+            Clear
+          </Link>
+        </form>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-zinc-500">
@@ -279,6 +368,7 @@ export default async function AdminOverviewPage({
                       <Link href={`/listings/${l.id}`} target="_blank" className="font-medium text-brand underline">
                         {l.title}
                       </Link>
+                      <p className="text-xs text-zinc-500">ID: {l.id}</p>
                     </td>
                     <td className="py-2 pr-3 text-zinc-700">{l.category.name}</td>
                     <td className="py-2 pr-3 text-zinc-700">{l.status}</td>
@@ -311,7 +401,28 @@ export default async function AdminOverviewPage({
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">Listings moderation</h2>
-        <p className="mt-1 text-sm text-zinc-600">Update status/visibility or delete listing (delete can be blocked by related orders).</p>
+        <p className="mt-1 text-sm text-zinc-600">
+          Showing up to 20 recent listings. Search by listing ID/title, seller email, category, or status.
+        </p>
+        <form className="mt-3 flex flex-wrap items-center gap-2">
+          <input type="hidden" name="userQ" value={userQ} />
+          <input type="hidden" name="yardQ" value={yardQ} />
+          <input
+            name="listingQ"
+            defaultValue={listingQ}
+            placeholder="Search listings"
+            className="w-full max-w-sm rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+          <button type="submit" className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50">
+            Search
+          </button>
+          <Link
+            href={`/dashboard/admin${userQ || yardQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(yardQ ? { yardQ } : {}) }).toString()}` : ""}`}
+            className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+          >
+            Clear
+          </Link>
+        </form>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-zinc-500">
@@ -332,6 +443,7 @@ export default async function AdminOverviewPage({
                       {l.title}
                     </Link>
                     <p className="text-xs text-zinc-500">{l.category.name}</p>
+                    <p className="text-xs text-zinc-500">ID: {l.id}</p>
                   </td>
                   <td className="py-2 pr-3 text-zinc-700">
                     {l.seller.email || l.seller.id}
@@ -402,6 +514,7 @@ export default async function AdminOverviewPage({
                       <Link href={`/listings/${b.listingId}`} target="_blank" className="text-brand underline">
                         {b.listing.title.slice(0, 42)}
                       </Link>
+                      <p className="text-xs text-zinc-500">ID: {b.listingId}</p>
                     </td>
                     <td className="py-2 px-3 text-zinc-700">{b.bidder.email || b.bidder.id}</td>
                     <td className="py-2 px-3 font-medium text-zinc-900">£{(b.amountPence / 100).toFixed(2)}</td>
@@ -429,6 +542,7 @@ export default async function AdminOverviewPage({
                         {a.title.slice(0, 40)}
                       </Link>
                       <p className="text-xs text-zinc-500">{a.status}</p>
+                      <p className="text-xs text-zinc-500">ID: {a.id}</p>
                     </td>
                     <td className="py-2 px-3 text-zinc-700">{a.seller.email || a.seller.id}</td>
                     <td className="py-2 px-3 text-zinc-700">

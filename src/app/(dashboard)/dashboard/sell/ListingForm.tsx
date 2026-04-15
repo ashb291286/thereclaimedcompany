@@ -153,12 +153,23 @@ export function ListingForm({
     return (listing.price / 100).toFixed(2);
   });
   const [auctionDuration, setAuctionDuration] = useState<AuctionDurationMode>(() => {
-    if (listing?.listingKind === "auction" && listing.auctionEndsAt) return "custom";
+    if (listing?.listingKind === "auction" && listing.auctionEndsAt) {
+      const ended =
+        listing.status === "ended" && new Date(listing.auctionEndsAt).getTime() <= Date.now();
+      if (ended) return 7;
+      return "custom";
+    }
     return 7;
   });
-  const [auctionCustomEndsStr, setAuctionCustomEndsStr] = useState(() =>
-    listing?.auctionEndsAt != null ? toDatetimeLocalValue(new Date(listing.auctionEndsAt)) : ""
-  );
+  const [auctionCustomEndsStr, setAuctionCustomEndsStr] = useState(() => {
+    if (listing?.listingKind === "auction" && listing.auctionEndsAt) {
+      const ended =
+        listing.status === "ended" && new Date(listing.auctionEndsAt).getTime() <= Date.now();
+      if (ended) return defaultDatetimeLocalDaysFromNow(7);
+      return toDatetimeLocalValue(new Date(listing.auctionEndsAt));
+    }
+    return "";
+  });
   const [auctionReserveStr, setAuctionReserveStr] = useState(() =>
     listing?.auctionReservePence != null ? (listing.auctionReservePence / 100).toFixed(2) : ""
   );

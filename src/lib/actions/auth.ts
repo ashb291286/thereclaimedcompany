@@ -2,8 +2,8 @@
 
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
+import { safeInternalPath } from "@/lib/safe-internal-path";
 
 export async function register(formData: FormData) {
   const email = formData.get("email") as string;
@@ -33,8 +33,12 @@ export async function register(formData: FormData) {
     },
   });
 
+  const callback = safeInternalPath(String(formData.get("callbackUrl") ?? ""));
+  const defaultSelling = "/dashboard/onboarding?welcome=1";
+  const defaultBuying = "/search?welcome=1";
   const redirectTo =
-    accountIntent === "selling" ? "/dashboard/onboarding?welcome=1" : "/search?welcome=1";
+    callback ??
+    (accountIntent === "selling" ? defaultSelling : defaultBuying);
 
   await signIn("credentials", {
     email: email.trim(),

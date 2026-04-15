@@ -8,10 +8,12 @@ export function RegisterForm({
   register,
   accountIntent,
   onAccountIntentChange,
+  callbackUrl = "",
 }: {
   register: RegisterAction;
   accountIntent: "buying" | "selling";
   onAccountIntentChange: (intent: "buying" | "selling") => void;
+  callbackUrl?: string;
 }) {
   const [state, formAction] = useActionState(
     async (_: { error?: string } | null, formData: FormData) => {
@@ -24,6 +26,7 @@ export function RegisterForm({
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="accountIntent" value={accountIntent} />
+      {callbackUrl ? <input type="hidden" name="callbackUrl" value={callbackUrl} /> : null}
       {state?.error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {state.error}

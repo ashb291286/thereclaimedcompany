@@ -510,6 +510,11 @@ export async function updateListing(id: string, formData: FormData) {
   const wasLive =
     listing.status === ListingStatus.active && Boolean(listing.visibleOnMarketplace);
 
+  const relistEndedAuction =
+    publish &&
+    parsed.data.listingKind === "auction" &&
+    listing.status === ListingStatus.ended;
+
   await prisma.listing.update({
     where: { id },
     data: {
@@ -550,6 +555,7 @@ export async function updateListing(id: string, formData: FormData) {
           ? Prisma.DbNull
           : (carbon.carbonImpactJson as Prisma.InputJsonValue),
       status: publish ? ListingStatus.active : ListingStatus.draft,
+      ...(relistEndedAuction ? { auctionFinalizedAt: null } : {}),
     },
   });
 

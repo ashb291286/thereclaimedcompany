@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { signIn } from "@/auth";
 import { redirect } from "next/navigation";
+import { safeInternalPath } from "@/lib/safe-internal-path";
 
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; callbackUrl?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, callbackUrl: rawCallback } = await searchParams;
+  const callbackUrl = safeInternalPath(rawCallback) ?? "";
+  const registerHref =
+    callbackUrl !== "" ? `/auth/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/register";
   return (
     <div className="mx-auto w-full max-w-md rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
       <h1 className="text-2xl font-semibold text-zinc-900 mb-6">Sign in</h1>
@@ -20,17 +24,21 @@ export default async function SignInPage({
         action={async (formData) => {
           "use server";
           try {
+            const cb = safeInternalPath(String(formData.get("callbackUrl") ?? ""));
             await signIn("credentials", {
               email: formData.get("email") as string,
               password: formData.get("password") as string,
-              redirectTo: "/",
+              redirectTo: cb ?? "/",
             });
           } catch {
-            redirect("/auth/signin?error=Invalid+email+or+password");
+            const q = new URLSearchParams({ error: "Invalid email or password" });
+            if (callbackUrl) q.set("callbackUrl", callbackUrl);
+            redirect(`/auth/signin?${q.toString()}`);
           }
         }}
         className="space-y-4"
       >
+        {callbackUrl ? <input type="hidden" name="callbackUrl" value={callbackUrl} /> : null}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-1">
             Email
@@ -66,7 +74,7 @@ export default async function SignInPage({
       </form>
       <p className="mt-6 text-center text-sm text-zinc-600">
         Don&apos;t have an account?{" "}
-        <Link href="/auth/register" className="font-medium text-brand hover:underline">
+        <Link href={registerHref} className="font-medium text-brand hover:underline">
           Sign up
         </Link>
       </p>

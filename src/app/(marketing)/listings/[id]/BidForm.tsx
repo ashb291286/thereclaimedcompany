@@ -6,12 +6,17 @@ import { useRouter } from "next/navigation";
 import { BidPaymentSetup } from "./BidPaymentSetup";
 import { createPortal } from "react-dom";
 
+function bidDraftKey(listingId: string) {
+  return `listing-bid-draft:${listingId}`;
+}
+
 export function BidForm({
   listingId,
   minimumPounds,
   hasBidPaymentMethod,
   chargesVat = false,
   isLeadingBidder = false,
+  isGuest = false,
 }: {
   listingId: string;
   minimumPounds: number;
@@ -19,6 +24,7 @@ export function BidForm({
   chargesVat?: boolean;
   /** Current user holds the top bid — they can only raise (next minimum updates after each bid). */
   isLeadingBidder?: boolean;
+  isGuest?: boolean;
 }) {
   const router = useRouter();
   const [pounds, setPounds] = useState(minimumPounds.toFixed(2));
@@ -37,10 +43,40 @@ export function BidForm({
     setCardSaved(hasBidPaymentMethod);
   }, [hasBidPaymentMethod]);
 
-  /** Keep the input aligned with server minimum after each bid / refresh. */
+  /** Keep the input aligned with server minimum after each bid / refresh (signed-in users). */
   useEffect(() => {
+    if (isGuest) return;
     setPounds(minimumPounds.toFixed(2));
-  }, [minimumPounds]);
+  }, [minimumPounds, isGuest]);
+
+  useEffect(() => {
+    if (!isGuest) return;
+    try {
+      const raw = sessionStorage.getItem(bidDraftKey(listingId));
+      if (raw) {
+        const parsed = JSON.parse(raw) as { pounds?: string };
+        const p = parseFloat(String(parsed.pounds ?? ""));
+        if (Number.isFinite(p) && p >= minimumPounds) {
+          setPounds(p.toFixed(2));
+          return;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    setPounds(minimumPounds.toFixed(2));
+  }, [listingId, isGuest, minimumPounds]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      try {
+        sessionStorage.setItem(bidDraftKey(listingId), JSON.stringify({ pounds }));
+      } catch {
+        /* ignore */
+      }
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [listingId, pounds]);
 
   useEffect(() => {
     if (!bidReceivedOpen) return;
@@ -61,6 +97,11 @@ export function BidForm({
     if (!res.ok) {
       setErr(res.error);
       return;
+    }
+    try {
+      sessionStorage.removeItem(bidDraftKey(listingId));
+    } catch {
+      /* ignore */
     }
     if (Number.isFinite(n)) {
       setConfirmedBidLine(
@@ -123,6 +164,52 @@ export function BidForm({
         document.body
       )
     ) : null;
+
+  if (isGuest) {
+    function onGuestBid(e: React.FormEvent) {
+      e.preventDefault();
+      setErr(null);
+      const n = parseFloat(pounds);
+      if (!Number.isFinite(n) || n < minimumPounds) {
+        setErr(`Bid must be at least £${minimumPounds.toFixed(2)}.`);
+        return;
+      }
+      try {
+        sessionStorage.setItem(bidDraftKey(listingId), JSON.stringify({ pounds }));
+      } catch {
+        /* ignore */
+      }
+      window.location.href = `/auth/register?callbackUrl=${encodeURIComponent(`/listings/${listingId}`)}`;
+    }
+
+    return (
+      <form onSubmit={onGuestBid} className="rounded-xl border border-brand/20 bg-brand-soft/60 p-4">
+        <h3 className="text-sm font-semibold text-zinc-900">Place a bid</h3>
+        <p className="mt-1 text-xs text-zinc-600">
+          Minimum next bid from £{minimumPounds.toFixed(2)}
+          {chargesVat ? " (incl. VAT)" : ""} (increment rules). Create a free account next, then save a card — if you
+          win, we charge it when the auction ends.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+          <input
+            type="number"
+            step="0.01"
+            min={minimumPounds}
+            value={pounds}
+            onChange={(e) => setPounds(e.target.value)}
+            className="w-full flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm sm:max-w-[140px]"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
+          >
+            Continue with account
+          </button>
+        </div>
+        {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      </form>
+    );
+  }
 
   if (!cardSaved) {
     return (
