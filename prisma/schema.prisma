@@ -94,6 +94,8 @@ model User {
   image         String?
   password      String?   // for credentials provider
   role          UserRole? // set when they become a seller
+  suspendedAt   DateTime?
+  suspensionReason String? @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

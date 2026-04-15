@@ -11,7 +11,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  const [unreadCount, unreadOutbidCount, dbRole] =
+  const [unreadCount, unreadOutbidCount, dbUserMeta] =
     session?.user?.id != null
       ? await Promise.all([
           prisma.notification.count({
@@ -22,11 +22,14 @@ export default async function DashboardLayout({
           }),
           prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { role: true },
+            select: { role: true, suspendedAt: true },
           }),
-        ]).then(([count, outbid, user]) => [count, outbid, user?.role ?? null] as const)
+        ]).then(([count, outbid, user]) => [count, outbid, user ?? null] as const)
       : [0, 0, null];
-  const isYardAccount = (session?.user?.role ?? dbRole) === "reclamation_yard";
+  if (dbUserMeta?.suspendedAt) {
+    await signOut({ redirectTo: "/auth/signout?suspended=1" });
+  }
+  const isYardAccount = (session?.user?.role ?? dbUserMeta?.role ?? null) === "reclamation_yard";
   const carbonAdmin = session ? isCarbonAdmin(session) : false;
 
   return (

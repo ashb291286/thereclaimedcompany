@@ -22,8 +22,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.email || !credentials?.password) return null;
         const user = await prisma.user.findUnique({
           where: { email: String(credentials.email) },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            image: true,
+            password: true,
+            suspendedAt: true,
+          },
         });
         if (!user?.password) return null;
+        if (user.suspendedAt) return null;
         const ok = await compare(String(credentials.password), user.password);
         if (!ok) return null;
         return {
@@ -37,13 +46,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
+      const userId = (user?.id ?? token.id) as string | undefined;
+      if (userId) {
+        token.id = userId;
         const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { role: true },
+          where: { id: userId },
+          select: { role: true, suspendedAt: true },
         });
         token.role = dbUser?.role ?? null;
+        token.suspendedAt = dbUser?.suspendedAt?.toISOString() ?? null;
       }
       return token;
     },
@@ -51,6 +62,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as "individual" | "reclamation_yard" | null;
+        session.user.suspendedAt = (token.suspendedAt as string | null | undefined) ?? null;
       }
       return session;
     },

@@ -23,6 +23,7 @@ export default auth((req) => {
   const isDrivenGarage = path.startsWith("/driven/garage");
   const isDrivenAdmin = path.startsWith("/driven/admin");
   const isAuthPage = path.startsWith("/auth/");
+  const isSuspended = Boolean((req.auth?.user as { suspendedAt?: string | null } | undefined)?.suspendedAt);
 
   if (isDrivenAdmin) {
     if (!isAuth) {
@@ -40,6 +41,9 @@ export default auth((req) => {
     const signIn = new URL("/auth/signin", req.nextUrl.origin);
     signIn.searchParams.set("callbackUrl", path);
     return Response.redirect(signIn);
+  }
+  if ((isDashboard || isDrivenGarage || isDrivenAdmin) && isAuth && isSuspended) {
+    return Response.redirect(new URL("/auth/signout?suspended=1", req.nextUrl.origin));
   }
   if (isAuthPage && isAuth && path !== "/auth/signout") {
     return Response.redirect(new URL("/dashboard", req.nextUrl.origin));
