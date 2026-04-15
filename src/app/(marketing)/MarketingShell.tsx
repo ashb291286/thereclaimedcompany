@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Session } from "next-auth";
 import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
+import { useEffect, useState } from "react";
 
 export function MarketingShell({
   session,
@@ -12,6 +13,17 @@ export function MarketingShell({
   session: Session | null;
   children: React.ReactNode;
 }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileOpen]);
+
   return (
     <CurrencyProvider>
       <div className="min-h-screen bg-stone-50 text-zinc-900">
@@ -24,7 +36,22 @@ export function MarketingShell({
                 className="h-10 w-auto"
               />
             </Link>
-            <nav className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 sm:gap-6">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-zinc-300 text-zinc-700 md:hidden"
+              aria-label="Open menu"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+                <path
+                  d="M4 7h16M4 12h16M4 17h16"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+            <nav className="hidden flex-wrap items-center justify-end gap-x-4 gap-y-2 md:flex md:gap-6">
               <Link href="/search" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
                 Browse
               </Link>
@@ -78,6 +105,68 @@ export function MarketingShell({
                 </>
               )}
             </nav>
+            <div
+              className={`fixed inset-0 z-[90] bg-black/45 transition-opacity duration-200 md:hidden ${
+                mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
+              }`}
+              onClick={() => setMobileOpen(false)}
+              aria-hidden
+            />
+            <aside
+              className={`fixed right-0 top-0 z-[100] flex h-[100dvh] w-[86vw] max-w-sm flex-col overflow-y-auto bg-white p-4 shadow-2xl transition-transform duration-300 md:hidden ${
+                mobileOpen ? "translate-x-0" : "translate-x-full"
+              }`}
+              aria-label="Mobile menu"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-sm font-semibold text-zinc-900">Menu</span>
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-md px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100"
+                >
+                  Close
+                </button>
+              </div>
+
+              {session ? (
+                <Link
+                  href="/dashboard/sell"
+                  onClick={() => setMobileOpen(false)}
+                  className="mb-3 rounded-full bg-brand px-4 py-2 text-center text-sm font-semibold text-white hover:bg-brand-hover"
+                >
+                  Add Listing
+                </Link>
+              ) : (
+                <Link
+                  href="/auth/register"
+                  onClick={() => setMobileOpen(false)}
+                  className="mb-3 rounded-full bg-brand px-4 py-2 text-center text-sm font-semibold text-white hover:bg-brand-hover"
+                >
+                  Sell now
+                </Link>
+              )}
+
+              <div className="mb-3 rounded-lg border border-zinc-200 p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Currency</p>
+                <CurrencySwitcher />
+              </div>
+
+              <div className="flex flex-col gap-1 text-sm">
+                <Link href="/search" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Browse</Link>
+                <Link href="/dealers" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Dealers</Link>
+                <Link href="/reclamation-yards" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Yards</Link>
+                <Link href="/wanted" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Wanted</Link>
+                <Link href="/demolition-alerts" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Demolition alerts</Link>
+                <Link href="/driven" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Driven</Link>
+                <Link href="/prop-yard" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Prop Yard</Link>
+                {session ? (
+                  <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Dashboard</Link>
+                ) : (
+                  <Link href="/auth/signin" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Sign in</Link>
+                )}
+              </div>
+            </aside>
           </div>
         </header>
         <main>{children}</main>

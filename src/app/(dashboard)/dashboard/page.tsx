@@ -2,17 +2,16 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import Image from "next/image";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { stripe } from "@/lib/stripe";
 import { StripeConnectButton } from "./StripeConnectButton";
+import {
+  sellerBoostListingCheckoutAction,
+  sellerDeleteOwnListingAction,
+} from "@/lib/actions/seller-listings";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { publicSellerPath } from "@/lib/yard-public-path";
 import { OffersAttentionBanner } from "./OffersAttentionBanner";
 import { DashboardJustAddedEffect } from "./DashboardJustAddedEffect";
-import { getSiteBaseUrl } from "@/lib/site-url";
-
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -21,79 +20,6 @@ export default async function DashboardPage({
   const session = await auth();
   if (!session?.user?.id) return null;
   const { stripe: stripeParam, boosted, boostError, justAdded } = await searchParams;
-
-  async function deleteListingAction(formData: FormData) {
-    "use server";
-    const current = await auth();
-    if (!current?.user?.id) redirect("/auth/signin");
-    const id = String(formData.get("listingId") ?? "");
-    if (!id) return;
-    await prisma.listing.deleteMany({
-      where: { id, sellerId: current.user.id },
-    });
-    revalidatePath("/dashboard");
-  }
-
-  async function boostListingAction(formData: FormData) {
-    "use server";
-    const current = await auth();
-    if (!current?.user?.id) redirect("/auth/signin");
-    const id = String(formData.get("listingId") ?? "");
-    if (!id) return;
-    const listing = await prisma.listing.findFirst({
-      where: { id, sellerId: current.user.id, status: "active" },
-      select: { id: true, title: true },
-    });
-    if (!listing) redirect("/dashboard?boostError=not-active");
-
-    const fullUser = await prisma.user.findUnique({
-      where: { id: current.user.id },
-      select: { email: true, stripeCustomerId: true },
-    });
-    if (!fullUser) redirect("/dashboard?boostError=user");
-
-    let customerId = fullUser.stripeCustomerId;
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: fullUser.email ?? undefined,
-        metadata: { userId: current.user.id },
-      });
-      customerId = customer.id;
-      await prisma.user.update({
-        where: { id: current.user.id },
-        data: { stripeCustomerId: customerId },
-      });
-    }
-
-    const baseUrl = getSiteBaseUrl();
-    const checkoutSession = await stripe.checkout.sessions.create({
-      mode: "payment",
-      customer: customerId,
-      line_items: [
-        {
-          price_data: {
-            currency: "gbp",
-            unit_amount: 500,
-            product_data: {
-              name: "Listing boost (7 days)",
-              description: `${listing.title} — featured promotion to local reclamation yards`,
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${baseUrl}/dashboard?boosted=1`,
-      cancel_url: `${baseUrl}/dashboard`,
-      metadata: {
-        kind: "listing_boost",
-        listingId: listing.id,
-        sellerId: current.user.id,
-      },
-    });
-
-    if (!checkoutSession.url) redirect("/dashboard?boostError=checkout");
-    redirect(checkoutSession.url);
-  }
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
@@ -493,7 +419,7 @@ export default async function DashboardPage({
                     >
                       Edit
                     </Link>
-                    <form action={deleteListingAction} className="contents">
+                    <form action={sellerDeleteOwnListingAction} className="contents">
                       <input type="hidden" name="listingId" value={l.id} />
                       <button
                         type="submit"
@@ -502,7 +428,7 @@ export default async function DashboardPage({
                         Delete
                       </button>
                     </form>
-                    <form action={boostListingAction} className="contents">
+                    <form action={sellerBoostListingCheckoutAction} className="contents">
                       <input type="hidden" name="listingId" value={l.id} />
                       <button
                         type="submit"

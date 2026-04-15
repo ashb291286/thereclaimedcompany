@@ -20,6 +20,7 @@ import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPrice
 import { resolveCategoryBrowseRow } from "@/lib/category-browse";
 import { BrowseListingGrid } from "./BrowseListingGrid";
 import { BrowseMobileReels, type ReelListing } from "./BrowseMobileReels";
+import { MobileFiltersDrawer } from "./MobileFiltersDrawer";
 import type { SearchListingRow } from "@/lib/listing-search";
 
 export async function generateMetadata({
@@ -262,15 +263,15 @@ export default async function SearchPage({
           <BuyerWelcomeModal open />
         </Suspense>
       ) : null}
-      <h1 className="text-2xl font-semibold text-zinc-900">
+      <h1 className="hidden text-2xl font-semibold text-zinc-900 md:block">
         {sellerFocusedBrowse === "reclamation_yard"
           ? "Reclamation yards near me"
           : sellerFocusedBrowse === "dealer"
             ? "Dealers near me"
             : "Browse listings"}
       </h1>
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
-        <aside className="lg:sticky lg:top-24">
+      <div className="mt-1 grid grid-cols-1 gap-6 md:mt-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
+        <aside className="hidden lg:sticky lg:top-24 lg:block">
           {fromImage ? (
             <p className="mb-3 rounded-lg border border-brand/20 bg-brand-soft px-4 py-3 text-sm text-zinc-900">
               Showing listings ranked by visual similarity to your photo. Use location, keywords, or category below to narrow results.
@@ -305,11 +306,11 @@ export default async function SearchPage({
 
         <section>
           {locationNote ? (
-            <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+            <p className="hidden rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 md:block">
               {locationNote}
             </p>
           ) : null}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mt-4 hidden flex-wrap items-center justify-between gap-3 md:flex">
             <p className="text-sm text-zinc-500">
               {total} listing{total !== 1 ? "s" : ""} found
             </p>
@@ -317,11 +318,6 @@ export default async function SearchPage({
               <BrowseSortSelect value={sortQuery} nearestAvailable={nearestAvailable} />
             </Suspense>
           </div>
-          {total > 0 ? (
-            <p className="mt-1 text-xs text-zinc-500 md:hidden">
-              Swipe cards vertically — full-screen previews, then open a listing.
-            </p>
-          ) : null}
           {listingsOrdered.length === 0 ? (
             <p className="mt-8 text-zinc-500">No listings match your filters.</p>
           ) : (
@@ -350,7 +346,23 @@ export default async function SearchPage({
                   listingType: listingTypeQuery || undefined,
                 }}
                 profileHref={session?.user?.id ? "/dashboard" : "/auth/signin?callbackUrl=%2Fsearch"}
+                initialSearch={params.q}
               />
+              <MobileFiltersDrawer>
+                <SearchForm
+                  id="search-filters-mobile"
+                  categories={categories}
+                  defaultQ={params.q}
+                  defaultCategorySlug={activeCategoryRow?.slug ?? ""}
+                  defaultPostcode={params.postcode?.trim() ? params.postcode : userPrefs?.homePostcode ?? undefined}
+                  defaultRadius={params.postcode?.trim() ? params.radius?.trim() || "50" : params.radius?.trim() || ""}
+                  defaultSellerType={params.sellerType}
+                  defaultHireOnly={params.hireOnly === "1"}
+                  defaultAvailableNow={params.availableNow === "1"}
+                  defaultListingType={listingTypeQuery}
+                  sellerFocusedBrowseMode={sellerFocusedBrowse}
+                />
+              </MobileFiltersDrawer>
               <BrowseListingGrid listings={listingsOrdered} />
             </>
           )}

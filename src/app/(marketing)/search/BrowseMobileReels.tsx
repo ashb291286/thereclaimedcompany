@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDisplayCurrency } from "@/components/currency/CurrencyProvider";
+import { useRouter } from "next/navigation";
 
 export type ReelListing = {
   id: string;
@@ -112,15 +113,19 @@ export function BrowseMobileReels({
   totalPages,
   query,
   profileHref,
+  initialSearch,
 }: {
   listings: ReelListing[];
   initialPage: number;
   totalPages: number;
   query: FeedQuery;
   profileHref: string;
+  initialSearch?: string;
 }) {
+  const router = useRouter();
   const { formatPence } = useDisplayCurrency();
   const [items, setItems] = useState<ReelListing[]>(listings);
+  const [searchText, setSearchText] = useState(initialSearch ?? "");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [page, setPage] = useState(initialPage);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -221,13 +226,52 @@ export function BrowseMobileReels({
 
   return (
     <div
-      className="md:hidden relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 px-3 pb-24 sm:px-4"
+      className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 md:hidden"
       aria-label="Swipe through listings"
     >
       <div
-        className="mx-auto max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-y-contain snap-y snap-mandatory [scrollbar-width:thin]"
+        className="mx-auto h-[100dvh] overflow-y-auto overscroll-y-contain snap-y snap-mandatory [scrollbar-width:none]"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-40 bg-gradient-to-b from-black/55 via-black/25 to-transparent px-3 pb-4 pt-[max(env(safe-area-inset-top),0.75rem)]">
+          <div className="pointer-events-auto mx-auto flex max-w-xl items-center gap-2">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/45 bg-black/30 text-white backdrop-blur"
+              aria-label="Back"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+                <path
+                  d="M15 5 8 12l7 7"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <form
+              className="flex-1"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const sp = new URLSearchParams(queryString);
+                if (searchText.trim()) sp.set("q", searchText.trim());
+                else sp.delete("q");
+                sp.delete("page");
+                router.push(`/search?${sp.toString()}`);
+              }}
+            >
+              <input
+                type="search"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search listings"
+                className="h-9 w-full rounded-full border border-white/45 bg-black/35 px-4 text-sm text-white placeholder:text-white/70 backdrop-blur focus:outline-none focus:ring-2 focus:ring-white/60"
+              />
+            </form>
+          </div>
+        </div>
         <ul className="flex flex-col gap-3 pt-1">
           {items.map((l) => {
             const auctionCountdown =
@@ -235,7 +279,7 @@ export function BrowseMobileReels({
             return (
             <li
               key={l.id}
-              className="relative h-[min(calc(100dvh-5.5rem),640px)] min-h-[22rem] w-full shrink-0 snap-start snap-always overflow-hidden rounded-2xl border border-zinc-200/90 bg-zinc-900 shadow-2xl ring-1 ring-black/10"
+              className="relative h-[100dvh] min-h-[100dvh] w-full shrink-0 snap-start snap-always overflow-hidden bg-zinc-900"
             >
               <div className="absolute inset-0">
                 {auctionCountdown ? (
@@ -264,7 +308,7 @@ export function BrowseMobileReels({
                 />
               </div>
 
-              <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end p-4 pt-16 text-white">
+              <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end p-4 pb-24 pt-16 text-white">
                 <div className="mb-2 flex min-h-[20px] flex-wrap content-start items-start gap-1.5">
                   {l.listingKind === "auction" && (
                     <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide backdrop-blur-sm">
@@ -334,7 +378,7 @@ export function BrowseMobileReels({
         </ul>
         <div ref={sentinelRef} className="h-12" />
         {loadingMore ? (
-          <p className="pb-4 text-center text-xs text-zinc-500">Loading more listings…</p>
+          <p className="pb-20 text-center text-xs text-zinc-500">Loading more listings…</p>
         ) : null}
         {loadError ? (
           <button
@@ -347,23 +391,13 @@ export function BrowseMobileReels({
         ) : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200/90 bg-white/95 px-3 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 backdrop-blur sm:px-4">
-        <div className="mx-auto grid max-w-xl grid-cols-4 gap-1.5">
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200/90 bg-white/95 px-3 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 backdrop-blur">
+        <div className="mx-auto grid max-w-xl grid-cols-3 gap-1.5">
           <button
             type="button"
             className="rounded-xl bg-zinc-900 px-2 py-2.5 text-[11px] font-semibold text-white"
           >
             Feed
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const filters = document.getElementById("search-filters");
-              filters?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }}
-            className="rounded-xl border border-zinc-300 bg-white px-2 py-2.5 text-[11px] font-semibold text-zinc-700"
-          >
-            Filters
           </button>
           <Link
             href="/dashboard/sell"
