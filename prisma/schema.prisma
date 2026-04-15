@@ -14,6 +14,7 @@ datasource db {
 enum UserRole {
   individual
   reclamation_yard
+  dealer
 }
 
 enum ListingStatus {
@@ -203,6 +204,10 @@ model SellerProfile {
   verificationStatus String?  @default("none") // none | pending | verified
   /// UK VAT-registered reclamation yards: listing prices stored ex VAT; buyers pay +20% at checkout.
   vatRegistered     Boolean   @default(false)
+  /// VAT registration number (stored when vatRegistered=true).
+  vatNumber         String?
+  /// Indicates the yard is part of the Salvo Code.
+  salvoCodeMember   Boolean   @default(false)
   stripeAccountId   String?   // Stripe Connect account id when onboarding complete
   /// Up to three buyer-facing material labels (e.g. timber, brick) for SEO H2 and pills.
   yardPrimaryMaterials      String[] @default([])
@@ -883,6 +888,30 @@ model Order {
   /** Snapshot from listing at purchase (kg mass kept in use). */
   purchaseWasteDivertedKg     Float?
   quantity              Int         @default(1)
+  /// collection | shipping (set by seller after payment)
+  fulfillmentMethod     String?
+  /// Agreed collection date/time (UTC) when fulfillmentMethod=collection.
+  collectionAgreedAt    DateTime?
+  /// Seller confirmed item handed over for collection.
+  collectionConfirmedBySellerAt DateTime?
+  /// Buyer confirmed item collected.
+  collectionConfirmedByBuyerAt  DateTime?
+  /// Courier/service name when fulfillmentMethod=shipping.
+  shippingCourier       String?
+  /// Tracking or consignment reference.
+  shippingTrackingRef   String?
+  /// Seller confirmed shipment dispatched.
+  shippingConfirmedAt   DateTime?
+  /// Buyer confirmed shipment received.
+  deliveryConfirmedAt   DateTime?
+  /// Buyer review of seller (1-5) after collection/receipt.
+  buyerReviewRating     Int?
+  buyerReviewComment    String?     @db.Text
+  buyerReviewedAt       DateTime?
+  /// Seller review of buyer (1-5) after collection/receipt.
+  sellerReviewRating    Int?
+  sellerReviewComment   String?     @db.Text
+  sellerReviewedAt      DateTime?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 

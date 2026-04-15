@@ -8,6 +8,69 @@ import {
   updateMarketplaceCategoryAction,
 } from "@/lib/actions/category-admin";
 
+function descendantIds(
+  rootId: string,
+  rows: { id: string; parentId: string | null }[],
+): Set<string> {
+  const byParent = new Map<string, string[]>();
+  for (const r of rows) {
+    if (!r.parentId) continue;
+    const list = byParent.get(r.parentId) ?? [];
+    list.push(r.id);
+    byParent.set(r.parentId, list);
+  }
+  const out = new Set<string>();
+  const stack = [...(byParent.get(rootId) ?? [])];
+  while (stack.length) {
+    const cid = stack.pop()!;
+    if (out.has(cid)) continue;
+    out.add(cid);
+    const kids = byParent.get(cid);
+    if (kids) stack.push(...kids);
+  }
+  return out;
+}
+
+function orderCategoriesTree<T extends { id: string; name: string; parentId: string | null }>(
+  rows: T[],
+): T[] {
+  const byParent = new Map<string | null, T[]>();
+  for (const r of rows) {
+    const k = r.parentId ?? null;
+    const list = byParent.get(k) ?? [];
+    list.push(r);
+    byParent.set(k, list);
+  }
+  for (const list of byParent.values()) {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  const out: T[] = [];
+  const visit = (parentKey: string | null) => {
+    const kids = byParent.get(parentKey) ?? [];
+    for (const k of kids) {
+      out.push(k);
+      visit(k.id);
+    }
+  };
+  visit(null);
+  return out;
+}
+
+function categoryDepth(
+  c: { parentId: string | null },
+  byId: Map<string, { parentId: string | null }>,
+): number {
+  let d = 0;
+  let cur: string | null | undefined = c.parentId;
+  const seen = new Set<string>();
+  while (cur && !seen.has(cur)) {
+    seen.add(cur);
+    d += 1;
+    cur = byId.get(cur)?.parentId ?? null;
+  }
+  return d;
+}
+
 export default async function AdminMarketplaceCategoriesPage({
   searchParams,
 }: {
@@ -31,14 +94,18 @@ export default async function AdminMarketplaceCategoriesPage({
     include: { parent: { select: { id: true, name: true } } },
   });
 
+  const treeRows = orderCategoriesTree(categories);
+  const byIdForDepth = new Map(
+    categories.map((c) => [c.id, { parentId: c.parentId }]),
+  );
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">Marketplace categories</h1>
           <p className="mt-1 max-w-2xl text-sm text-zinc-600">
-            Add categories that appear when sellers list items. Optional parent creates a subcategory.
-            URL slugs are generated from the name unless you override them. To map a category to WooCommerce
+            Add or edit categories that appear when sellers list items. Under <strong className="font-medium text-zinc-800">All categories</strong>, change the display name, URL slug, or parent (top level or any category that is not this row or its subcategories). To map a category to WooCommerce
             affiliate products, use{" "}
             <Link href="/dashboard/admin/woocommerce-sync" className="font-medium text-brand hover:underline">
               WooCommerce sync
@@ -117,61 +184,87 @@ export default async function AdminMarketplaceCategoriesPage({
 
       <section>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">All categories</h2>
+        <p className="mt-2 text-xs text-zinc-500">
+          Nested list follows parent/child order. Saving updates the category immediately.
+        </p>
         <ul className="mt-3 divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white">
-          {categories.map((c) => (
-            <li key={c.id} className="px-4 py-3 text-sm">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="font-medium text-zinc-900">{c.name}</span>
-                <span className="font-mono text-xs text-zinc-400">{c.slug}</span>
-              </div>
-              <div className="mb-3 text-xs text-zinc-500">
-                Parent: {c.parent ? c.parent.name : "Top level"} ·{" "}
-                {c.wooCommerceSyncEnabled ? (
-                  <span className="text-emerald-700">Woo sync · WC cat {c.wooCommerceCategoryId ?? "—"}</span>
-                ) : (
-                  <span>No WooCommerce sync</span>
-                )}{" "}
-              </div>
-              <div>
-                <form action={updateMarketplaceCategoryAction} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-                  <input type="hidden" name="id" value={c.id} />
-                  <label className="min-w-[180px] flex-1 text-sm">
-                    <span className="text-zinc-600">Name</span>
-                    <input
-                      name="name"
-                      required
-                      maxLength={120}
-                      defaultValue={c.name}
-                      className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2"
-                    />
-                  </label>
-                  <label className="min-w-[220px] text-sm">
-                    <span className="text-zinc-600">Parent</span>
-                    <select
-                      name="parentId"
-                      className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2"
-                      defaultValue={c.parentId ?? ""}
-                    >
-                      <option value="">— Top level —</option>
-                      {categories
-                        .filter((opt) => opt.id !== c.id)
-                        .map((opt) => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.parent ? `${opt.parent.name} › ${opt.name}` : opt.name}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <button
-                    type="submit"
-                    className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+          {treeRows.map((c) => {
+            const depth = categoryDepth(c, byIdForDepth);
+            const blocked = descendantIds(c.id, categories);
+            blocked.add(c.id);
+            return (
+              <li
+                key={c.id}
+                className="px-4 py-3 text-sm"
+                style={{ paddingLeft: 16 + depth * 14 }}
+              >
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="font-medium text-zinc-900">{c.name}</span>
+                  <span className="font-mono text-xs text-zinc-400">{c.slug}</span>
+                </div>
+                <div className="mb-3 text-xs text-zinc-500">
+                  Current parent: {c.parent ? c.parent.name : "Top level"} ·{" "}
+                  {c.wooCommerceSyncEnabled ? (
+                    <span className="text-emerald-700">Woo sync · WC cat {c.wooCommerceCategoryId ?? "—"}</span>
+                  ) : (
+                    <span>No WooCommerce sync</span>
+                  )}{" "}
+                </div>
+                <div>
+                  <form
+                    action={updateMarketplaceCategoryAction}
+                    className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end"
                   >
-                    Save
-                  </button>
-                </form>
-              </div>
-            </li>
-          ))}
+                    <input type="hidden" name="id" value={c.id} />
+                    <label className="min-w-[180px] flex-1 text-sm">
+                      <span className="text-zinc-600">Display name</span>
+                      <input
+                        name="name"
+                        required
+                        maxLength={120}
+                        defaultValue={c.name}
+                        className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2"
+                      />
+                    </label>
+                    <label className="min-w-[160px] text-sm">
+                      <span className="text-zinc-600">URL slug</span>
+                      <input
+                        name="slug"
+                        required
+                        maxLength={96}
+                        defaultValue={c.slug}
+                        className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 font-mono text-sm"
+                        title="Changing the slug updates /categories/... URLs"
+                      />
+                    </label>
+                    <label className="min-w-[220px] text-sm">
+                      <span className="text-zinc-600">Parent</span>
+                      <select
+                        name="parentId"
+                        className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2"
+                        defaultValue={c.parentId ?? ""}
+                      >
+                        <option value="">— Top level —</option>
+                        {categories
+                          .filter((opt) => !blocked.has(opt.id))
+                          .map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.parent ? `${opt.parent.name} › ${opt.name}` : opt.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <button
+                      type="submit"
+                      className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                    >
+                      Save
+                    </button>
+                  </form>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </section>
     </div>

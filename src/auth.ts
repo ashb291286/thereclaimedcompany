@@ -61,7 +61,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as "individual" | "reclamation_yard" | null;
+        session.user.role = token.role as "individual" | "reclamation_yard" | "dealer" | null;
         session.user.suspendedAt = (token.suspendedAt as string | null | undefined) ?? null;
       }
       return session;

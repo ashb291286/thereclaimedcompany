@@ -35,6 +35,13 @@ export async function generateMetadata({
         "Find reclamation yards by UK postcode and search radius. Browse salvage and reclaimed listings from yards across the country.",
     };
   }
+  if (p.sellerType === "dealer") {
+    return {
+      title: "Antiques dealers near me | Browse UK antiques dealers",
+      description:
+        "Find antiques dealers by UK postcode and search radius. Browse reclaimed and antique listings from dealers across the country.",
+    };
+  }
   return {
     title: "Browse listings",
     description: "Search active reclaimed and salvage listings on The Reclaimed Company.",
@@ -166,7 +173,12 @@ export default async function SearchPage({
 
   const totalPages = Math.ceil(total / pageSize);
   const fromImage = params.fromImage === "1";
-  const yardsBrowse = params.sellerType === "reclamation_yard";
+  const sellerFocusedBrowse =
+    params.sellerType === "reclamation_yard"
+      ? "reclamation_yard"
+      : params.sellerType === "dealer"
+        ? "dealer"
+        : null;
 
   const paramRecord: Record<string, string | undefined> = {
     q: params.q,
@@ -251,7 +263,11 @@ export default async function SearchPage({
         </Suspense>
       ) : null}
       <h1 className="text-2xl font-semibold text-zinc-900">
-        {yardsBrowse ? "Reclamation yards near me" : "Browse listings"}
+        {sellerFocusedBrowse === "reclamation_yard"
+          ? "Reclamation yards near me"
+          : sellerFocusedBrowse === "dealer"
+            ? "Dealers near me"
+            : "Browse listings"}
       </h1>
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
         <aside className="lg:sticky lg:top-24">
@@ -271,7 +287,7 @@ export default async function SearchPage({
             defaultHireOnly={params.hireOnly === "1"}
             defaultAvailableNow={params.availableNow === "1"}
             defaultListingType={listingTypeQuery}
-            yardsBrowseMode={yardsBrowse}
+            sellerFocusedBrowseMode={sellerFocusedBrowse}
           />
           <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
             <p className="text-sm font-semibold text-zinc-900">Have something to sell?</p>

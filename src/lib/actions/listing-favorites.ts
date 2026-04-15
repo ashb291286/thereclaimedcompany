@@ -31,6 +31,7 @@ export async function toggleListingFavorite(listingId: string) {
   if (existing) {
     await prisma.listingFavorite.delete({ where: { id: existing.id } });
     revalidatePath(`/listings/${listingId}`);
+    revalidatePath("/dashboard/favourites");
     return { ok: true as const, favorited: false as const };
   }
 
@@ -38,5 +39,6 @@ export async function toggleListingFavorite(listingId: string) {
     data: { userId: session.user.id, listingId },
   });
   revalidatePath(`/listings/${listingId}`);
+  revalidatePath("/dashboard/favourites");
   return { ok: true as const, favorited: true as const };
 }

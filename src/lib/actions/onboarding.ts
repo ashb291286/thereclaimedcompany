@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { slugifyAdminDistrict } from "@/lib/yard-area-seo";
+import { slugifyDealerArea } from "@/lib/dealer-area-seo";
 import { revalidateYardPublicPaths } from "@/lib/revalidate-yard";
 import type { UserRole } from "@/generated/prisma/client";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
@@ -22,11 +23,13 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   const businessName = formData.get("businessName") as string | null;
   const openingHoursScheduleRaw = formData.get("openingHoursSchedule") as string | null;
   const vatRegisteredRaw = String(formData.get("vatRegistered") ?? "").trim();
+  const vatNumberRaw = String(formData.get("vatNumber") ?? "").trim();
+  const salvoCodeMemberRaw = String(formData.get("salvoCodeMember") ?? "").trim();
 
   if (!sellerType || !displayName?.trim() || !postcodeRaw?.trim()) {
     redirect("/dashboard/onboarding?error=Display+name+and+postcode+required");
   }
-  if (sellerType !== "individual" && sellerType !== "reclamation_yard") {
+  if (sellerType !== "individual" && sellerType !== "reclamation_yard" && sellerType !== "dealer") {
     redirect("/dashboard/onboarding?error=Invalid+seller+type");
   }
 
@@ -39,7 +42,7 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   }
 
   let openingHoursSchedule: Prisma.InputJsonValue | undefined;
-  if (sellerType === "reclamation_yard") {
+  if (sellerType === "reclamation_yard" || sellerType === "dealer") {
     let json: unknown;
     if (openingHoursScheduleRaw?.trim()) {
       try {
@@ -58,7 +61,16 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   }
 
   let yardSlug: string | undefined;
-  const vatRegistered = sellerType === "reclamation_yard" && vatRegisteredRaw === "yes";
+  const vatRegistered =
+    (sellerType === "reclamation_yard" || sellerType === "dealer") && vatRegisteredRaw === "yes";
+  const vatNumber = vatRegistered ? vatNumberRaw.toUpperCase().replace(/\s+/g, "") : "";
+  if (vatRegistered && vatNumber.length < 8) {
+    redirect(
+      "/dashboard/onboarding?error=" +
+        encodeURIComponent("Enter a valid VAT number when VAT registered is selected.")
+    );
+  }
+  const salvoCodeMember = sellerType === "reclamation_yard" && salvoCodeMemberRaw === "yes";
   if (sellerType === "reclamation_yard") {
     const baseName = (businessName?.trim() || displayName.trim()) as string;
     yardSlug = await allocateYardSlug(prisma, baseName, session.user.id);
@@ -79,11 +91,17 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
         adminDistrict: resolved.adminDistrict,
         region: resolved.region,
         postcodeLocality: resolved.postcodeLocality,
-        businessName: sellerType === "reclamation_yard" ? (businessName?.trim() || null) : null,
+        businessName:
+          sellerType === "reclamation_yard" || sellerType === "dealer"
+            ? (businessName?.trim() || null)
+            : null,
         openingHours: null,
         openingHoursSchedule,
         yardSlug: sellerType === "reclamation_yard" ? yardSlug : null,
-        vatRegistered: sellerType === "reclamation_yard" ? vatRegistered : false,
+        vatRegistered:
+          sellerType === "reclamation_yard" || sellerType === "dealer" ? vatRegistered : false,
+        vatNumber: vatRegistered ? vatNumber : null,
+        salvoCodeMember,
       },
     }),
   ]);
@@ -91,6 +109,10 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   if (sellerType === "reclamation_yard" && resolved.adminDistrict?.trim()) {
     revalidatePath("/reclamation-yards");
     revalidatePath(`/reclamation-yards/${slugifyAdminDistrict(resolved.adminDistrict)}`);
+  }
+  if (sellerType === "dealer" && resolved.adminDistrict?.trim()) {
+    revalidatePath("/dealers");
+    revalidatePath(`/dealers/${slugifyDealerArea(resolved.adminDistrict)}`);
   }
   if (sellerType === "reclamation_yard" && yardSlug) {
     revalidateYardPublicPaths(yardSlug);

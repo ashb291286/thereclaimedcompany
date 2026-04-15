@@ -4,9 +4,14 @@ import { useState } from "react";
 import { OpeningHoursEditor } from "@/components/OpeningHoursEditor";
 
 export function YardFieldsToggle() {
-  const [sellerType, setSellerType] = useState<"individual" | "reclamation_yard">("individual");
+  const [sellerType, setSellerType] = useState<"individual" | "reclamation_yard" | "dealer">(
+    "individual"
+  );
   const [vatRegistered, setVatRegistered] = useState(false);
-  const showYard = sellerType === "reclamation_yard";
+  const [vatNumber, setVatNumber] = useState("");
+  const [salvoCodeMember, setSalvoCodeMember] = useState(false);
+  const showBusiness = sellerType === "reclamation_yard" || sellerType === "dealer";
+  const showSalvo = sellerType === "reclamation_yard";
 
   return (
     <>
@@ -16,7 +21,9 @@ export function YardFieldsToggle() {
         </label>
         <input type="hidden" name="sellerType" value={sellerType} />
         <input type="hidden" name="vatRegistered" value={vatRegistered ? "yes" : "no"} />
-        <div className="grid gap-3 sm:grid-cols-2">
+        <input type="hidden" name="vatNumber" value={vatNumber} />
+        <input type="hidden" name="salvoCodeMember" value={salvoCodeMember ? "yes" : "no"} />
+        <div className="grid gap-3 sm:grid-cols-3">
           <button
             type="button"
             onClick={() => setSellerType("individual")}
@@ -41,9 +48,21 @@ export function YardFieldsToggle() {
             <p className="text-sm font-semibold text-zinc-900">Reclamation yard</p>
             <p className="mt-1 text-xs text-zinc-600">Business inventory and yard details.</p>
           </button>
+          <button
+            type="button"
+            onClick={() => setSellerType("dealer")}
+            className={`rounded-xl border p-4 text-left transition ${
+              sellerType === "dealer"
+                ? "border-brand bg-brand-soft/60 ring-1 ring-brand/25"
+                : "border-zinc-200 bg-white hover:border-zinc-300"
+            }`}
+          >
+            <p className="text-sm font-semibold text-zinc-900">Dealer</p>
+            <p className="mt-1 text-xs text-zinc-600">Antiques dealer profile and business details.</p>
+          </button>
         </div>
       </div>
-      {showYard && (
+      {showBusiness && (
         <div className="space-y-4">
           <div>
             <label htmlFor="businessName" className="block text-sm font-medium text-zinc-700 mb-1">
@@ -53,7 +72,7 @@ export function YardFieldsToggle() {
               id="businessName"
               name="businessName"
               type="text"
-              placeholder="Your reclamation yard name"
+              placeholder={sellerType === "dealer" ? "Your dealer business name" : "Your reclamation yard name"}
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
@@ -70,7 +89,10 @@ export function YardFieldsToggle() {
                   name="vatChoice"
                   className="mt-0.5"
                   checked={!vatRegistered}
-                  onChange={() => setVatRegistered(false)}
+                  onChange={() => {
+                    setVatRegistered(false);
+                    setVatNumber("");
+                  }}
                 />
                 <span>
                   <span className="font-medium text-zinc-900">Not VAT registered</span>
@@ -95,7 +117,66 @@ export function YardFieldsToggle() {
                 </span>
               </label>
             </div>
+            {vatRegistered ? (
+              <div className="mt-3">
+                <label htmlFor="vatNumber" className="block text-xs font-semibold text-zinc-800">
+                  VAT number
+                </label>
+                <input
+                  id="vatNumber"
+                  type="text"
+                  value={vatNumber}
+                  onChange={(e) => setVatNumber(e.target.value.toUpperCase())}
+                  placeholder="e.g. GB123456789"
+                  className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+                <p className="mt-1 text-xs text-zinc-600">
+                  We will save this against your seller profile for invoicing/compliance records.
+                </p>
+              </div>
+            ) : null}
           </fieldset>
+          {showSalvo ? (
+            <fieldset className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
+              <legend className="px-1 text-sm font-semibold text-zinc-900">Salvo Code</legend>
+              <p className="mt-1 text-xs text-zinc-600">
+                Are you a part of the Salvo Code? If yes, we show a <strong>Salvo Code Member</strong> badge on
+                your profile and listings.
+              </p>
+              <div className="mt-3 space-y-2">
+                <label className="flex cursor-pointer gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm has-[:checked]:border-brand has-[:checked]:ring-1 has-[:checked]:ring-brand/25">
+                  <input
+                    type="radio"
+                    name="salvoCodeChoice"
+                    className="mt-0.5"
+                    checked={!salvoCodeMember}
+                    onChange={() => setSalvoCodeMember(false)}
+                  />
+                  <span>
+                    <span className="font-medium text-zinc-900">No</span>
+                    <span className="mt-0.5 block text-xs text-zinc-600">
+                      No Salvo badge shown.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex cursor-pointer gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm has-[:checked]:border-brand has-[:checked]:ring-1 has-[:checked]:ring-brand/25">
+                  <input
+                    type="radio"
+                    name="salvoCodeChoice"
+                    className="mt-0.5"
+                    checked={salvoCodeMember}
+                    onChange={() => setSalvoCodeMember(true)}
+                  />
+                  <span>
+                    <span className="font-medium text-zinc-900">Yes</span>
+                    <span className="mt-0.5 block text-xs text-zinc-600">
+                      Show “Salvo Code Member” on public yard and listing views.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+          ) : null}
           <OpeningHoursEditor />
         </div>
       )}

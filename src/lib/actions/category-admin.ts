@@ -17,6 +17,18 @@ async function uniqueSlug(base: string): Promise<string> {
   return s;
 }
 
+/** Slug unique among other rows; allows keeping the same slug on the category being updated. */
+async function uniqueSlugForCategory(base: string, categoryId: string): Promise<string> {
+  let s = base;
+  let n = 0;
+  while (true) {
+    const found = await prisma.category.findUnique({ where: { slug: s }, select: { id: true } });
+    if (!found || found.id === categoryId) return s;
+    n += 1;
+    s = `${base}-${n}`;
+  }
+}
+
 export async function createMarketplaceCategoryAction(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
@@ -72,6 +84,8 @@ export async function createMarketplaceCategoryAction(formData: FormData): Promi
   revalidatePath("/dashboard/admin/woocommerce-sync");
   revalidatePath("/dashboard/wanted");
   revalidatePath("/dashboard/prop-yard");
+  revalidatePath("/categories");
+  revalidatePath(`/categories/${slug}`);
 
   redirect("/dashboard/admin/marketplace-categories?created=1");
 }
@@ -88,6 +102,7 @@ export async function updateMarketplaceCategoryAction(formData: FormData): Promi
   const id = String(formData.get("id") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim().slice(0, 120);
   const parentIdRaw = String(formData.get("parentId") ?? "").trim();
+  const slugRaw = String(formData.get("slug") ?? "").trim();
 
   if (!id) {
     redirect(
@@ -100,6 +115,32 @@ export async function updateMarketplaceCategoryAction(formData: FormData): Promi
       "/dashboard/admin/marketplace-categories?error=" + encodeURIComponent("Name is required")
     );
   }
+
+  const existingRow = await prisma.category.findUnique({
+    where: { id },
+    select: { slug: true },
+  });
+  if (!existingRow) {
+    redirect(
+      "/dashboard/admin/marketplace-categories?error=" + encodeURIComponent("Unknown category")
+    );
+  }
+
+  if (!slugRaw) {
+    redirect(
+      "/dashboard/admin/marketplace-categories?error=" +
+        encodeURIComponent("URL slug is required when saving")
+    );
+  }
+  const baseSlug = slugifyCategoryName(slugRaw.toLowerCase().replace(/\s+/g, "-"));
+  if (!baseSlug) {
+    redirect(
+      "/dashboard/admin/marketplace-categories?error=" +
+        encodeURIComponent("Could not build a URL slug — use letters or numbers.")
+    );
+  }
+  const slug = await uniqueSlugForCategory(baseSlug, id);
+  const previousSlug = existingRow.slug;
 
   let parentId: string | null = null;
   if (parentIdRaw) {
@@ -141,12 +182,21 @@ export async function updateMarketplaceCategoryAction(formData: FormData): Promi
 
   await prisma.category.update({
     where: { id },
-    data: { name, parentId },
+    data: { name, parentId, slug },
   });
 
   revalidatePath("/dashboard/sell");
+  revalidatePath("/dashboard/listings");
   revalidatePath("/search");
   revalidatePath("/dashboard/admin/marketplace-categories");
+  revalidatePath("/dashboard/admin/woocommerce-sync");
+  revalidatePath("/dashboard/wanted");
+  revalidatePath("/dashboard/prop-yard");
+  revalidatePath("/categories");
+  revalidatePath(`/categories/${previousSlug}`);
+  if (slug !== previousSlug) {
+    revalidatePath(`/categories/${slug}`);
+  }
 
   redirect("/dashboard/admin/marketplace-categories?updated=1");
 }

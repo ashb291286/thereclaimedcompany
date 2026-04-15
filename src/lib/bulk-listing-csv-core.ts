@@ -89,7 +89,7 @@ export function bulkCsvSplitImageUrls(raw: string): string[] {
 
 export type BulkImportRowSeller = {
   sellerId: string;
-  sellerRole: "individual" | "reclamation_yard" | null;
+  sellerRole: "individual" | "reclamation_yard" | "dealer" | null;
   defaultPostcode: string;
 };
 

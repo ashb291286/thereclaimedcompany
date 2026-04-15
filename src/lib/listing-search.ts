@@ -6,7 +6,12 @@ import { buyerGrossPenceFromSellerNetPence, sellerChargesVat } from "@/lib/vat-p
 
 const searchListingInclude = {
   category: true,
-  seller: { select: { role: true, sellerProfile: { select: { vatRegistered: true } } } },
+  seller: {
+    select: {
+      role: true,
+      sellerProfile: { select: { vatRegistered: true, salvoCodeMember: true } },
+    },
+  },
 } as const;
 
 export type SearchListingRow = Prisma.ListingGetPayload<{ include: typeof searchListingInclude }> & {
@@ -191,7 +196,7 @@ function buildBaseWhere(
   if (params.condition) where.condition = params.condition as Condition;
   if (params.conditionGrade) where.conditionGrade = params.conditionGrade as never;
   if (params.sellerType) {
-    where.seller = { role: params.sellerType as "individual" | "reclamation_yard" };
+    where.seller = { role: params.sellerType as "individual" | "reclamation_yard" | "dealer" };
   }
   const eras = (params.eraCsv ?? "").split(",").map((x) => x.trim()).filter(Boolean);
   const genres = (params.genreCsv ?? "").split(",").map((x) => x.trim()).filter(Boolean);

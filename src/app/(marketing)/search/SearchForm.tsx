@@ -30,11 +30,11 @@ function readRadiusQueryFromDom(fallbackSlider: number): string {
 
 function SearchRadiusSlider({
   defaultRadius,
-  isYards,
+  sellerTypeFilter,
   updateQuery,
 }: {
   defaultRadius: string;
-  isYards: boolean;
+  sellerTypeFilter?: "reclamation_yard" | "dealer" | null;
   updateQuery: (updates: Record<string, string>) => void;
 }) {
   const valRef = useRef(browseRadiusSliderFromParam(defaultRadius));
@@ -55,9 +55,9 @@ function SearchRadiusSlider({
       postcode,
       ...STRIP_LEGACY_FILTERS,
     };
-    if (isYards) patch.sellerType = "reclamation_yard";
+    if (sellerTypeFilter) patch.sellerType = sellerTypeFilter;
     updateQuery(patch);
-  }, [isYards, updateQuery]);
+  }, [sellerTypeFilter, updateQuery]);
 
   return (
     <div className="min-w-[200px] flex-1 sm:max-w-[240px]">
@@ -95,7 +95,7 @@ export function SearchForm({
   defaultHireOnly,
   defaultAvailableNow,
   defaultListingType,
-  yardsBrowseMode,
+  sellerFocusedBrowseMode,
 }: {
   id?: string;
   categories: Category[];
@@ -107,12 +107,13 @@ export function SearchForm({
   defaultHireOnly?: boolean;
   defaultAvailableNow?: boolean;
   defaultListingType?: string;
-  /** Reclamation-yard browse: postcode-first UI; lock seller type. */
-  yardsBrowseMode?: boolean;
+  /** Seller-focused browse: postcode-first UI; lock seller type. */
+  sellerFocusedBrowseMode?: "reclamation_yard" | "dealer" | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isYards = Boolean(yardsBrowseMode);
+  const isSellerFocused =
+    sellerFocusedBrowseMode === "reclamation_yard" || sellerFocusedBrowseMode === "dealer";
 
   const updateQuery = useCallback(
     (updates: Record<string, string>) => {
@@ -146,12 +147,12 @@ export function SearchForm({
         ...(v ? { radius: radiusQ } : { radius: "" }),
         ...STRIP_LEGACY_FILTERS,
       };
-      if (isYards) {
-        patch.sellerType = "reclamation_yard";
+      if (sellerFocusedBrowseMode) {
+        patch.sellerType = sellerFocusedBrowseMode;
       }
       updateQuery(patch);
     },
-    [defaultRadius, isYards, updateQuery]
+    [defaultRadius, sellerFocusedBrowseMode, updateQuery]
   );
 
   const defaultRadiusStr = defaultRadius ?? "";
@@ -163,15 +164,20 @@ export function SearchForm({
     <div
       id={id}
       className={`rounded-xl border p-4 ${
-        isYards ? "border-brand/35 bg-white shadow-sm ring-1 ring-brand/15" : "border-zinc-200 bg-white"
+        isSellerFocused
+          ? "border-brand/35 bg-white shadow-sm ring-1 ring-brand/15"
+          : "border-zinc-200 bg-white"
       }`}
     >
-      {isYards ? (
+      {isSellerFocused ? (
         <div className={locationHighlightClass}>
-          <p className="text-sm font-semibold text-zinc-900">Reclamation yards near you</p>
+          <p className="text-sm font-semibold text-zinc-900">
+            {sellerFocusedBrowseMode === "dealer" ? "Dealers near you" : "Reclamation yards near you"}
+          </p>
           <p className="mt-1 text-xs leading-relaxed text-zinc-700">
-            Start with your postcode to sort yard stock by distance — the fastest way to find local
-            reclamation yards.
+            {sellerFocusedBrowseMode === "dealer"
+              ? "Start with your postcode to sort dealer stock by distance — the fastest way to find local antiques dealers."
+              : "Start with your postcode to sort yard stock by distance — the fastest way to find local reclamation yards."}
           </p>
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <div className="min-w-[160px] flex-1">
@@ -186,7 +192,11 @@ export function SearchForm({
                 className="w-full rounded-lg border-2 border-brand/40 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
               />
             </div>
-            <SearchRadiusSlider defaultRadius={defaultRadiusStr} isYards={isYards} updateQuery={updateQuery} />
+            <SearchRadiusSlider
+              defaultRadius={defaultRadiusStr}
+              sellerTypeFilter={sellerFocusedBrowseMode}
+              updateQuery={updateQuery}
+            />
           </div>
         </div>
       ) : (
@@ -209,7 +219,11 @@ export function SearchForm({
                 className="w-full rounded-lg border-2 border-brand/40 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
               />
             </div>
-            <SearchRadiusSlider defaultRadius={defaultRadiusStr} isYards={isYards} updateQuery={updateQuery} />
+            <SearchRadiusSlider
+              defaultRadius={defaultRadiusStr}
+              sellerTypeFilter={sellerFocusedBrowseMode}
+              updateQuery={updateQuery}
+            />
           </div>
         </div>
       )}
@@ -268,7 +282,7 @@ export function SearchForm({
             <option value="free_collect">Free to collect</option>
           </select>
         </div>
-        {!isYards ? (
+        {!isSellerFocused ? (
           <div>
             <label className="mb-1 block text-xs font-medium text-zinc-500">Seller type</label>
             <select
@@ -281,6 +295,7 @@ export function SearchForm({
               <option value="">All</option>
               <option value="individual">Individual</option>
               <option value="reclamation_yard">Reclamation yard</option>
+              <option value="dealer">Dealer</option>
             </select>
           </div>
         ) : null}
@@ -318,8 +333,8 @@ export function SearchForm({
               listingType,
               ...(postcode ? { radius: radiusQ } : { radius: "" }),
             };
-            if (isYards) {
-              updates.sellerType = "reclamation_yard";
+            if (sellerFocusedBrowseMode) {
+              updates.sellerType = sellerFocusedBrowseMode;
             }
             updateQuery(updates);
           }}

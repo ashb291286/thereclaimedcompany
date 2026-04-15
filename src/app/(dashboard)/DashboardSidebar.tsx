@@ -45,6 +45,7 @@ export function DashboardSidebar({
       label: "My bids",
       badge: myBidsOutbidUnread > 0 ? String(Math.min(99, myBidsOutbidUnread)) : null,
     },
+    { href: "/dashboard/favourites", label: "Favourites" },
     { href: "/dashboard/wanted", label: "My wanted" },
     { href: "/dashboard/stock-alerts", label: "Stock alerts" },
     { href: "/dashboard/demolition-alerts", label: "Demolition alerts" },

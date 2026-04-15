@@ -26,7 +26,7 @@ export default async function AdminOverviewPage({
   }
 
   const { error } = await searchParams;
-  const [users, yards, listings, bids, endedAuctions, stats] = await Promise.all([
+  const [users, yards, listings, bids, endedAuctions, myListings, stats] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: "desc" },
       take: 80,
@@ -77,6 +77,14 @@ export default async function AdminOverviewPage({
         seller: { select: { id: true, email: true } },
         bids: { orderBy: { amountPence: "desc" }, take: 1, select: { amountPence: true, bidderId: true } },
         orders: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true, status: true, amount: true } },
+      },
+    }),
+    prisma.listing.findMany({
+      where: { sellerId: session.user.id },
+      orderBy: { updatedAt: "desc" },
+      take: 24,
+      include: {
+        category: { select: { name: true } },
       },
     }),
     Promise.all([
@@ -242,6 +250,63 @@ export default async function AdminOverviewPage({
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-zinc-900">My listings (quick manage)</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Fast access to your own listings before reviewing all marketplace rows.
+        </p>
+        {myListings.length === 0 ? (
+          <p className="mt-3 text-sm text-zinc-500">You don&apos;t have listings on this admin account yet.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-zinc-500">
+                <tr>
+                  <th className="py-2 pr-3">Listing</th>
+                  <th className="py-2 pr-3">Category</th>
+                  <th className="py-2 pr-3">Status</th>
+                  <th className="py-2 pr-3">Visible</th>
+                  <th className="py-2 pr-3">Updated</th>
+                  <th className="py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {myListings.map((l) => (
+                  <tr key={l.id} className="border-t border-zinc-100 align-top">
+                    <td className="py-2 pr-3">
+                      <Link href={`/listings/${l.id}`} target="_blank" className="font-medium text-brand underline">
+                        {l.title}
+                      </Link>
+                    </td>
+                    <td className="py-2 pr-3 text-zinc-700">{l.category.name}</td>
+                    <td className="py-2 pr-3 text-zinc-700">{l.status}</td>
+                    <td className="py-2 pr-3 text-zinc-700">{l.visibleOnMarketplace ? "Yes" : "No"}</td>
+                    <td className="py-2 pr-3 text-zinc-500">{l.updatedAt.toISOString().slice(0, 10)}</td>
+                    <td className="py-2">
+                      <div className="flex flex-wrap gap-2">
+                        <form action={adminSetListingVisibilityAction}>
+                          <input type="hidden" name="listingId" value={l.id} />
+                          <input type="hidden" name="visible" value={l.visibleOnMarketplace ? "0" : "1"} />
+                          <button type="submit" className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50">
+                            {l.visibleOnMarketplace ? "Hide" : "Unhide"}
+                          </button>
+                        </form>
+                        <Link
+                          href={`/dashboard/listings/${l.id}/edit`}
+                          className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+                        >
+                          Edit
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">

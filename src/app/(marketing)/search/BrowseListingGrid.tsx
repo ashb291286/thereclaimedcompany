@@ -81,6 +81,11 @@ export function BrowseListingGrid({ listings }: { listings: SearchListingRow[] }
                       {formatMiles(l.distanceMiles)}
                     </span>
                   )}
+                  {l.seller.sellerProfile?.salvoCodeMember ? (
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
+                      Salvo Code Member
+                    </span>
+                  ) : null}
                 </div>
                 <p className="truncate font-medium text-zinc-900">{l.title}</p>
                 <BrowseListingPriceLine

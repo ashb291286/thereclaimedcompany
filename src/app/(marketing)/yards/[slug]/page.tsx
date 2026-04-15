@@ -308,6 +308,11 @@ export default async function YardPublicPage({ params }: Props) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200/95">
                   Reclamation yard
                 </p>
+                {profile.salvoCodeMember ? (
+                  <p className="mt-1 inline-flex rounded-full border border-emerald-200/70 bg-emerald-100/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900">
+                    Salvo Code Member
+                  </p>
+                ) : null}
                 <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">{h1}</h1>
                 <p className="mt-1 max-w-xl text-sm font-medium text-zinc-100">{h2}</p>
                 {profile.yardTagline?.trim() ? (

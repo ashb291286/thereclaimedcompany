@@ -54,8 +54,15 @@ async function resolveSellerForAdminRow(
   const postcodeForProfile = sellerPostcode || listingPostcode;
 
   const sellerRoleRaw = (row.seller_role ?? "individual").trim().toLowerCase();
-  if (sellerRoleRaw !== "individual" && sellerRoleRaw !== "reclamation_yard") {
-    return { ok: false, message: 'seller_role must be "individual" or "reclamation_yard".' };
+  if (
+    sellerRoleRaw !== "individual" &&
+    sellerRoleRaw !== "reclamation_yard" &&
+    sellerRoleRaw !== "dealer"
+  ) {
+    return {
+      ok: false,
+      message: 'seller_role must be "individual", "reclamation_yard", or "dealer".',
+    };
   }
   const sellerRole = sellerRoleRaw as UserRole;
 

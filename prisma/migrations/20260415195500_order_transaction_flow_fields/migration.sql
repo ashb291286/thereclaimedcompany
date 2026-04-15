@@ -1,0 +1,15 @@
+ALTER TABLE "Order"
+ADD COLUMN "fulfillmentMethod" TEXT,
+ADD COLUMN "collectionAgreedAt" TIMESTAMP(3),
+ADD COLUMN "collectionConfirmedBySellerAt" TIMESTAMP(3),
+ADD COLUMN "collectionConfirmedByBuyerAt" TIMESTAMP(3),
+ADD COLUMN "shippingCourier" TEXT,
+ADD COLUMN "shippingTrackingRef" TEXT,
+ADD COLUMN "shippingConfirmedAt" TIMESTAMP(3),
+ADD COLUMN "deliveryConfirmedAt" TIMESTAMP(3),
+ADD COLUMN "buyerReviewRating" INTEGER,
+ADD COLUMN "buyerReviewComment" TEXT,
+ADD COLUMN "buyerReviewedAt" TIMESTAMP(3),
+ADD COLUMN "sellerReviewRating" INTEGER,
+ADD COLUMN "sellerReviewComment" TEXT,
+ADD COLUMN "sellerReviewedAt" TIMESTAMP(3);
