@@ -5,6 +5,7 @@ import type { Session } from "next-auth";
 import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export function MarketingShell({
   session,
@@ -13,6 +14,8 @@ export function MarketingShell({
   session: Session | null;
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const hideMobileHeader = pathname?.startsWith("/search") ?? false;
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -27,7 +30,11 @@ export function MarketingShell({
   return (
     <CurrencyProvider>
       <div className="min-h-screen bg-stone-50 text-zinc-900">
-        <header className="border-b border-zinc-200 bg-white/95 backdrop-blur">
+        <header
+          className={`border-b border-zinc-200 bg-white/95 backdrop-blur ${
+            hideMobileHeader ? "hidden md:block" : ""
+          }`}
+        >
           <div className="mx-auto flex min-h-16 w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6 sm:py-0">
             <Link href="/" className="flex items-center gap-3">
               <img
@@ -106,14 +113,14 @@ export function MarketingShell({
               )}
             </nav>
             <div
-              className={`fixed inset-0 z-[90] bg-black/45 transition-opacity duration-200 md:hidden ${
+              className={`fixed inset-0 z-[1200] bg-black/45 transition-opacity duration-200 md:hidden ${
                 mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
               }`}
               onClick={() => setMobileOpen(false)}
               aria-hidden
             />
             <aside
-              className={`fixed right-0 top-0 z-[100] flex h-[100dvh] w-[86vw] max-w-sm flex-col overflow-y-auto bg-white p-4 shadow-2xl transition-transform duration-300 md:hidden ${
+              className={`fixed right-0 top-0 z-[1300] flex h-[100dvh] w-[86vw] max-w-sm flex-col overflow-y-auto bg-white p-4 shadow-2xl transition-transform duration-300 md:hidden ${
                 mobileOpen ? "translate-x-0" : "translate-x-full"
               }`}
               aria-label="Mobile menu"

@@ -130,6 +130,7 @@ export function BrowseMobileReels({
   const [page, setPage] = useState(initialPage);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const hasMore = page < totalPages;
 
@@ -180,6 +181,24 @@ export function BrowseMobileReels({
     if (query.listingType) sp.set("listingType", query.listingType);
     return sp.toString();
   }, [query]);
+  const scrollKey = useMemo(() => `browse-mobile-scroll:${queryString}`, [queryString]);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    try {
+      const raw = window.sessionStorage.getItem(scrollKey);
+      if (!raw) return;
+      const top = Number(raw);
+      if (!Number.isFinite(top) || top < 0) return;
+      // Restore after layout settles so snap positions are valid.
+      window.requestAnimationFrame(() => {
+        el.scrollTop = top;
+      });
+    } catch {
+      /* ignore storage restore failures */
+    }
+  }, [scrollKey, items.length]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
@@ -230,8 +249,18 @@ export function BrowseMobileReels({
       aria-label="Swipe through listings"
     >
       <div
+        ref={scrollContainerRef}
         className="mx-auto h-[100dvh] overflow-y-auto overscroll-y-contain snap-y snap-mandatory [scrollbar-width:none]"
         style={{ WebkitOverflowScrolling: "touch" }}
+        onScroll={() => {
+          const el = scrollContainerRef.current;
+          if (!el) return;
+          try {
+            window.sessionStorage.setItem(scrollKey, String(el.scrollTop));
+          } catch {
+            /* ignore storage write failures */
+          }
+        }}
       >
         <div className="pointer-events-none fixed inset-x-0 top-0 z-40 bg-gradient-to-b from-black/55 via-black/25 to-transparent px-3 pb-4 pt-[max(env(safe-area-inset-top),0.75rem)]">
           <div className="pointer-events-auto mx-auto flex max-w-xl items-center gap-2">
@@ -355,6 +384,15 @@ export function BrowseMobileReels({
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Link
                     href={`/listings/${l.id}`}
+                    onClick={() => {
+                      const el = scrollContainerRef.current;
+                      if (!el) return;
+                      try {
+                        window.sessionStorage.setItem(scrollKey, String(el.scrollTop));
+                      } catch {
+                        /* ignore storage write failures */
+                      }
+                    }}
                     className="inline-flex flex-1 min-w-[8rem] items-center justify-center rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 shadow-lg transition hover:bg-zinc-100"
                   >
                     View listing
@@ -391,25 +429,36 @@ export function BrowseMobileReels({
         ) : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200/90 bg-white/95 px-3 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 backdrop-blur">
-        <div className="mx-auto grid max-w-xl grid-cols-3 gap-1.5">
+      <div className="fixed inset-x-0 bottom-0 z-50 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-3 pb-[max(env(safe-area-inset-bottom),0.6rem)] pt-6">
+        <div className="mx-auto grid max-w-xl grid-cols-4 gap-1.5">
           <button
             type="button"
-            className="rounded-xl bg-zinc-900 px-2 py-2.5 text-[11px] font-semibold text-white"
+            className="inline-flex flex-col items-center justify-center rounded-xl px-2 py-1.5 text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.65)]"
           >
-            Feed
+            <PlayIcon />
+            <span className="mt-0.5 text-[10px] font-semibold leading-none">Feed</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("open-mobile-filters"))}
+            className="inline-flex flex-col items-center justify-center rounded-xl px-2 py-1.5 text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.65)]"
+          >
+            <FilterIcon />
+            <span className="mt-0.5 text-[10px] font-semibold leading-none">Filter</span>
           </button>
           <Link
             href="/dashboard/sell"
-            className="rounded-xl border border-zinc-300 bg-white px-2 py-2.5 text-center text-[11px] font-semibold text-zinc-700"
+            className="inline-flex flex-col items-center justify-center rounded-xl px-2 py-1.5 text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.65)]"
           >
-            Add listing
+            <PlusIcon />
+            <span className="mt-0.5 text-[10px] font-semibold leading-none">Add</span>
           </Link>
           <Link
             href={profileHref}
-            className="rounded-xl border border-zinc-300 bg-white px-2 py-2.5 text-center text-[11px] font-semibold text-zinc-700"
+            className="inline-flex flex-col items-center justify-center rounded-xl px-2 py-1.5 text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.65)]"
           >
-            Profile
+            <UserIcon />
+            <span className="mt-0.5 text-[10px] font-semibold leading-none">Profile</span>
           </Link>
         </div>
       </div>
@@ -422,6 +471,50 @@ function ShareIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-90" aria-hidden>
       <path
         d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v14"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="m9 7 8 5-8 5V7Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function FilterIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 6h16M7 12h10M10 18h4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M20 21a8 8 0 1 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"

@@ -14,25 +14,23 @@ export function MobileFiltersDrawer({ children }: { children: React.ReactNode })
     };
   }, [open]);
 
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener("open-mobile-filters", onOpen);
+    return () => window.removeEventListener("open-mobile-filters", onOpen);
+  }, []);
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-3 text-sm font-semibold text-white shadow-xl md:hidden"
-      >
-        Filters
-      </button>
-
       <div
-        className={`fixed inset-0 z-[80] bg-black/45 transition-opacity duration-200 md:hidden ${
+        className={`fixed inset-0 z-[1200] bg-black/45 transition-opacity duration-200 md:hidden ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={() => setOpen(false)}
         aria-hidden
       />
       <div
-        className={`fixed inset-x-0 bottom-0 z-[90] max-h-[82dvh] overflow-y-auto rounded-t-2xl bg-white p-4 pb-8 shadow-2xl transition-transform duration-300 md:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-[1300] max-h-[82dvh] overflow-y-auto rounded-t-2xl bg-white p-4 pb-8 shadow-2xl transition-transform duration-300 md:hidden ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
         role="dialog"
