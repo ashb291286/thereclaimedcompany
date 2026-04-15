@@ -3,12 +3,15 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isCarbonAdmin } from "@/lib/admin";
-import { createMarketplaceCategoryAction } from "@/lib/actions/category-admin";
+import {
+  createMarketplaceCategoryAction,
+  updateMarketplaceCategoryAction,
+} from "@/lib/actions/category-admin";
 
 export default async function AdminMarketplaceCategoriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ created?: string; error?: string }>;
+  searchParams: Promise<{ created?: string; updated?: string; error?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
@@ -21,7 +24,7 @@ export default async function AdminMarketplaceCategoriesPage({
     );
   }
 
-  const { created, error } = await searchParams;
+  const { created, updated, error } = await searchParams;
 
   const categories = await prisma.category.findMany({
     orderBy: [{ parentId: "asc" }, { name: "asc" }],
@@ -55,6 +58,11 @@ export default async function AdminMarketplaceCategoriesPage({
       {created ? (
         <p className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           Category created.
+        </p>
+      ) : null}
+      {updated ? (
+        <p className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          Category updated.
         </p>
       ) : null}
       {error ? (
@@ -111,20 +119,56 @@ export default async function AdminMarketplaceCategoriesPage({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">All categories</h2>
         <ul className="mt-3 divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white">
           {categories.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3 text-sm">
-              <div>
+            <li key={c.id} className="px-4 py-3 text-sm">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="font-medium text-zinc-900">{c.name}</span>
-                {c.parent ? (
-                  <span className="text-zinc-500"> · under {c.parent.name}</span>
-                ) : null}
-                <span className="ml-2 font-mono text-xs text-zinc-400">{c.slug}</span>
+                <span className="font-mono text-xs text-zinc-400">{c.slug}</span>
               </div>
-              <div className="text-xs text-zinc-500">
+              <div className="mb-3 text-xs text-zinc-500">
+                Parent: {c.parent ? c.parent.name : "Top level"} ·{" "}
                 {c.wooCommerceSyncEnabled ? (
                   <span className="text-emerald-700">Woo sync · WC cat {c.wooCommerceCategoryId ?? "—"}</span>
                 ) : (
                   <span>No WooCommerce sync</span>
-                )}
+                )}{" "}
+              </div>
+              <div>
+                <form action={updateMarketplaceCategoryAction} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                  <input type="hidden" name="id" value={c.id} />
+                  <label className="min-w-[180px] flex-1 text-sm">
+                    <span className="text-zinc-600">Name</span>
+                    <input
+                      name="name"
+                      required
+                      maxLength={120}
+                      defaultValue={c.name}
+                      className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2"
+                    />
+                  </label>
+                  <label className="min-w-[220px] text-sm">
+                    <span className="text-zinc-600">Parent</span>
+                    <select
+                      name="parentId"
+                      className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2"
+                      defaultValue={c.parentId ?? ""}
+                    >
+                      <option value="">— Top level —</option>
+                      {categories
+                        .filter((opt) => opt.id !== c.id)
+                        .map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.parent ? `${opt.parent.name} › ${opt.name}` : opt.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                  >
+                    Save
+                  </button>
+                </form>
               </div>
             </li>
           ))}

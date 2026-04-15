@@ -75,3 +75,78 @@ export async function createMarketplaceCategoryAction(formData: FormData): Promi
 
   redirect("/dashboard/admin/marketplace-categories?created=1");
 }
+
+export async function updateMarketplaceCategoryAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/auth/signin");
+  if (!isCarbonAdmin(session)) {
+    redirect(
+      "/dashboard/admin/marketplace-categories?error=" + encodeURIComponent("Not allowed")
+    );
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 120);
+  const parentIdRaw = String(formData.get("parentId") ?? "").trim();
+
+  if (!id) {
+    redirect(
+      "/dashboard/admin/marketplace-categories?error=" +
+        encodeURIComponent("Category id is required")
+    );
+  }
+  if (!name) {
+    redirect(
+      "/dashboard/admin/marketplace-categories?error=" + encodeURIComponent("Name is required")
+    );
+  }
+
+  let parentId: string | null = null;
+  if (parentIdRaw) {
+    if (parentIdRaw === id) {
+      redirect(
+        "/dashboard/admin/marketplace-categories?error=" +
+          encodeURIComponent("A category cannot be its own parent")
+      );
+    }
+    const parent = await prisma.category.findUnique({
+      where: { id: parentIdRaw },
+      select: { id: true, parentId: true },
+    });
+    if (!parent) {
+      redirect(
+        "/dashboard/admin/marketplace-categories?error=" +
+          encodeURIComponent("Invalid parent category")
+      );
+    }
+
+    // Prevent hierarchy loops: the new parent cannot be a child/descendant of the edited category.
+    let cursor = parent.parentId;
+    while (cursor) {
+      if (cursor === id) {
+        redirect(
+          "/dashboard/admin/marketplace-categories?error=" +
+            encodeURIComponent("Invalid parent: this would create a category loop")
+        );
+      }
+      const next = await prisma.category.findUnique({
+        where: { id: cursor },
+        select: { parentId: true },
+      });
+      cursor = next?.parentId ?? null;
+    }
+
+    parentId = parent.id;
+  }
+
+  await prisma.category.update({
+    where: { id },
+    data: { name, parentId },
+  });
+
+  revalidatePath("/dashboard/sell");
+  revalidatePath("/search");
+  revalidatePath("/dashboard/admin/marketplace-categories");
+
+  redirect("/dashboard/admin/marketplace-categories?updated=1");
+}
