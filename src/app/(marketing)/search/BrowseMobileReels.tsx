@@ -337,7 +337,7 @@ export function BrowseMobileReels({
                 />
               </div>
 
-              <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end p-4 pb-28 pt-16 text-white">
+              <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end p-4 pb-32 pt-16 text-white">
                 <div className="mb-2 flex min-h-[20px] flex-wrap content-start items-start gap-1.5">
                   {l.listingKind === "auction" && (
                     <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide backdrop-blur-sm">
@@ -429,7 +429,7 @@ export function BrowseMobileReels({
         ) : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-6">
+      <div className="fixed inset-x-0 z-50 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-3 pb-4 pt-6 [bottom:calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
         <div className="mx-auto grid max-w-xl grid-cols-4 gap-1.5">
           <button
             type="button"
