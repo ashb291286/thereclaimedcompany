@@ -283,7 +283,7 @@ export default async function AdminOverviewPage({
         </div>
       </div>
 
-      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+      <section id="notifications" className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">Live fee settings (Stripe Connect)</h2>
         <p className="mt-1 text-sm text-zinc-600">
           The platform takes an application fee on each payment: commission (+ VAT), estimated Stripe processing fee, and any mandatory digital marketplace fee.
@@ -526,7 +526,7 @@ export default async function AdminOverviewPage({
         <div className="mt-6">
           <h3 className="text-sm font-semibold text-zinc-900">Recent notifications (all users)</h3>
           <p className="mt-1 text-xs text-zinc-600">Up to 20 rows, newest first. Search by type, title, body, user id/email, or notification id.</p>
-          <form className="mt-3 flex flex-wrap items-center gap-2">
+          <form action="/dashboard/admin#notifications" className="mt-3 flex flex-wrap items-center gap-2">
             <input type="hidden" name="userQ" value={userQ} />
             <input type="hidden" name="yardQ" value={yardQ} />
             <input type="hidden" name="listingQ" value={listingQ} />
@@ -540,7 +540,7 @@ export default async function AdminOverviewPage({
               Search
             </button>
             <Link
-              href={`/dashboard/admin${userQ || yardQ || listingQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(yardQ ? { yardQ } : {}), ...(listingQ ? { listingQ } : {}) }).toString()}` : ""}`}
+              href={`/dashboard/admin${userQ || yardQ || listingQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(yardQ ? { yardQ } : {}), ...(listingQ ? { listingQ } : {}) }).toString()}` : ""}#notifications`}
               className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
             >
               Clear
@@ -624,12 +624,12 @@ export default async function AdminOverviewPage({
         </div>
       </section>
 
-      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+      <section id="users" className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">Users</h2>
         <p className="mt-1 text-sm text-zinc-600">
           Showing up to 20 recent users. Search by email, name, yard details, or user ID.
         </p>
-        <form className="mt-3 flex flex-wrap items-center gap-2">
+        <form action="/dashboard/admin#users" className="mt-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="yardQ" value={yardQ} />
           <input type="hidden" name="listingQ" value={listingQ} />
           <input type="hidden" name="notifQ" value={notifQ} />
@@ -643,7 +643,7 @@ export default async function AdminOverviewPage({
             Search
           </button>
           <Link
-            href={`/dashboard/admin${yardQ || listingQ || notifQ ? `?${new URLSearchParams({ ...(yardQ ? { yardQ } : {}), ...(listingQ ? { listingQ } : {}), ...(notifQ ? { notifQ } : {}) }).toString()}` : ""}`}
+            href={`/dashboard/admin${yardQ || listingQ || notifQ ? `?${new URLSearchParams({ ...(yardQ ? { yardQ } : {}), ...(listingQ ? { listingQ } : {}), ...(notifQ ? { notifQ } : {}) }).toString()}` : ""}#users`}
             className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
           >
             Clear
@@ -736,12 +736,12 @@ export default async function AdminOverviewPage({
         </div>
       </section>
 
-      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+      <section id="yards" className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">Yards and related listings</h2>
         <p className="mt-1 text-sm text-zinc-600">
           Showing up to 20 recent yards. Search by yard name/slug, postcode, user email, or ID.
         </p>
-        <form className="mt-3 flex flex-wrap items-center gap-2">
+        <form action="/dashboard/admin#yards" className="mt-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="userQ" value={userQ} />
           <input type="hidden" name="listingQ" value={listingQ} />
           <input type="hidden" name="notifQ" value={notifQ} />
@@ -755,7 +755,7 @@ export default async function AdminOverviewPage({
             Search
           </button>
           <Link
-            href={`/dashboard/admin${userQ || listingQ || notifQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(listingQ ? { listingQ } : {}), ...(notifQ ? { notifQ } : {}) }).toString()}` : ""}`}
+            href={`/dashboard/admin${userQ || listingQ || notifQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(listingQ ? { listingQ } : {}), ...(notifQ ? { notifQ } : {}) }).toString()}` : ""}#yards`}
             className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
           >
             Clear
@@ -795,7 +795,7 @@ export default async function AdminOverviewPage({
         </div>
       </section>
 
-      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+      <section id="listings" className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">My listings (quick manage)</h2>
         <p className="mt-1 text-sm text-zinc-600">
           Fast access to your own listings before reviewing all marketplace rows.
@@ -858,7 +858,7 @@ export default async function AdminOverviewPage({
         <p className="mt-1 text-sm text-zinc-600">
           Showing up to 20 recent listings. Search by listing ID/title, seller email, category, or status.
         </p>
-        <form className="mt-3 flex flex-wrap items-center gap-2">
+        <form action="/dashboard/admin#listings" className="mt-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="userQ" value={userQ} />
           <input type="hidden" name="yardQ" value={yardQ} />
           <input type="hidden" name="notifQ" value={notifQ} />
@@ -872,7 +872,7 @@ export default async function AdminOverviewPage({
             Search
           </button>
           <Link
-            href={`/dashboard/admin${userQ || yardQ || notifQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(yardQ ? { yardQ } : {}), ...(notifQ ? { notifQ } : {}) }).toString()}` : ""}`}
+            href={`/dashboard/admin${userQ || yardQ || notifQ ? `?${new URLSearchParams({ ...(userQ ? { userQ } : {}), ...(yardQ ? { yardQ } : {}), ...(notifQ ? { notifQ } : {}) }).toString()}` : ""}#listings`}
             className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
           >
             Clear

@@ -437,6 +437,7 @@ export default async function ListingPage({
                 <h1 className="text-xl font-semibold leading-snug text-zinc-900 sm:text-2xl">
                   {listing.title}
                 </h1>
+                <p className="mt-1 font-mono text-[11px] text-zinc-500">ID: {id}</p>
                 {listing.sellerReference?.trim() ? (
                   <p className="mt-1.5 text-sm text-zinc-600">
                     <span className="font-medium text-zinc-800">Reference</span>{" "}

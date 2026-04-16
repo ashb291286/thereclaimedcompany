@@ -11,8 +11,8 @@ import { BuyerWelcomeModal } from "./BuyerWelcomeModal";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { parseBrowseRadiusParam } from "@/lib/browse-radius";
 import { browseListingTypeQueryParam, browseSortQueryParam, searchListings } from "@/lib/listing-search";
-import { formatUkLocationLine } from "@/lib/postcode-uk";
-import { formatMiles } from "@/lib/geo";
+import { formatUkLocationLine, lookupUkPostcode } from "@/lib/postcode-uk";
+import { formatMiles, haversineMiles } from "@/lib/geo";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat, vatLabelSuffix } from "@/lib/vat-pricing";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
@@ -191,7 +191,11 @@ export default async function SearchPage({
             businessName: true,
             yardSlug: true,
             yardTagline: true,
+            yardLogoUrl: true,
+            yardHeaderImageUrl: true,
             postcode: true,
+            lat: true,
+            lng: true,
             postcodeLocality: true,
             adminDistrict: true,
             region: true,
@@ -220,6 +224,51 @@ export default async function SearchPage({
   const fromImage = params.fromImage === "1";
   const showSellerProfileFallback =
     !activeCategoryRow && sellerFocusedBrowse !== null && listingsOrdered.length === 0 && sellerProfiles.length > 0;
+  const sellerIdsForFallback = showSellerProfileFallback ? sellerProfiles.map((s) => s.userId) : [];
+
+  const originForSellerDistance = (() => {
+    if (params.postcode?.trim()) return { mode: "postcode" as const, postcode: params.postcode.trim() };
+    if (userPrefs?.homeLat != null && userPrefs?.homeLng != null) {
+      return { mode: "home" as const, lat: userPrefs.homeLat, lng: userPrefs.homeLng };
+    }
+    return null;
+  })();
+
+  const originCoords =
+    originForSellerDistance?.mode === "postcode"
+      ? await lookupUkPostcode(originForSellerDistance.postcode)
+      : originForSellerDistance?.mode === "home"
+        ? { postcode: userPrefs?.homePostcode ?? "", lat: originForSellerDistance.lat, lng: originForSellerDistance.lng }
+        : null;
+
+  const listingCounts =
+    showSellerProfileFallback && sellerIdsForFallback.length
+      ? await prisma.listing.groupBy({
+          by: ["sellerId"],
+          where: {
+            sellerId: { in: sellerIdsForFallback },
+            status: "active",
+            visibleOnMarketplace: true,
+          },
+          _count: { _all: true },
+        })
+      : [];
+  const listingCountBySellerId = new Map(listingCounts.map((r) => [r.sellerId, r._count._all]));
+  const sellerCards = showSellerProfileFallback
+    ? sellerProfiles
+        .map((s) => {
+          const distanceMiles =
+            originCoords && s.lat != null && s.lng != null
+              ? haversineMiles(originCoords.lat, originCoords.lng, s.lat, s.lng)
+              : null;
+          return {
+            ...s,
+            distanceMiles,
+            listingCount: listingCountBySellerId.get(s.userId) ?? 0,
+          };
+        })
+        .sort((a, b) => (a.distanceMiles ?? 9999) - (b.distanceMiles ?? 9999))
+    : [];
 
   const paramRecord: Record<string, string | undefined> = {
     q: params.q,
@@ -365,32 +414,54 @@ export default async function SearchPage({
               <p className="px-4 text-sm text-zinc-600 md:px-0">
                 No live listings matched these filters yet. Showing {sellerFocusedBrowse === "reclamation_yard" ? "reclamation yards" : "dealers"} with public profiles.
               </p>
-              <ul className="mt-4 space-y-3">
-                {sellerProfiles.map((s) => {
+              <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {sellerCards.map((s) => {
                   const href = publicSellerPath({
                     sellerId: s.userId,
                     role: s.user.role,
                     yardSlug: s.yardSlug,
                   });
+                  const img = s.yardHeaderImageUrl || s.yardLogoUrl || "/images/yard-header-default.png";
                   return (
                     <li key={s.id}>
                       <Link
                         href={href}
-                        className="block rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-brand/35 hover:shadow-sm"
+                        className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition hover:border-brand/35 hover:shadow-sm"
                       >
-                        <p className="font-semibold text-zinc-900">{s.displayName}</p>
-                        {s.businessName && s.businessName !== s.displayName ? (
-                          <p className="text-sm text-zinc-600">{s.businessName}</p>
-                        ) : null}
-                        {s.yardTagline ? <p className="mt-2 text-sm text-zinc-600">{s.yardTagline}</p> : null}
-                        <p className="mt-2 text-xs text-zinc-500">
-                          {formatUkLocationLine({
-                            postcodeLocality: s.postcodeLocality,
-                            adminDistrict: s.adminDistrict,
-                            region: s.region,
-                            postcode: s.postcode,
-                          })}
-                        </p>
+                        <div className="relative aspect-square bg-zinc-100">
+                          <Image
+                            src={img}
+                            alt=""
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                            unoptimized
+                          />
+                        </div>
+                        <div className="p-3">
+                          <p className="truncate font-semibold text-zinc-900">{s.displayName}</p>
+                          {s.businessName && s.businessName !== s.displayName ? (
+                            <p className="truncate text-sm text-zinc-600">{s.businessName}</p>
+                          ) : null}
+                          <p className="mt-1 truncate text-xs text-zinc-500">
+                            {formatUkLocationLine({
+                              postcodeLocality: s.postcodeLocality,
+                              adminDistrict: s.adminDistrict,
+                              region: s.region,
+                              postcode: s.postcode,
+                            })}
+                          </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
+                            {s.distanceMiles != null ? (
+                              <span className="rounded bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700">
+                                {formatMiles(s.distanceMiles)} away
+                              </span>
+                            ) : null}
+                            <span className="rounded bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700">
+                              {s.listingCount} listing{s.listingCount === 1 ? "" : "s"}
+                            </span>
+                          </div>
+                        </div>
                       </Link>
                     </li>
                   );

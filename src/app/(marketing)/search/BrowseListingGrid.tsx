@@ -34,8 +34,8 @@ export function BrowseListingGrid({
 }) {
   const layoutClass =
     visibility === "always"
-      ? "mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-      : "mt-6 hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5";
+      ? "mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+      : "mt-6 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5";
   return (
     <ul className={[layoutClass, className].filter(Boolean).join(" ")}>
       {listings.map((l) => {
@@ -109,7 +109,6 @@ export function BrowseListingGrid({
                   categoryName={l.category.name}
                   conditionExtra={l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
                 />
-                <p className="mt-1 truncate font-mono text-[10px] text-zinc-400">ID: {l.id}</p>
                 {(() => {
                   const locLine = formatUkLocationLine({
                     postcodeLocality: l.postcodeLocality,

@@ -104,7 +104,8 @@ export default async function SellerPage({
 
   return (
     <article className="pb-12">
-      <section className="rounded-2xl border border-zinc-200 bg-white p-6">
+      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Meet the dealer</p>
         <h1 className="mt-1 text-3xl font-semibold text-zinc-900">{displayTitle}</h1>
         <p className="mt-2 text-zinc-600">{placeLine}</p>
@@ -120,9 +121,9 @@ export default async function SellerPage({
             Own this dealer profile? Claim it
           </Link>
         ) : null}
-      </section>
+        </section>
 
-      <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
+        <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="rounded-xl border border-zinc-200 bg-white p-5">
           <h2 className="text-lg font-semibold text-zinc-900">About this dealer</h2>
           {profile.yardAbout?.trim() ? (
@@ -209,9 +210,9 @@ export default async function SellerPage({
             </div>
           ) : null}
         </aside>
-      </section>
+        </section>
 
-      <section className="mt-8">
+        <section className="mt-8">
         <h2 className="text-lg font-semibold text-zinc-900">For sale</h2>
         {forSaleListings.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-500">No active sale listings.</p>
@@ -224,9 +225,9 @@ export default async function SellerPage({
             ))}
           </ul>
         )}
-      </section>
+        </section>
 
-      <section className="mt-8">
+        <section className="mt-8">
         <h2 className="text-lg font-semibold text-zinc-900">Auctions</h2>
         {auctionListings.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-500">No active auctions.</p>
@@ -239,7 +240,7 @@ export default async function SellerPage({
             ))}
           </ul>
         )}
-      </section>
+        </section>
 
       {relatedDealers.length > 0 ? (
         <section className="mt-10 border-t border-zinc-200 pt-8">
@@ -269,6 +270,7 @@ export default async function SellerPage({
           </div>
         </section>
       ) : null}
+      </div>
     </article>
   );
 }
@@ -310,7 +312,6 @@ function ListingCard({
           £{(l.price / 100).toFixed(2)} · {l.category.name}
           {l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
         </p>
-        <p className="mt-1 truncate font-mono text-[10px] text-zinc-400">ID: {l.id}</p>
       </div>
     </Link>
   );
