@@ -57,6 +57,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       yardAbout: true,
       yardLogoUrl: true,
       yardHeaderImageUrl: true,
+      importedByAdmin: true,
+      claimCode: true,
     },
   });
   if (!profile) return { title: "Yard not found" };
@@ -361,6 +363,14 @@ export default async function YardPublicPage({ params }: Props) {
                   </a>
                 ) : null}
               </div>
+              {profile.importedByAdmin && profile.claimCode ? (
+                <Link
+                  href={`/claim-profile?sellerProfileId=${profile.id}`}
+                  className="mt-2 inline-block text-xs text-zinc-200 underline decoration-zinc-300/80 underline-offset-2 hover:text-white"
+                >
+                  Own this yard? Claim this profile
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>

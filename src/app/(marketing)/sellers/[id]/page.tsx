@@ -112,6 +112,14 @@ export default async function SellerPage({
           On Reclaimed since {seller.createdAt.toLocaleDateString("en-GB", { dateStyle: "medium" })}
         </p>
         {profile.yardTagline ? <p className="mt-3 text-sm text-zinc-700">{profile.yardTagline}</p> : null}
+        {profile.importedByAdmin && profile.claimCode ? (
+          <Link
+            href={`/claim-profile?sellerProfileId=${profile.id}`}
+            className="mt-3 inline-block text-xs font-medium text-brand underline"
+          >
+            Own this dealer profile? Claim it
+          </Link>
+        ) : null}
       </section>
 
       <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">

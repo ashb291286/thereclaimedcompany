@@ -226,6 +226,14 @@ model SellerProfile {
   yardTradePublic           String?
   /// Shown near enquiry form, e.g. “Typically responds within 24 hours”.
   yardResponseTimeNote      String?
+  /// True when profile was created via admin CSV bootstrap import.
+  importedByAdmin        Boolean   @default(false)
+  /// One-time code shared with the real owner to claim this imported profile.
+  claimCode              String?   @unique
+  /// Optional contact email from CSV (used for admin follow-up).
+  claimContactEmail      String?
+  /// Set when the claim code was successfully used.
+  claimedAt              DateTime?
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

@@ -14,6 +14,7 @@ import {
   adminToggleUserSuspensionAction,
 } from "@/lib/actions/admin-overview";
 import { calculateMarketplaceFees } from "@/lib/marketplace-fees";
+import { SellerProfileImportForm } from "./SellerProfileImportForm";
 
 export default async function AdminOverviewPage({
   searchParams,
@@ -331,6 +332,8 @@ export default async function AdminOverviewPage({
           </p>
         </div>
       </section>
+
+      <SellerProfileImportForm />
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">Blog publishing</h2>
