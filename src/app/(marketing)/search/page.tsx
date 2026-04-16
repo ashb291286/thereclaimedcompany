@@ -76,6 +76,7 @@ export default async function SearchPage({
     hireOnly?: string;
     availableNow?: string;
     page?: string;
+    sellerPage?: string;
     ids?: string;
     fromImage?: string;
     welcome?: string;
@@ -99,6 +100,8 @@ export default async function SearchPage({
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
   const pageSize = 12;
   const skip = (page - 1) * pageSize;
+  const sellerPage = Math.max(1, parseInt(params.sellerPage ?? "1", 10));
+  const sellerPageSize = 12;
   const sellerFocusedBrowse =
     params.sellerType === "reclamation_yard"
       ? "reclamation_yard"
@@ -269,6 +272,8 @@ export default async function SearchPage({
         })
         .sort((a, b) => (a.distanceMiles ?? 9999) - (b.distanceMiles ?? 9999))
     : [];
+  const sellerCardsShown = sellerCards.slice(0, sellerPage * sellerPageSize);
+  const hasMoreSellerCards = sellerCards.length > sellerCardsShown.length;
 
   const paramRecord: Record<string, string | undefined> = {
     q: params.q,
@@ -410,12 +415,12 @@ export default async function SearchPage({
             </Suspense>
           </div>
           {showSellerProfileFallback ? (
-            <div className="mt-6">
+            <div id="seller-cards" className="mt-6 scroll-mt-24">
               <p className="px-4 text-sm text-zinc-600 md:px-0">
                 No live listings matched these filters yet. Showing {sellerFocusedBrowse === "reclamation_yard" ? "reclamation yards" : "dealers"} with public profiles.
               </p>
               <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {sellerCards.map((s) => {
+                {sellerCardsShown.map((s) => {
                   const href = publicSellerPath({
                     sellerId: s.userId,
                     role: s.user.role,
@@ -467,6 +472,23 @@ export default async function SearchPage({
                   );
                 })}
               </ul>
+              {hasMoreSellerCards ? (
+                <div className="mt-6 flex justify-center">
+                  <Link
+                    href={`/search?${(() => {
+                      const sp = new URLSearchParams();
+                      for (const [k, v] of Object.entries(paramRecord)) {
+                        if (v != null && String(v) !== "") sp.set(k, String(v));
+                      }
+                      sp.set("sellerPage", String(sellerPage + 1));
+                      return sp.toString();
+                    })()}#seller-cards`}
+                    className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                  >
+                    Load more
+                  </Link>
+                </div>
+              ) : null}
             </div>
           ) : listingsOrdered.length === 0 ? (
             <p className="mt-8 px-4 text-zinc-500 md:px-0">No listings match your filters.</p>

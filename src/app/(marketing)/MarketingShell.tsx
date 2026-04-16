@@ -66,7 +66,10 @@ export function MarketingShell({
               <Link href="/dealers" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
                 Dealers
               </Link>
-              <Link href="/reclamation-yards" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
+              <Link
+                href="/search?sellerType=reclamation_yard#search-filters"
+                className="text-sm font-medium text-zinc-700 hover:text-zinc-900"
+              >
                 Yards
               </Link>
               <Link href="/wanted" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
@@ -163,7 +166,13 @@ export function MarketingShell({
               <div className="flex flex-col gap-1 text-sm">
                 <Link href="/search" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Browse</Link>
                 <Link href="/dealers" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Dealers</Link>
-                <Link href="/reclamation-yards" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Yards</Link>
+                <Link
+                  href="/search?sellerType=reclamation_yard#search-filters"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-md px-2 py-2 hover:bg-zinc-100"
+                >
+                  Yards
+                </Link>
                 <Link href="/wanted" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Wanted</Link>
                 <Link href="/demolition-alerts" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Demolition alerts</Link>
                 <Link href="/driven" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Driven</Link>
