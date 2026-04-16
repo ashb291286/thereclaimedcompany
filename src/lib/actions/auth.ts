@@ -10,12 +10,16 @@ export async function register(formData: FormData) {
   const password = formData.get("password") as string;
   const name = formData.get("name") as string;
   const accountIntent = ((formData.get("accountIntent") as string) ?? "buying").trim();
+  const agreeLegalHub = String(formData.get("agreeLegalHub") ?? "") === "on";
 
   if (!email?.trim() || !password?.trim()) {
     return { error: "Email and password are required" };
   }
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters" };
+  }
+  if (!agreeLegalHub) {
+    return { error: "Please agree to the Legal hub documents to continue" };
   }
 
   const existing = await prisma.user.findUnique({ where: { email: email.trim() } });

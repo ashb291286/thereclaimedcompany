@@ -104,6 +104,21 @@ export function RegisterForm({
         />
         <p className="text-xs text-zinc-500 mt-1">At least 8 characters</p>
       </div>
+      <label className="flex items-start gap-2 rounded-lg border border-zinc-200 bg-zinc-50/70 p-3 text-sm text-zinc-700">
+        <input
+          name="agreeLegalHub"
+          type="checkbox"
+          required
+          className="mt-0.5"
+        />
+        <span>
+          I agree to the{" "}
+          <a href="/legal-hub" target="_blank" rel="noopener noreferrer" className="font-medium text-brand underline">
+            Legal hub documents
+          </a>
+          .
+        </span>
+      </label>
       <button
         type="submit"
         className="w-full rounded-lg bg-brand px-4 py-2.5 font-medium text-white hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"

@@ -331,6 +331,14 @@ export default async function YardPublicPage({ params }: Props) {
                 >
                   View stock
                 </a>
+                <YardStockAlertToggle
+                  sellerId={seller.id}
+                  sellerPath={`/yards/${slug}`}
+                  viewerId={viewerId}
+                  hasAlert={hasStockAlert}
+                  label="Favourite yard"
+                  stopLabel="Unfavourite yard"
+                />
                 {profile.yardContactPhone ? (
                   <a
                     href={`tel:${profile.yardContactPhone.replace(/\s+/g, "")}`}
@@ -470,14 +478,6 @@ export default async function YardPublicPage({ params }: Props) {
 
           <section id="enquiry" className="scroll-mt-24 space-y-4">
             <h2 className="text-lg font-semibold text-zinc-900">Get in touch</h2>
-            <YardStockAlertToggle
-              sellerId={seller.id}
-              sellerPath={`/yards/${slug}`}
-              viewerId={viewerId}
-              hasAlert={hasStockAlert}
-              label="Favourite yard & get alerts"
-              stopLabel="Unfavourite yard"
-            />
             <YardEnquiryFormIsland
               yardUserId={seller.id}
               yardSlug={slug}
@@ -491,6 +491,40 @@ export default async function YardPublicPage({ params }: Props) {
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <h2 className="text-sm font-semibold text-zinc-900">Meet the yard</h2>
+            <ul className="mt-3 space-y-2 text-sm text-zinc-700">
+              <li>
+                <span className="font-medium text-zinc-800">On Reclaimed since:</span>{" "}
+                {seller.createdAt.toLocaleDateString("en-GB", { dateStyle: "medium" })}
+              </li>
+              {profile.yearEstablished ? (
+                <li>
+                  <span className="font-medium text-zinc-800">Established:</span> {profile.yearEstablished}
+                </li>
+              ) : null}
+              {profile.salvoCodeMember ? (
+                <li>
+                  <span className="font-medium text-zinc-800">Salvo:</span> Salvo Code Member
+                </li>
+              ) : null}
+              {tradeLabel ? (
+                <li>
+                  <span className="font-medium text-zinc-800">Visitors:</span> {tradeLabel}
+                </li>
+              ) : null}
+            </ul>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <OpeningHoursBlock
+              id="opening-hours"
+              scheduleJson={profile.openingHoursSchedule}
+              legacyText={profile.openingHours}
+              showOpenNowBadge
+            />
+          </div>
+
           {(profile.yardContactEmail ||
             profile.yardContactPhone ||
             profile.yardWebsiteUrl ||
@@ -546,15 +580,6 @@ export default async function YardPublicPage({ params }: Props) {
               </ul>
             </section>
           )}
-
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <OpeningHoursBlock
-              id="opening-hours"
-              scheduleJson={profile.openingHoursSchedule}
-              legacyText={profile.openingHours}
-              showOpenNowBadge
-            />
-          </div>
 
           <p className="text-xs text-zinc-500">
             Listed on{" "}

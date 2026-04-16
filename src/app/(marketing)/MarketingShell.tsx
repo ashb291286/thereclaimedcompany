@@ -168,6 +168,7 @@ export function MarketingShell({
                 <Link href="/demolition-alerts" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Demolition alerts</Link>
                 <Link href="/driven" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Driven</Link>
                 <Link href="/prop-yard" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Prop Yard</Link>
+                <Link href="/legal-hub" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Legal hub</Link>
                 {session ? (
                   <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Dashboard</Link>
                 ) : (
@@ -248,8 +249,12 @@ export function MarketingShell({
                   <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
                     <p className="text-xs font-semibold tracking-widest text-white/80">COMPANY</p>
                     <p>Safety Tips</p>
-                    <p>Terms</p>
-                    <p>Privacy Policy</p>
+                    <Link href="/legal-hub" className="hover:text-white">
+                      Legal Hub
+                    </Link>
+                    <Link href="/legal-hub" className="hover:text-white">
+                      Terms &amp; Privacy
+                    </Link>
                     <Link href="/intellectual-property" className="hover:text-white">
                       Intellectual Property
                     </Link>
@@ -273,8 +278,12 @@ export function MarketingShell({
               <div className="mt-5 flex flex-col gap-3 text-xs text-white/70 sm:flex-row sm:items-center sm:justify-between">
                 <p>©2025 The Reclaimed Company 05769679 - All Rights Reserved.</p>
                 <div className="flex items-center gap-4">
-                  <p>Privacy Policy</p>
-                  <p>Terms of use</p>
+                  <Link href="/legal-hub" className="hover:text-white">
+                    Privacy Policy
+                  </Link>
+                  <Link href="/legal-hub" className="hover:text-white">
+                    Terms of use
+                  </Link>
                 </div>
               </div>
             </div>
