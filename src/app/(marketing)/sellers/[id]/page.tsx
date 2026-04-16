@@ -116,18 +116,17 @@ export default async function SellerPage({
 
       <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="rounded-xl border border-zinc-200 bg-white p-5">
-          <h2 className="text-lg font-semibold text-zinc-900">Find this dealer</h2>
-          <p className="mt-2 text-sm text-zinc-600">{profile.postcode}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50">
-              Google Maps
-            </a>
-            {wazeUrl ? (
-              <a href={wazeUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50">
-                Waze
-              </a>
-            ) : null}
-          </div>
+          <h2 className="text-lg font-semibold text-zinc-900">About this dealer</h2>
+          {profile.yardAbout?.trim() ? (
+            <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
+              {profile.yardAbout.trim()}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+              Browse live listings from this dealer on Reclaimed Marketplace, including unique reclaimed stock and
+              regular inventory updates.
+            </p>
+          )}
           <div className="mt-4">
             <YardStockAlertToggle
               sellerId={seller.id}
@@ -169,6 +168,26 @@ export default async function SellerPage({
               );
             })}
           </ul>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+            >
+              Open in Google Maps
+            </a>
+            {wazeUrl ? (
+              <a
+                href={wazeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+              >
+                Open in Waze
+              </a>
+            ) : null}
+          </div>
           {profile.salvoCodeMember ? (
             <p className="mt-3 rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-900">Salvo Code Member</p>
           ) : null}

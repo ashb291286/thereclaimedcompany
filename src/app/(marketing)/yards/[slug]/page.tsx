@@ -26,6 +26,7 @@ import { YardMaterialPillsSection, YardRelatedYardsSection } from "@/components/
 export const revalidate = 900;
 
 type Props = { params: Promise<{ slug: string }> };
+const DEFAULT_YARD_HEADER_IMAGE_PATH = "/images/yard-header-default.png";
 
 function formatUpdatedAgo(d: Date): string {
   const s = Math.floor((Date.now() - d.getTime()) / 1000);
@@ -75,11 +76,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = descSource.slice(0, 158);
   const base = getSiteUrl();
   const url = `${base}/yards/${slug}`;
-  const ogImages = profile.yardHeaderImageUrl
-    ? [profile.yardHeaderImageUrl]
-    : profile.yardLogoUrl
-      ? [profile.yardLogoUrl]
-      : undefined;
+  const defaultHeaderAbsoluteUrl = `${base}${DEFAULT_YARD_HEADER_IMAGE_PATH}`;
+  const ogImage = profile.yardHeaderImageUrl || profile.yardLogoUrl || defaultHeaderAbsoluteUrl;
+  const ogImages = [ogImage];
 
   return {
     title,
@@ -94,7 +93,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: ogImages,
     },
     twitter: {
-      card: ogImages ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title,
       description,
       images: ogImages,
@@ -155,6 +154,8 @@ export default async function YardPublicPage({ params }: Props) {
 
   const base = getSiteUrl();
   const pageUrl = `${base}/yards/${slug}`;
+  const fallbackHeaderImageUrl = `${base}${DEFAULT_YARD_HEADER_IMAGE_PATH}`;
+  const heroImageUrl = profile.yardHeaderImageUrl || DEFAULT_YARD_HEADER_IMAGE_PATH;
   const schedule = scheduleFromDbField(profile.openingHoursSchedule);
 
   const trust = parseYardTrustFlagsJson(profile.yardTrustFlagsJson);
@@ -186,7 +187,7 @@ export default async function YardPublicPage({ params }: Props) {
         ? { lat: profile.lat, lng: profile.lng }
         : null,
     logoUrl: profile.yardLogoUrl,
-    imageUrl: profile.yardHeaderImageUrl ?? profile.yardLogoUrl,
+    imageUrl: profile.yardHeaderImageUrl || profile.yardLogoUrl || fallbackHeaderImageUrl,
     telephone: profile.yardContactPhone,
     email: profile.yardContactEmail,
     sameAs: sameAs.length ? sameAs : undefined,
@@ -277,18 +278,14 @@ export default async function YardPublicPage({ params }: Props) {
       />
 
       <div className="relative -mx-4 mb-8 h-[min(38vh,420px)] bg-zinc-900 sm:-mx-0 sm:overflow-hidden sm:rounded-2xl">
-        {profile.yardHeaderImageUrl ? (
-          <Image
-            src={profile.yardHeaderImageUrl}
-            alt={`${displayTitle} — reclamation yard`}
-            fill
-            priority
-            className="object-cover opacity-95"
-            sizes="100vw"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 via-zinc-800 to-zinc-900" />
-        )}
+        <Image
+          src={heroImageUrl}
+          alt={`${displayTitle} — reclamation yard`}
+          fill
+          priority
+          className="object-cover opacity-95"
+          sizes="100vw"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 sm:flex-row sm:items-end sm:justify-between sm:px-6">
@@ -384,89 +381,21 @@ export default async function YardPublicPage({ params }: Props) {
 
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-10">
-          <div className="grid gap-8 lg:grid-cols-2">
-            <section aria-labelledby="about-heading">
-              <h2 id="about-heading" className="text-lg font-semibold text-zinc-900">
-                About this yard
-              </h2>
-              {profile.yardAbout?.trim() ? (
-                <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
-                  {profile.yardAbout.trim()}
-                </div>
-              ) : (
-                <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-                  Browse live listings from this reclamation yard. Materials are listed by the yard on Reclaimed
-                  Marketplace — ideal for builders, restorers, and salvage hunters across the UK.
-                </p>
-              )}
-            </section>
-
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50/90 p-5 text-sm">
-              <h3 className="font-semibold text-zinc-900">Meet the yard</h3>
-              <ul className="mt-3 space-y-2 text-zinc-700">
-                <li>
-                  <span className="font-medium text-zinc-800">On Reclaimed since:</span>{" "}
-                  {seller.createdAt.toLocaleDateString("en-GB", { dateStyle: "medium" })}
-                </li>
-                {profile.yearEstablished ? (
-                  <li>
-                    <span className="font-medium text-zinc-800">Established:</span> {profile.yearEstablished}
-                  </li>
-                ) : null}
-                {tradeLabel ? (
-                  <li>
-                    <span className="font-medium text-zinc-800">Visitors:</span> {tradeLabel}
-                  </li>
-                ) : null}
-                {hoursSummary ? (
-                  <li>
-                    <span className="font-medium text-zinc-800">Hours:</span> {hoursSummary}
-                  </li>
-                ) : null}
-                {delivery ? (
-                  <li>
-                    <span className="font-medium text-zinc-800">Fulfillment:</span>{" "}
-                    {[
-                      delivery.collection ? "Collection" : null,
-                      delivery.delivery ? "Delivery" : null,
-                      delivery.radiusMiles != null ? `within ~${delivery.radiusMiles} mi` : null,
-                      delivery.minOrderGbp != null ? `from £${delivery.minOrderGbp} min order` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || "—"}
-                  </li>
-                ) : null}
-                {profile.yardServiceAreas?.trim() ? (
-                  <li>
-                    <span className="font-medium text-zinc-800">Areas served:</span> {profile.yardServiceAreas.trim()}
-                  </li>
-                ) : null}
-                {stockUpdated ? (
-                  <li>
-                    <span className="font-medium text-zinc-800">Stock updated:</span> {formatUpdatedAgo(stockUpdated)}
-                  </li>
-                ) : null}
-              </ul>
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-flex rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-              >
-                Open in Google Maps
-              </a>
-              {profile.lat != null && profile.lng != null ? (
-                <a
-                  href={`https://waze.com/ul?ll=${profile.lat},${profile.lng}&navigate=yes`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-2 mt-4 inline-flex rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-                >
-                  Open in Waze
-                </a>
-              ) : null}
-            </div>
-          </div>
+          <section aria-labelledby="about-heading">
+            <h2 id="about-heading" className="text-lg font-semibold text-zinc-900">
+              About this yard
+            </h2>
+            {profile.yardAbout?.trim() ? (
+              <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
+                {profile.yardAbout.trim()}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+                Browse live listings from this reclamation yard. Materials are listed by the yard on Reclaimed
+                Marketplace — ideal for builders, restorers, and salvage hunters across the UK.
+              </p>
+            )}
+          </section>
 
           <YardStockIsland listings={listingCards} yardPostcode={profile.postcode} />
 
@@ -513,7 +442,55 @@ export default async function YardPublicPage({ params }: Props) {
                   <span className="font-medium text-zinc-800">Visitors:</span> {tradeLabel}
                 </li>
               ) : null}
+              {hoursSummary ? (
+                <li>
+                  <span className="font-medium text-zinc-800">Hours:</span> {hoursSummary}
+                </li>
+              ) : null}
+              {delivery ? (
+                <li>
+                  <span className="font-medium text-zinc-800">Fulfillment:</span>{" "}
+                  {[
+                    delivery.collection ? "Collection" : null,
+                    delivery.delivery ? "Delivery" : null,
+                    delivery.radiusMiles != null ? `within ~${delivery.radiusMiles} mi` : null,
+                    delivery.minOrderGbp != null ? `from £${delivery.minOrderGbp} min order` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "—"}
+                </li>
+              ) : null}
+              {profile.yardServiceAreas?.trim() ? (
+                <li>
+                  <span className="font-medium text-zinc-800">Areas served:</span> {profile.yardServiceAreas.trim()}
+                </li>
+              ) : null}
+              {stockUpdated ? (
+                <li>
+                  <span className="font-medium text-zinc-800">Stock updated:</span> {formatUpdatedAgo(stockUpdated)}
+                </li>
+              ) : null}
             </ul>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+              >
+                Open in Google Maps
+              </a>
+              {profile.lat != null && profile.lng != null ? (
+                <a
+                  href={`https://waze.com/ul?ll=${profile.lat},${profile.lng}&navigate=yes`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                >
+                  Open in Waze
+                </a>
+              ) : null}
+            </div>
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
