@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getYardAreaIndex } from "@/lib/yard-area-seo";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Reclamation yards UK | Find a yard near you",
@@ -12,9 +13,23 @@ export const revalidate = 1800;
 
 export default async function ReclamationYardsHubPage() {
   const areas = await getYardAreaIndex();
+  const base = getSiteBaseUrl();
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Reclamation yards UK",
+    url: `${base}/reclamation-yards`,
+    description:
+      "Search UK reclamation yards by postcode and radius, or browse yards by town and city.",
+    about: { "@type": "Service", name: "Reclamation yards near me" },
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
         Reclamation yards near you
       </h1>

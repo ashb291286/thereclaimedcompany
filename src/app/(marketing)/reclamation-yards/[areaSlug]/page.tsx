@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getAllYardAreaSlugs, getYardsInAreaBySlug } from "@/lib/yard-area-seo";
 import { publicSellerPath } from "@/lib/yard-public-path";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 type Props = { params: Promise<{ areaSlug: string }> };
 
@@ -29,11 +30,45 @@ export default async function ReclamationYardsAreaPage({ params }: Props) {
   const { areaSlug } = await params;
   const { label, yards } = await getYardsInAreaBySlug(areaSlug);
   if (!label || yards.length === 0) notFound();
+  const base = getSiteBaseUrl();
 
   const searchNearHref = `/search?sellerType=reclamation_yard`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `Reclamation yards in ${label}`,
+    url: `${base}/reclamation-yards/${areaSlug}`,
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: yards.slice(0, 100).map((y, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        item: {
+          "@type": "Store",
+          name: y.businessName || y.displayName,
+          url: `${base}${publicSellerPath({
+            sellerId: y.userId,
+            role: "reclamation_yard",
+            yardSlug: y.yardSlug,
+          })}`,
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: y.postcodeLocality || y.adminDistrict || undefined,
+            addressRegion: y.region || undefined,
+            postalCode: y.postcode || undefined,
+            addressCountry: "GB",
+          },
+        },
+      })),
+    },
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <nav className="text-sm text-zinc-500">
         <Link href="/reclamation-yards" className="hover:text-zinc-800">
           Reclamation yards

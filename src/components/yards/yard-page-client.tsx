@@ -13,6 +13,7 @@ export type YardListingCard = {
   title: string;
   price: number;
   condition: string;
+  listingKind?: "sell" | "auction";
   categoryId: string;
   categoryName: string;
   image: string | null;
@@ -61,6 +62,8 @@ export function YardStockIsland({
 
   const now = Date.now();
   const isNew = (createdAt: string) => now - new Date(createdAt).getTime() < 48 * 3600 * 1000;
+  const forSale = filtered.filter((l) => l.listingKind !== "auction");
+  const auctions = filtered.filter((l) => l.listingKind === "auction");
 
   return (
     <section id="stock" className="scroll-mt-24">
@@ -98,43 +101,36 @@ export function YardStockIsland({
       {filtered.length === 0 ? (
         <p className="mt-4 text-sm text-zinc-500">No listings match this filter.</p>
       ) : (
-        <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {filtered.map((l) => (
-            <li key={l.id}>
-              <Link
-                href={`/listings/${l.id}`}
-                className="group block overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition hover:border-brand/40 hover:shadow-md"
-              >
-                <div className="relative aspect-[4/3] bg-zinc-100">
-                  {l.image ? (
-                    <Image
-                      src={l.image}
-                      alt={l.title}
-                      fill
-                      className="object-cover transition group-hover:scale-[1.02]"
-                      sizes="(max-width: 640px) 100vw, 50vw"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-zinc-400">No image</div>
-                  )}
-                  {isNew(l.createdAt) ? (
-                    <span className="absolute left-2 top-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
-                      New
-                    </span>
-                  ) : null}
-                </div>
-                <div className="p-3">
-                  <p className="font-medium text-zinc-900 group-hover:text-brand">{l.title}</p>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    £{(l.price / 100).toFixed(2)} · {l.categoryName}
-                    {l.condition ? ` · ${CONDITION_LABELS[l.condition as keyof typeof CONDITION_LABELS] ?? l.condition}` : ""}
-                  </p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4 space-y-8">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-600">For sale</h3>
+            {forSale.length === 0 ? (
+              <p className="mt-2 text-sm text-zinc-500">No active fixed-price listings.</p>
+            ) : (
+              <ul className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {forSale.map((l) => (
+                  <li key={l.id}>
+                    <YardListingCardTile listing={l} isNew={isNew(l.createdAt)} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-600">Auctions</h3>
+            {auctions.length === 0 ? (
+              <p className="mt-2 text-sm text-zinc-500">No active auctions.</p>
+            ) : (
+              <ul className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {auctions.map((l) => (
+                  <li key={l.id}>
+                    <YardListingCardTile listing={l} isNew={isNew(l.createdAt)} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       )}
       <p className="mt-4 text-xs text-zinc-500">
         Prefer map search?{" "}
@@ -146,6 +142,42 @@ export function YardStockIsland({
         </Link>
       </p>
     </section>
+  );
+}
+
+function YardListingCardTile({ listing: l, isNew }: { listing: YardListingCard; isNew: boolean }) {
+  return (
+    <Link
+      href={`/listings/${l.id}`}
+      className="group block overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition hover:border-brand/40 hover:shadow-md"
+    >
+      <div className="relative aspect-[4/3] bg-zinc-100">
+        {l.image ? (
+          <Image
+            src={l.image}
+            alt={l.title}
+            fill
+            className="object-cover transition group-hover:scale-[1.02]"
+            sizes="(max-width: 640px) 100vw, 50vw"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-zinc-400">No image</div>
+        )}
+        {isNew ? (
+          <span className="absolute left-2 top-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+            New
+          </span>
+        ) : null}
+      </div>
+      <div className="p-3">
+        <p className="font-medium text-zinc-900 group-hover:text-brand">{l.title}</p>
+        <p className="mt-1 text-sm text-zinc-500">
+          £{(l.price / 100).toFixed(2)} · {l.categoryName}
+          {l.condition ? ` · ${CONDITION_LABELS[l.condition as keyof typeof CONDITION_LABELS] ?? l.condition}` : ""}
+        </p>
+      </div>
+    </Link>
   );
 }
 
@@ -290,14 +322,18 @@ export function YardEnquiryFormIsland({
 
 export function YardStockAlertToggle({
   sellerId,
-  yardSlug,
+  sellerPath,
   viewerId,
   hasAlert,
+  label = "Alert me for new stock",
+  stopLabel = "Stop stock alerts",
 }: {
   sellerId: string;
-  yardSlug: string;
+  sellerPath: string;
   viewerId: string | null;
   hasAlert: boolean;
+  label?: string;
+  stopLabel?: string;
 }) {
   if (!viewerId) {
     return (
@@ -313,15 +349,15 @@ export function YardStockAlertToggle({
 
   return (
     <form action={toggleYardStockAlertAction} className="inline">
-      <input type="hidden" name="callbackUrl" value={`/yards/${yardSlug}`} />
+      <input type="hidden" name="callbackUrl" value={sellerPath} />
       <input type="hidden" name="sellerId" value={sellerId} />
-      <input type="hidden" name="yardSlug" value={yardSlug} />
+      <input type="hidden" name="sellerPath" value={sellerPath} />
       <input type="hidden" name="categoryId" value="all" />
       <button
         type="submit"
         className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
       >
-        {hasAlert ? "Stop stock alerts" : "Alert me for new stock"}
+        {hasAlert ? stopLabel : label}
       </button>
     </form>
   );

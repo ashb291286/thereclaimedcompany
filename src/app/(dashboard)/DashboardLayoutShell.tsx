@@ -135,7 +135,7 @@ export function DashboardLayoutShell({
       </main>
 
       {mobileMenuOpen ? (
-        <div className="fixed inset-0 z-[2000] md:hidden" role="dialog" aria-modal="true" aria-label="Dashboard menu">
+        <div className="fixed inset-0 z-[7000] md:hidden" role="dialog" aria-modal="true" aria-label="Dashboard menu">
           <button
             type="button"
             className="absolute inset-0 z-0 bg-zinc-900/50"

@@ -6,12 +6,10 @@ import { ListingPricingMode } from "@/generated/prisma/client";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat } from "@/lib/vat-pricing";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { calculateMarketplaceFees, getMarketplaceFeeSettings } from "@/lib/marketplace-fees";
 import { NextResponse } from "next/server";
 
 const MAX_CHECKOUT_QUANTITY = 10_000;
-
-const PLATFORM_FEE_PERCENT = 10;
-const PLATFORM_FEE_FIXED = 20; // pence
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -230,9 +228,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const applicationFeeAmount = Math.round(
-    (amount * PLATFORM_FEE_PERCENT) / 100 + PLATFORM_FEE_FIXED
-  );
+  const feeSettings = await getMarketplaceFeeSettings();
+  const feeBreakdown = calculateMarketplaceFees(amount, feeSettings);
+  const applicationFeeAmount = feeBreakdown.totalMarketplaceFeesPence;
 
   const carbonLine =
     listing.carbonSavedKg != null && listing.carbonSavedKg > 0
@@ -272,6 +270,12 @@ export async function POST(req: Request) {
         sellerId: listing.sellerId,
         amount: String(amount),
         platformFee: String(applicationFeeAmount),
+          fee_commission_net: String(feeBreakdown.commissionNetPence),
+          fee_commission_vat: String(feeBreakdown.commissionVatPence),
+          fee_commission_gross: String(feeBreakdown.commissionGrossPence),
+          fee_stripe_processing: String(feeBreakdown.stripeProcessingFeePence),
+          fee_digital_marketplace: String(feeBreakdown.digitalMarketplaceFeePence),
+          fee_seller_payout: String(feeBreakdown.sellerPayoutPence),
         quantity: String(quantity),
         ...(metadataOfferId ? { offerId: metadataOfferId } : {}),
         ...(metadataBidId ? { bidId: metadataBidId } : {}),

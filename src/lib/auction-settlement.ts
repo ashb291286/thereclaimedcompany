@@ -4,13 +4,11 @@ import { createNotification } from "@/lib/notifications";
 import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
 import { ListingStatus } from "@/generated/prisma/client";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat } from "@/lib/vat-pricing";
-
-const PLATFORM_FEE_PERCENT = 10;
-const PLATFORM_FEE_FIXED = 20; // pence
-
-function platformFeePence(amountPence: number): number {
-  return Math.round((amountPence * PLATFORM_FEE_PERCENT) / 100 + PLATFORM_FEE_FIXED);
-}
+import {
+  calculateMarketplaceFees,
+  getMarketplaceFeeSettings,
+  invoiceNumberForOrder,
+} from "@/lib/marketplace-fees";
 
 /**
  * Run when an auction listing has passed auctionEndsAt while still active.
@@ -88,7 +86,9 @@ export async function finalizeAuctionListing(listingId: string): Promise<void> {
     vatRegistered: listing.seller.sellerProfile?.vatRegistered,
   });
   const amount = buyerGrossPenceFromSellerNetPence(top.amountPence, winChargesVat);
-  const applicationFeeAmount = platformFeePence(amount);
+  const feeSettings = await getMarketplaceFeeSettings();
+  const feeBreakdown = calculateMarketplaceFees(amount, feeSettings);
+  const applicationFeeAmount = feeBreakdown.totalMarketplaceFeesPence;
 
   if (!buyer?.stripeCustomerId || !buyer?.bidPaymentMethodId || !destination) {
     await prisma.listing.update({
@@ -121,6 +121,12 @@ export async function finalizeAuctionListing(listingId: string): Promise<void> {
           bidId: top.id,
           amount: String(amount),
           platformFee: String(applicationFeeAmount),
+          fee_commission_net: String(feeBreakdown.commissionNetPence),
+          fee_commission_vat: String(feeBreakdown.commissionVatPence),
+          fee_commission_gross: String(feeBreakdown.commissionGrossPence),
+          fee_stripe_processing: String(feeBreakdown.stripeProcessingFeePence),
+          fee_digital_marketplace: String(feeBreakdown.digitalMarketplaceFeePence),
+          fee_seller_payout: String(feeBreakdown.sellerPayoutPence),
           kind: "auction_win",
         },
         application_fee_amount: applicationFeeAmount,
@@ -139,7 +145,7 @@ export async function finalizeAuctionListing(listingId: string): Promise<void> {
           });
           return;
         }
-        await tx.order.create({
+        const created = await tx.order.create({
           data: {
             listingId,
             buyerId: top.bidderId,
@@ -151,6 +157,27 @@ export async function finalizeAuctionListing(listingId: string): Promise<void> {
             bidId: top.id,
             quantity: 1,
             ...purchaseCarbonSnapshotFromListing(listing),
+          },
+        });
+        await tx.orderChargeBreakdown.create({
+          data: {
+            orderId: created.id,
+            invoiceNumber: invoiceNumberForOrder(created.id),
+            grossAmountPence: amount,
+            commissionNetPence: feeBreakdown.commissionNetPence,
+            commissionVatPence: feeBreakdown.commissionVatPence,
+            commissionGrossPence: feeBreakdown.commissionGrossPence,
+            stripeProcessingFeePence: feeBreakdown.stripeProcessingFeePence,
+            digitalMarketplaceFeePence: feeBreakdown.digitalMarketplaceFeePence,
+            totalMarketplaceFeesPence: feeBreakdown.totalMarketplaceFeesPence,
+            sellerPayoutPence: feeBreakdown.sellerPayoutPence,
+            commissionPercentBps: feeBreakdown.commissionPercentBps,
+            commissionFixedPence: feeBreakdown.commissionFixedPence,
+            commissionVatRateBps: feeBreakdown.commissionVatRateBps,
+            stripeFeePercentBps: feeBreakdown.stripeFeePercentBps,
+            stripeFeeFixedPence: feeBreakdown.stripeFeeFixedPence,
+            digitalMarketplaceFeeBps: feeBreakdown.digitalMarketplaceFeeBps,
+            digitalMarketplaceFeeFixedPence: feeBreakdown.digitalMarketplaceFeeFixedPence,
           },
         });
         await tx.listing.update({

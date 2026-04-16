@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getDealerAreaIndex } from "@/lib/dealer-area-seo";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Antiques dealers UK | Find a dealer near you",
@@ -12,9 +13,23 @@ export const revalidate = 1800;
 
 export default async function DealersHubPage() {
   const areas = await getDealerAreaIndex();
+  const base = getSiteBaseUrl();
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Antiques dealers UK",
+    url: `${base}/dealers`,
+    description:
+      "Search UK antiques dealers by postcode and radius, or browse dealers by town and city.",
+    about: { "@type": "Service", name: "Antiques dealers near me" },
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">Dealers near you</h1>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600 sm:text-base">
         Enter your postcode to see antiques dealer listings sorted by distance, or explore dealer profiles

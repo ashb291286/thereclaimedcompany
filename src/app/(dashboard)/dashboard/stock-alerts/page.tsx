@@ -10,10 +10,7 @@ export default async function StockAlertsPage() {
   if (!session?.user?.id) redirect("/auth/signin");
 
   const alerts = await prisma.yardStockAlert.findMany({
-    where: {
-      userId: session.user.id,
-      seller: { sellerProfile: { yardSlug: { not: null } } },
-    },
+    where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
     include: {
       seller: {
@@ -29,12 +26,13 @@ export default async function StockAlertsPage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="text-2xl font-semibold text-zinc-900">Stock alerts</h1>
       <p className="mt-1 text-sm text-zinc-600">
-        We notify you when a followed yard lists new marketplace stock that matches your alert.
+        We notify you when a followed yard or dealer lists new marketplace stock that matches your alert.
       </p>
 
       {alerts.length === 0 ? (
         <p className="mt-8 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-600">
-          You are not following any yards yet. Open a yard profile and choose &quot;Alert me for new stock&quot;.
+          You are not following any sellers yet. Open a yard or dealer profile and choose
+          &quot;Favourite ... &amp; get alerts&quot;.
         </p>
       ) : (
         <ul className="mt-6 space-y-3">
@@ -66,7 +64,7 @@ export default async function StockAlertsPage() {
                 <form action={toggleYardStockAlertAction}>
                   <input type="hidden" name="callbackUrl" value="/dashboard/stock-alerts" />
                   <input type="hidden" name="sellerId" value={a.sellerId} />
-                  <input type="hidden" name="yardSlug" value={slug ?? ""} />
+                  <input type="hidden" name="sellerPath" value={href} />
                   <input type="hidden" name="categoryId" value={a.categoryId ?? "all"} />
                   <button
                     type="submit"

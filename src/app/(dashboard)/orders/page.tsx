@@ -23,13 +23,21 @@ export default async function OrdersPage({
     where: { buyerId: session.user.id, status: "paid" },
     orderBy: { createdAt: "desc" },
     take: 40,
-    include: { listing: { select: { id: true, title: true, status: true } }, seller: { select: { email: true } } },
+    include: {
+      listing: { select: { id: true, title: true, status: true } },
+      seller: { select: { email: true } },
+      chargeBreakdown: true,
+    },
   });
   const soldOrders = await prisma.order.findMany({
     where: { sellerId: session.user.id, status: "paid" },
     orderBy: { createdAt: "desc" },
     take: 40,
-    include: { listing: { select: { id: true, title: true, status: true } }, buyer: { select: { email: true } } },
+    include: {
+      listing: { select: { id: true, title: true, status: true } },
+      buyer: { select: { email: true } },
+      chargeBreakdown: true,
+    },
   });
 
   const totalCarbonKg = boughtOrders.reduce((s, o) => s + (o.purchaseCarbonSavedKg ?? 0), 0);
@@ -125,6 +133,15 @@ export default async function OrdersPage({
                 <p className="mt-1 text-xs text-zinc-600">
                   Seller: {o.seller.email || o.sellerId} · Flow: {o.fulfillmentMethod || "awaiting seller plan"}
                 </p>
+                {o.chargeBreakdown ? (
+                  <p className="mt-1 text-xs text-zinc-600">
+                    Fees £{(o.chargeBreakdown.totalMarketplaceFeesPence / 100).toFixed(2)} · Seller payout £
+                    {(o.chargeBreakdown.sellerPayoutPence / 100).toFixed(2)}
+                  </p>
+                ) : null}
+                <Link href={`/orders/${o.id}/invoice`} className="mt-1 inline-block text-xs text-brand underline">
+                  View invoice
+                </Link>
               </div>
               <div className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-700 sm:w-auto sm:min-w-[300px]">
                 {o.fulfillmentMethod === "collection" ? (
@@ -221,10 +238,21 @@ export default async function OrdersPage({
                     Buyer: {o.buyer.email || o.buyerId} · {o.quantity > 1 ? `×${o.quantity} · ` : ""}
                     {o.amount > 0 ? `£${(o.amount / 100).toFixed(2)}` : "Free collection"}
                   </p>
+                  {o.chargeBreakdown ? (
+                    <p className="mt-1 text-xs text-zinc-600">
+                      Platform fees: £{(o.chargeBreakdown.totalMarketplaceFeesPence / 100).toFixed(2)} · Your payout: £
+                      {(o.chargeBreakdown.sellerPayoutPence / 100).toFixed(2)}
+                    </p>
+                  ) : null}
                 </div>
-                <Link href={`/listings/${o.listingId}`} className="text-xs font-medium text-brand hover:underline">
-                  Open listing
-                </Link>
+                <div className="flex gap-3">
+                  <Link href={`/listings/${o.listingId}`} className="text-xs font-medium text-brand hover:underline">
+                    Open listing
+                  </Link>
+                  <Link href={`/orders/${o.id}/invoice`} className="text-xs font-medium text-brand hover:underline">
+                    Invoice
+                  </Link>
+                </div>
               </div>
 
               <div className="mt-3 grid gap-3 md:grid-cols-2">

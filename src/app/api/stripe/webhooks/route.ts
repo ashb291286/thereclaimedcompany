@@ -6,6 +6,11 @@ import { NextResponse } from "next/server";
 import type { Stripe } from "stripe";
 import { createNotification } from "@/lib/notifications";
 import { ListingPricingMode } from "@/generated/prisma/client";
+import {
+  calculateMarketplaceFees,
+  getMarketplaceFeeSettings,
+  invoiceNumberForOrder,
+} from "@/lib/marketplace-fees";
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -37,6 +42,12 @@ export async function POST(req: Request) {
       : session.payment_intent?.id;
     const offerIdMeta = session.metadata?.offerId?.trim();
     const bidIdMeta = session.metadata?.bidId?.trim();
+    const feeCommissionNet = parseInt(session.metadata?.fee_commission_net ?? "0", 10);
+    const feeCommissionVat = parseInt(session.metadata?.fee_commission_vat ?? "0", 10);
+    const feeCommissionGross = parseInt(session.metadata?.fee_commission_gross ?? "0", 10);
+    const feeStripeProcessing = parseInt(session.metadata?.fee_stripe_processing ?? "0", 10);
+    const feeDigitalMarketplace = parseInt(session.metadata?.fee_digital_marketplace ?? "0", 10);
+    const feeSellerPayout = parseInt(session.metadata?.fee_seller_payout ?? "0", 10);
 
     if (kind === "prop_hire_batch" && paymentIntentId) {
       const batchIdMeta = session.metadata?.batchId?.trim();
@@ -149,7 +160,7 @@ export async function POST(req: Request) {
           const carbonSnap = purchaseCarbonSnapshotFromListing(
             listingRow ?? { carbonSavedKg: null, carbonWasteDivertedKg: null }
           );
-          await tx.order.create({
+          const created = await tx.order.create({
             data: {
               listingId,
               buyerId,
@@ -162,6 +173,44 @@ export async function POST(req: Request) {
               ...carbonSnap,
               ...(offerIdMeta ? { offerId: offerIdMeta } : {}),
               ...(bidIdMeta ? { bidId: bidIdMeta } : {}),
+            },
+          });
+          const feeSettings = await getMarketplaceFeeSettings();
+          const computed = calculateMarketplaceFees(amount, feeSettings);
+          const commissionNetPence = Number.isFinite(feeCommissionNet) && feeCommissionNet > 0 ? feeCommissionNet : computed.commissionNetPence;
+          const commissionVatPence = Number.isFinite(feeCommissionVat) && feeCommissionVat >= 0 ? feeCommissionVat : computed.commissionVatPence;
+          const commissionGrossPence = Number.isFinite(feeCommissionGross) && feeCommissionGross > 0 ? feeCommissionGross : computed.commissionGrossPence;
+          const stripeProcessingFeePence =
+            Number.isFinite(feeStripeProcessing) && feeStripeProcessing >= 0
+              ? feeStripeProcessing
+              : computed.stripeProcessingFeePence;
+          const digitalMarketplaceFeePence =
+            Number.isFinite(feeDigitalMarketplace) && feeDigitalMarketplace >= 0
+              ? feeDigitalMarketplace
+              : computed.digitalMarketplaceFeePence;
+          const sellerPayoutPence =
+            Number.isFinite(feeSellerPayout) && feeSellerPayout >= 0
+              ? feeSellerPayout
+              : computed.sellerPayoutPence;
+          await tx.orderChargeBreakdown.create({
+            data: {
+              orderId: created.id,
+              invoiceNumber: invoiceNumberForOrder(created.id),
+              grossAmountPence: amount,
+              commissionNetPence,
+              commissionVatPence,
+              commissionGrossPence,
+              stripeProcessingFeePence,
+              digitalMarketplaceFeePence,
+              totalMarketplaceFeesPence: commissionGrossPence + stripeProcessingFeePence + digitalMarketplaceFeePence,
+              sellerPayoutPence,
+              commissionPercentBps: feeSettings.commissionPercentBps,
+              commissionFixedPence: feeSettings.commissionFixedPence,
+              commissionVatRateBps: feeSettings.commissionVatRateBps,
+              stripeFeePercentBps: feeSettings.stripeFeePercentBps,
+              stripeFeeFixedPence: feeSettings.stripeFeeFixedPence,
+              digitalMarketplaceFeeBps: feeSettings.digitalMarketplaceFeeBps,
+              digitalMarketplaceFeeFixedPence: feeSettings.digitalMarketplaceFeeFixedPence,
             },
           });
           const forStock = await tx.listing.findUnique({ where: { id: listingId } });
@@ -199,6 +248,12 @@ export async function POST(req: Request) {
       const bidIdMeta = pi.metadata.bidId?.trim();
       const amount = parseInt(pi.metadata.amount ?? "0", 10);
       const platformFee = parseInt(pi.metadata.platformFee ?? "0", 10);
+      const feeCommissionNet = parseInt(pi.metadata.fee_commission_net ?? "0", 10);
+      const feeCommissionVat = parseInt(pi.metadata.fee_commission_vat ?? "0", 10);
+      const feeCommissionGross = parseInt(pi.metadata.fee_commission_gross ?? "0", 10);
+      const feeStripeProcessing = parseInt(pi.metadata.fee_stripe_processing ?? "0", 10);
+      const feeDigitalMarketplace = parseInt(pi.metadata.fee_digital_marketplace ?? "0", 10);
+      const feeSellerPayout = parseInt(pi.metadata.fee_seller_payout ?? "0", 10);
       if (listingId && buyerId && sellerId && bidIdMeta && pi.id) {
         const existing = await prisma.order.findUnique({ where: { bidId: bidIdMeta } });
         if (!existing) {
@@ -209,19 +264,57 @@ export async function POST(req: Request) {
           const carbonSnap = purchaseCarbonSnapshotFromListing(
             listingRow ?? { carbonSavedKg: null, carbonWasteDivertedKg: null }
           );
+          const feeSettings = await getMarketplaceFeeSettings();
+          const computed = calculateMarketplaceFees(amount, feeSettings);
+          const created = await prisma.order.create({
+            data: {
+              listingId,
+              buyerId,
+              sellerId,
+              amount,
+              platformFee,
+              stripePaymentIntentId: pi.id,
+              status: "paid",
+              bidId: bidIdMeta,
+              quantity: 1,
+              ...carbonSnap,
+            },
+          });
+          const commissionNetPence = Number.isFinite(feeCommissionNet) && feeCommissionNet > 0 ? feeCommissionNet : computed.commissionNetPence;
+          const commissionVatPence = Number.isFinite(feeCommissionVat) && feeCommissionVat >= 0 ? feeCommissionVat : computed.commissionVatPence;
+          const commissionGrossPence = Number.isFinite(feeCommissionGross) && feeCommissionGross > 0 ? feeCommissionGross : computed.commissionGrossPence;
+          const stripeProcessingFeePence =
+            Number.isFinite(feeStripeProcessing) && feeStripeProcessing >= 0
+              ? feeStripeProcessing
+              : computed.stripeProcessingFeePence;
+          const digitalMarketplaceFeePence =
+            Number.isFinite(feeDigitalMarketplace) && feeDigitalMarketplace >= 0
+              ? feeDigitalMarketplace
+              : computed.digitalMarketplaceFeePence;
+          const sellerPayoutPence =
+            Number.isFinite(feeSellerPayout) && feeSellerPayout >= 0
+              ? feeSellerPayout
+              : computed.sellerPayoutPence;
           await prisma.$transaction([
-            prisma.order.create({
+            prisma.orderChargeBreakdown.create({
               data: {
-                listingId,
-                buyerId,
-                sellerId,
-                amount,
-                platformFee,
-                stripePaymentIntentId: pi.id,
-                status: "paid",
-                bidId: bidIdMeta,
-                quantity: 1,
-                ...carbonSnap,
+                orderId: created.id,
+                invoiceNumber: invoiceNumberForOrder(created.id),
+                grossAmountPence: amount,
+                commissionNetPence,
+                commissionVatPence,
+                commissionGrossPence,
+                stripeProcessingFeePence,
+                digitalMarketplaceFeePence,
+                totalMarketplaceFeesPence: commissionGrossPence + stripeProcessingFeePence + digitalMarketplaceFeePence,
+                sellerPayoutPence,
+                commissionPercentBps: feeSettings.commissionPercentBps,
+                commissionFixedPence: feeSettings.commissionFixedPence,
+                commissionVatRateBps: feeSettings.commissionVatRateBps,
+                stripeFeePercentBps: feeSettings.stripeFeePercentBps,
+                stripeFeeFixedPence: feeSettings.stripeFeeFixedPence,
+                digitalMarketplaceFeeBps: feeSettings.digitalMarketplaceFeeBps,
+                digitalMarketplaceFeeFixedPence: feeSettings.digitalMarketplaceFeeFixedPence,
               },
             }),
             prisma.listing.update({

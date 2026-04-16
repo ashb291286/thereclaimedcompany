@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAllDealerAreaSlugs, getDealersInAreaBySlug } from "@/lib/dealer-area-seo";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 type Props = { params: Promise<{ areaSlug: string }> };
 
@@ -26,9 +27,39 @@ export default async function DealersAreaPage({ params }: Props) {
   const { areaSlug } = await params;
   const { label, dealers } = await getDealersInAreaBySlug(areaSlug);
   if (!label || dealers.length === 0) notFound();
+  const base = getSiteBaseUrl();
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `Antiques dealers in ${label}`,
+    url: `${base}/dealers/${areaSlug}`,
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: dealers.slice(0, 100).map((d, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        item: {
+          "@type": "AntiqueStore",
+          name: d.businessName || d.displayName,
+          url: `${base}/sellers/${d.userId}`,
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: d.postcodeLocality || d.adminDistrict || undefined,
+            addressRegion: d.region || undefined,
+            postalCode: d.postcode || undefined,
+            addressCountry: "GB",
+          },
+        },
+      })),
+    },
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <nav className="text-sm text-zinc-500">
         <Link href="/dealers" className="hover:text-zinc-800">
           Dealers

@@ -22,7 +22,7 @@ function auctionCountdownLabel(endsAt: Date | null): string | null {
 }
 
 export default async function HomePage() {
-  const [listings, demolitionAlerts] = await Promise.all([
+  const [listings, demolitionAlerts, blogPosts] = await Promise.all([
     prisma.listing.findMany({
       where: { status: "active", visibleOnMarketplace: true },
       orderBy: [{ boostedUntil: "desc" }, { createdAt: "desc" }],
@@ -36,6 +36,12 @@ export default async function HomePage() {
       include: {
         elements: { select: { id: true, status: true, isFree: true } },
       },
+    }),
+    prisma.blogPost.findMany({
+      where: { published: true },
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+      take: 3,
+      select: { id: true, title: true, slug: true, excerpt: true, publishedAt: true, createdAt: true },
     }),
   ]);
 
@@ -192,6 +198,31 @@ export default async function HomePage() {
           </ul>
         )}
       </div>
+
+      <section className="mx-auto mt-10 w-full max-w-7xl px-4 sm:px-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-zinc-900">From the blog</h2>
+          <Link href="/blog" className="text-sm font-medium text-brand hover:underline">
+            View all posts
+          </Link>
+        </div>
+        {blogPosts.length === 0 ? null : (
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {blogPosts.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/blog/${p.slug}`}
+                  className="block h-full rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-brand/40"
+                >
+                  <p className="font-semibold text-zinc-900">{p.title}</p>
+                  {p.excerpt ? <p className="mt-2 line-clamp-3 text-sm text-zinc-600">{p.excerpt}</p> : null}
+                  <p className="mt-3 text-xs text-zinc-500">{(p.publishedAt ?? p.createdAt).toISOString().slice(0, 10)}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="mt-10 border-y border-amber-900/15 bg-gradient-to-br from-amber-50 via-white to-orange-50/80">
         <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-12">

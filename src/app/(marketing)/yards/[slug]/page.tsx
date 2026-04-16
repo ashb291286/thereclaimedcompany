@@ -207,6 +207,7 @@ export default async function YardPublicPage({ params }: Props) {
     id: l.id,
     title: l.title,
     price: l.price,
+    listingKind: l.listingKind,
     condition: l.condition,
     categoryId: l.categoryId,
     categoryName: l.category.name,
@@ -393,8 +394,12 @@ export default async function YardPublicPage({ params }: Props) {
             </section>
 
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50/90 p-5 text-sm">
-              <h3 className="font-semibold text-zinc-900">At a glance</h3>
+              <h3 className="font-semibold text-zinc-900">Meet the yard</h3>
               <ul className="mt-3 space-y-2 text-zinc-700">
+                <li>
+                  <span className="font-medium text-zinc-800">On Reclaimed since:</span>{" "}
+                  {seller.createdAt.toLocaleDateString("en-GB", { dateStyle: "medium" })}
+                </li>
                 {profile.yearEstablished ? (
                   <li>
                     <span className="font-medium text-zinc-800">Established:</span> {profile.yearEstablished}
@@ -438,10 +443,20 @@ export default async function YardPublicPage({ params }: Props) {
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 inline-flex text-sm font-medium text-brand hover:underline"
+                className="mt-4 inline-flex rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
               >
                 Open in Google Maps
               </a>
+              {profile.lat != null && profile.lng != null ? (
+                <a
+                  href={`https://waze.com/ul?ll=${profile.lat},${profile.lng}&navigate=yes`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-2 mt-4 inline-flex rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                >
+                  Open in Waze
+                </a>
+              ) : null}
             </div>
           </div>
 
@@ -457,9 +472,11 @@ export default async function YardPublicPage({ params }: Props) {
             <h2 className="text-lg font-semibold text-zinc-900">Get in touch</h2>
             <YardStockAlertToggle
               sellerId={seller.id}
-              yardSlug={slug}
+              sellerPath={`/yards/${slug}`}
               viewerId={viewerId}
               hasAlert={hasStockAlert}
+              label="Favourite yard & get alerts"
+              stopLabel="Unfavourite yard"
             />
             <YardEnquiryFormIsland
               yardUserId={seller.id}

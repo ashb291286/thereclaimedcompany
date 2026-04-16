@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   sellerBoostListingCheckoutAction,
-  sellerDeleteOwnListingAction,
 } from "@/lib/actions/seller-listings";
+import { DeleteListingButton } from "./DeleteListingButton";
 
 export default async function DashboardListingsPage({
   searchParams,
@@ -143,15 +143,7 @@ export default async function DashboardListingsPage({
                       {isBoosted ? "Boosted" : "Boost £5"}
                     </button>
                   </form>
-                  <form action={sellerDeleteOwnListingAction} className="contents">
-                    <input type="hidden" name="listingId" value={l.id} />
-                    <button
-                      type="submit"
-                      className="rounded-lg border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50"
-                    >
-                      Delete
-                    </button>
-                  </form>
+                  <DeleteListingButton listingId={l.id} title={l.title} />
                 </div>
               </li>
             );

@@ -34,6 +34,7 @@ import { formatUkLocationLine } from "@/lib/postcode-uk";
 import { ListingImageGallery } from "./ListingImageGallery";
 import { ListingQaSection } from "@/components/listings/ListingQaSection";
 import type { Metadata } from "next";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 export async function generateMetadata({
   params,
@@ -243,6 +244,43 @@ export default async function ListingPage({
   const buyerListPricePence = buyerGrossPenceFromSellerNetPence(listing.price, chargesVat);
   const buyerMinNextPence = buyerGrossPenceFromSellerNetPence(minNextPence, chargesVat);
   const minNextPounds = buyerMinNextPence / 100;
+  const base = getSiteBaseUrl();
+  const listingUrl = `${base}/listings/${listing.id}`;
+  const sellerName =
+    listing.seller?.sellerProfile?.businessName?.trim() ||
+    listing.seller?.sellerProfile?.displayName ||
+    listing.seller?.name ||
+    "Seller";
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: listing.title,
+    description: listing.description.slice(0, 500),
+    sku: listing.id,
+    category: listing.category.name,
+    image: listing.images.slice(0, 8),
+    url: listingUrl,
+    brand: { "@type": "Brand", name: sellerName },
+    seller: {
+      "@type": "Organization",
+      name: sellerName,
+      url: `${base}${sellerPublicHref}`,
+    },
+    offers: {
+      "@type": "Offer",
+      url: listingUrl,
+      priceCurrency: "GBP",
+      price: (isAuction ? buyerMinNextPence : buyerListPricePence) / 100,
+      availability:
+        listing.status === "active"
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
+      itemCondition:
+        listing.condition === "like_new"
+          ? "https://schema.org/NewCondition"
+          : "https://schema.org/UsedCondition",
+    },
+  };
 
   const userWonAuction =
     !!topBid &&
@@ -261,6 +299,16 @@ export default async function ListingPage({
       : null;
 
   const carbonImpact = parseStoredCarbonImpact(listing);
+  const sellerOrderSummary = isOwner
+    ? await prisma.order.findFirst({
+        where: { listingId: listing.id, status: "paid" },
+        orderBy: { createdAt: "desc" },
+        include: {
+          buyer: { select: { email: true } },
+          chargeBreakdown: true,
+        },
+      })
+    : null;
 
   const sellerBadges = buildSellerBadges({
     paidSalesCount: sellerPaidSales,
@@ -275,6 +323,10 @@ export default async function ListingPage({
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:max-w-7xl lg:py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
       {isOwner && !listing.visibleOnMarketplace ? (
         <p className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <strong>Hire-only</strong> — this item is hidden from marketplace search and your public yard shop.
@@ -284,6 +336,25 @@ export default async function ListingPage({
           </Link>
           .
         </p>
+      ) : null}
+      {isOwner && sellerOrderSummary ? (
+        <div className="mb-6 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800">
+          <p className="font-medium text-zinc-900">Sold transaction summary</p>
+          <p className="mt-1">
+            Buyer: {sellerOrderSummary.buyer.email || sellerOrderSummary.buyerId} · Gross paid £
+            {(sellerOrderSummary.amount / 100).toFixed(2)}
+          </p>
+          {sellerOrderSummary.chargeBreakdown ? (
+            <p className="mt-1">
+              Platform fees £{(sellerOrderSummary.chargeBreakdown.totalMarketplaceFeesPence / 100).toFixed(2)} (incl VAT on
+              commission) · Seller payout £
+              {(sellerOrderSummary.chargeBreakdown.sellerPayoutPence / 100).toFixed(2)} ·{" "}
+              <Link href={`/orders/${sellerOrderSummary.id}/invoice`} className="text-brand underline">
+                invoice
+              </Link>
+            </p>
+          ) : null}
+        </div>
       ) : null}
       <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-500">
         <Link href="/" className="hover:text-zinc-800">

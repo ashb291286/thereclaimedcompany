@@ -1,5 +1,8 @@
+import nodemailer from "nodemailer";
+
 /**
- * Optional Resend delivery for yard enquiries. If RESEND_API_KEY is unset, no-op (in-app notification still created).
+ * Optional SMTP delivery for yard enquiries.
+ * If SMTP credentials are unset, this is a no-op (in-app notification still created).
  */
 export async function sendYardEnquiryEmail(input: {
   toEmail: string;
@@ -11,10 +14,17 @@ export async function sendYardEnquiryEmail(input: {
   quantity?: string | null;
   yardPageUrl: string;
 }): Promise<void> {
-  const key = process.env.RESEND_API_KEY?.trim();
-  if (!key) return;
+  const smtpHost = process.env.SMTP_HOST?.trim() || "smtp.thereclaimedcompany.com";
+  const smtpPort = parseInt(process.env.SMTP_PORT?.trim() || "465", 10);
+  const smtpSecure = String(process.env.SMTP_SECURE ?? "true").trim().toLowerCase() !== "false";
+  const smtpUser = process.env.SMTP_USER?.trim();
+  const smtpPass = process.env.SMTP_PASS?.trim();
+  if (!smtpUser || !smtpPass) return;
 
-  const from = process.env.RESEND_FROM?.trim() || "Reclaimed Marketplace <onboarding@resend.dev>";
+  const from =
+    process.env.MAIL_FROM?.trim() ||
+    process.env.SMTP_FROM?.trim() ||
+    "Reclaimed Marketplace <nowthen@thereclaimedcompany.com>";
   const text = [
     `New enquiry for ${input.yardDisplayName}`,
     "",
@@ -29,17 +39,21 @@ export async function sendYardEnquiryEmail(input: {
     .filter(Boolean)
     .join("\n");
 
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
+  const transport = nodemailer.createTransport({
+    host: smtpHost,
+    port: Number.isFinite(smtpPort) ? smtpPort : 465,
+    secure: smtpSecure,
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
     },
-    body: JSON.stringify({
-      from,
-      to: [input.toEmail],
-      subject: `Enquiry via Reclaimed Marketplace — ${input.yardDisplayName}`,
-      text,
-    }),
+  });
+
+  await transport.sendMail({
+    from,
+    to: input.toEmail,
+    subject: `Enquiry via Reclaimed Marketplace — ${input.yardDisplayName}`,
+    text,
+    replyTo: `${input.fromName} <${input.fromEmail}>`,
   });
 }

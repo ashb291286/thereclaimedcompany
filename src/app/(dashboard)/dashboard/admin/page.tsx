@@ -3,12 +3,17 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { isCarbonAdmin } from "@/lib/admin";
 import {
+  adminCreateBlogPostAction,
+  adminDeleteBlogPostAction,
   adminDeleteListingAction,
   adminPurgeReadNotificationsAction,
   adminSetListingStatusAction,
   adminSetListingVisibilityAction,
+  adminSetBlogPublishedAction,
+  adminUpdateMarketplaceFeesAction,
   adminToggleUserSuspensionAction,
 } from "@/lib/actions/admin-overview";
+import { calculateMarketplaceFees } from "@/lib/marketplace-fees";
 
 export default async function AdminOverviewPage({
   searchParams,
@@ -64,6 +69,8 @@ export default async function AdminOverviewPage({
     recentNotifications,
     notificationTotal,
     notificationUnread,
+    blogPosts,
+    feeSettings,
   ] = await Promise.all([
     prisma.user.findMany({
       where: userQ
@@ -190,13 +197,38 @@ export default async function AdminOverviewPage({
     }),
     prisma.notification.count(),
     prisma.notification.count({ where: { readAt: null } }),
+    prisma.blogPost.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        published: true,
+        publishedAt: true,
+        createdAt: true,
+      },
+    }),
+    prisma.marketplaceFeeSettings.findUnique({ where: { id: "default" } }),
   ]);
+  const effectiveFeeSettings = {
+    commissionPercentBps: feeSettings?.commissionPercentBps ?? 1000,
+    commissionFixedPence: feeSettings?.commissionFixedPence ?? 20,
+    commissionVatRateBps: feeSettings?.commissionVatRateBps ?? 2000,
+    stripeFeePercentBps: feeSettings?.stripeFeePercentBps ?? 150,
+    stripeFeeFixedPence: feeSettings?.stripeFeeFixedPence ?? 20,
+    digitalMarketplaceFeeBps: feeSettings?.digitalMarketplaceFeeBps ?? 0,
+    digitalMarketplaceFeeFixedPence: feeSettings?.digitalMarketplaceFeeFixedPence ?? 0,
+  };
+  const sample = calculateMarketplaceFees(10000, effectiveFeeSettings);
 
   const [userCount, suspendedCount, yardCount, listingCount, activeListingCount, activeAuctionCount] = stats;
   const notifByTypeSorted = [...notifByType].sort((a, b) => b._count.id - a._count.id);
-  const resendConfigured = Boolean(process.env.RESEND_API_KEY?.trim());
-  const resendFromPreview =
-    process.env.RESEND_FROM?.trim() || "Reclaimed Marketplace <onboarding@resend.dev>";
+  const smtpConfigured = Boolean(process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
+  const smtpFromPreview =
+    process.env.MAIL_FROM?.trim() ||
+    process.env.SMTP_FROM?.trim() ||
+    "Reclaimed Marketplace <nowthen@thereclaimedcompany.com>";
 
   return (
     <div>
@@ -226,6 +258,11 @@ export default async function AdminOverviewPage({
           Listing delete was blocked by related records (e.g. orders). Set status/visibility instead.
         </p>
       ) : null}
+      {error === "blog_slug_taken" ? (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          Blog slug already exists. Use a unique slug.
+        </p>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-xl border border-zinc-200 bg-white p-4">
@@ -245,6 +282,174 @@ export default async function AdminOverviewPage({
       </div>
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-zinc-900">Live fee settings (Stripe Connect)</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          The platform takes an application fee on each payment: commission (+ VAT), estimated Stripe processing fee, and any mandatory digital marketplace fee.
+          Seller receives the remaining balance via Stripe Connect transfer.
+        </p>
+        <form action={adminUpdateMarketplaceFeesAction} className="mt-4 grid gap-3 rounded-lg border border-zinc-200 p-4 md:grid-cols-3">
+          <label className="text-xs">
+            <span className="mb-1 block font-medium text-zinc-700">Commission % (bps)</span>
+            <input name="commissionPercentBps" defaultValue={effectiveFeeSettings.commissionPercentBps} className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm" />
+          </label>
+          <label className="text-xs">
+            <span className="mb-1 block font-medium text-zinc-700">Commission fixed (pence)</span>
+            <input name="commissionFixedPence" defaultValue={effectiveFeeSettings.commissionFixedPence} className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm" />
+          </label>
+          <label className="text-xs">
+            <span className="mb-1 block font-medium text-zinc-700">VAT on commission (bps)</span>
+            <input name="commissionVatRateBps" defaultValue={effectiveFeeSettings.commissionVatRateBps} className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm" />
+          </label>
+          <label className="text-xs">
+            <span className="mb-1 block font-medium text-zinc-700">Stripe fee % estimate (bps)</span>
+            <input name="stripeFeePercentBps" defaultValue={effectiveFeeSettings.stripeFeePercentBps} className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm" />
+          </label>
+          <label className="text-xs">
+            <span className="mb-1 block font-medium text-zinc-700">Stripe fixed estimate (pence)</span>
+            <input name="stripeFeeFixedPence" defaultValue={effectiveFeeSettings.stripeFeeFixedPence} className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm" />
+          </label>
+          <label className="text-xs">
+            <span className="mb-1 block font-medium text-zinc-700">Digital marketplace % (bps)</span>
+            <input name="digitalMarketplaceFeeBps" defaultValue={effectiveFeeSettings.digitalMarketplaceFeeBps} className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm" />
+          </label>
+          <label className="text-xs md:col-span-2">
+            <span className="mb-1 block font-medium text-zinc-700">Digital marketplace fixed (pence)</span>
+            <input name="digitalMarketplaceFeeFixedPence" defaultValue={effectiveFeeSettings.digitalMarketplaceFeeFixedPence} className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm" />
+          </label>
+          <div className="flex items-end">
+            <button type="submit" className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800">Save fee settings</button>
+          </div>
+        </form>
+        <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">
+          <p className="font-medium text-zinc-900">Example on a £100.00 order</p>
+          <p className="mt-1">Commission (net): £{(sample.commissionNetPence / 100).toFixed(2)}</p>
+          <p>VAT on commission: £{(sample.commissionVatPence / 100).toFixed(2)}</p>
+          <p>Stripe fee estimate: £{(sample.stripeProcessingFeePence / 100).toFixed(2)}</p>
+          <p>Digital marketplace fee: £{(sample.digitalMarketplaceFeePence / 100).toFixed(2)}</p>
+          <p className="mt-1 font-medium text-zinc-900">
+            Total platform fees: £{(sample.totalMarketplaceFeesPence / 100).toFixed(2)} · Seller payout: £{(sample.sellerPayoutPence / 100).toFixed(2)}
+          </p>
+        </div>
+      </section>
+
+      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-zinc-900">Blog publishing</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Post full-page blog content as HTML. Published posts appear on the homepage and <code className="rounded bg-zinc-100 px-1">/blog</code>.
+        </p>
+        <form action={adminCreateBlogPostAction} className="mt-4 grid gap-3 rounded-lg border border-zinc-200 p-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-medium text-zinc-700">Title</span>
+              <input
+                name="title"
+                required
+                maxLength={180}
+                placeholder="e.g. Reclaimed timber trends in 2026"
+                className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-medium text-zinc-700">Slug (optional)</span>
+              <input
+                name="slug"
+                maxLength={140}
+                placeholder="auto-from-title-if-empty"
+                className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+          <label className="text-sm">
+            <span className="mb-1 block text-xs font-medium text-zinc-700">Excerpt (optional)</span>
+            <input
+              name="excerpt"
+              maxLength={300}
+              placeholder="Short summary for homepage and blog list."
+              className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-xs font-medium text-zinc-700">HTML content</span>
+            <textarea
+              name="htmlContent"
+              required
+              rows={14}
+              placeholder="<h1>...</h1><p>...</p>"
+              className="w-full rounded border border-zinc-300 px-3 py-2 font-mono text-xs"
+            />
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
+            <input type="checkbox" name="published" defaultChecked />
+            Publish immediately
+          </label>
+          <div>
+            <button type="submit" className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800">
+              Create post
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-5 overflow-x-auto rounded-lg border border-zinc-200">
+          <table className="min-w-full text-sm">
+            <thead className="text-left text-xs uppercase tracking-wide text-zinc-500">
+              <tr>
+                <th className="py-2 px-3">Post</th>
+                <th className="py-2 px-3">Status</th>
+                <th className="py-2 px-3">Published</th>
+                <th className="py-2 px-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {blogPosts.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-5 px-3 text-sm text-zinc-500">No blog posts yet.</td>
+                </tr>
+              ) : (
+                blogPosts.map((p) => (
+                  <tr key={p.id} className="border-t border-zinc-100">
+                    <td className="py-2 px-3">
+                      <p className="font-medium text-zinc-900">{p.title}</p>
+                      <p className="font-mono text-xs text-zinc-500">/blog/{p.slug}</p>
+                    </td>
+                    <td className="py-2 px-3">
+                      {p.published ? (
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Published</span>
+                      ) : (
+                        <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">Draft</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-3 text-zinc-600">
+                      {(p.publishedAt ?? p.createdAt).toISOString().slice(0, 10)}
+                    </td>
+                    <td className="py-2 px-3">
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={`/blog/${p.slug}`} target="_blank" className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50">
+                          View
+                        </Link>
+                        <form action={adminSetBlogPublishedAction}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <input type="hidden" name="published" value={p.published ? "0" : "1"} />
+                          <button type="submit" className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50">
+                            {p.published ? "Unpublish" : "Publish"}
+                          </button>
+                        </form>
+                        <form action={adminDeleteBlogPostAction}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <button type="submit" className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-800 hover:bg-rose-50">
+                            Delete
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">Notifications &amp; email alerts</h2>
         <p className="mt-1 text-sm text-zinc-600">
           In-app notifications are stored per user. Operational email is optional and currently used for yard
@@ -252,22 +457,23 @@ export default async function AdminOverviewPage({
         </p>
         <div className="mt-4 grid gap-6 lg:grid-cols-2">
           <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
-            <h3 className="text-sm font-semibold text-zinc-900">Email (Resend)</h3>
+            <h3 className="text-sm font-semibold text-zinc-900">Email (Stackmail SMTP)</h3>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-700">
               <li>
                 Status:{" "}
-                <span className={resendConfigured ? "font-medium text-emerald-800" : "font-medium text-amber-800"}>
-                  {resendConfigured ? "Configured (API key present)" : "Not configured — yard enquiry emails are skipped"}
+                <span className={smtpConfigured ? "font-medium text-emerald-800" : "font-medium text-amber-800"}>
+                  {smtpConfigured ? "Configured (SMTP user/pass present)" : "Not configured — yard enquiry emails are skipped"}
                 </span>
               </li>
               <li>
-                Default / configured <code className="rounded bg-zinc-200 px-1 text-xs">RESEND_FROM</code>:{" "}
-                <span className="break-all">{resendFromPreview}</span>
+                Default / configured <code className="rounded bg-zinc-200 px-1 text-xs">MAIL_FROM</code>:{" "}
+                <span className="break-all">{smtpFromPreview}</span>
               </li>
               <li>
                 Code path: <code className="rounded bg-zinc-200 px-1 text-xs">sendYardEnquiryEmail</code> — in-app
                 notification to the yard is always created; email sends only when{" "}
-                <code className="rounded bg-zinc-200 px-1 text-xs">RESEND_API_KEY</code> is set.
+                <code className="rounded bg-zinc-200 px-1 text-xs">SMTP_USER</code> and{" "}
+                <code className="rounded bg-zinc-200 px-1 text-xs">SMTP_PASS</code> are set.
               </li>
             </ul>
           </div>

@@ -20,22 +20,29 @@ export async function toggleYardStockAlertAction(formData: FormData): Promise<vo
   }
 
   const sellerId = String(formData.get("sellerId") ?? "").trim();
+  const sellerPath = String(formData.get("sellerPath") ?? "").trim();
   const yardSlug = String(formData.get("yardSlug") ?? "").trim();
   const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   const categoryId = categoryIdRaw && categoryIdRaw !== "all" ? categoryIdRaw : null;
 
-  if (!sellerId || !yardSlug) return;
+  if (!sellerId) return;
 
-  const yard = await prisma.sellerProfile.findUnique({
+  const sellerProfile = await prisma.sellerProfile.findUnique({
     where: { userId: sellerId },
     select: { yardSlug: true, user: { select: { role: true } } },
   });
-  if (!yard || yard.user.role !== "reclamation_yard" || yard.yardSlug !== yardSlug) {
+  if (!sellerProfile) {
     return;
   }
   if (sellerId === session.user.id) {
     return;
   }
+  const callbackPath = safeInternalPath(
+    sellerPath ||
+      (sellerProfile.user.role === "reclamation_yard" && sellerProfile.yardSlug
+        ? `/yards/${sellerProfile.yardSlug}`
+        : `/sellers/${sellerId}`)
+  );
 
   const existing = await prisma.yardStockAlert.findFirst({
     where: {
@@ -47,7 +54,7 @@ export async function toggleYardStockAlertAction(formData: FormData): Promise<vo
 
   if (existing) {
     await prisma.yardStockAlert.delete({ where: { id: existing.id } });
-    revalidatePath(`/yards/${yardSlug}`);
+    revalidatePath(callbackPath);
     revalidatePath("/dashboard/stock-alerts");
     return;
   }
@@ -59,6 +66,6 @@ export async function toggleYardStockAlertAction(formData: FormData): Promise<vo
       categoryId,
     },
   });
-  revalidatePath(`/yards/${yardSlug}`);
+  revalidatePath(callbackPath);
   revalidatePath("/dashboard/stock-alerts");
 }
