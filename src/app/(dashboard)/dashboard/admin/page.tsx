@@ -10,6 +10,7 @@ import {
   adminSetListingStatusAction,
   adminSetListingVisibilityAction,
   adminSetBlogPublishedAction,
+  adminSetUserRoleAction,
   adminUpdateMarketplaceFeesAction,
   adminToggleUserSuspensionAction,
 } from "@/lib/actions/admin-overview";
@@ -686,27 +687,47 @@ export default async function AdminOverviewPage({
                     )}
                   </td>
                   <td className="py-2">
-                    <form action={adminToggleUserSuspensionAction} className="flex flex-col gap-2">
-                      <input type="hidden" name="userId" value={u.id} />
-                      <input type="hidden" name="mode" value={u.suspendedAt ? "unsuspend" : "suspend"} />
-                      {!u.suspendedAt ? (
-                        <input
-                          name="reason"
-                          placeholder="Reason (optional)"
-                          className="w-52 rounded border border-zinc-300 px-2 py-1 text-xs"
-                        />
-                      ) : null}
-                      <button
-                        type="submit"
-                        className={`rounded px-2 py-1 text-xs font-medium ${
-                          u.suspendedAt
-                            ? "border border-emerald-300 text-emerald-800 hover:bg-emerald-50"
-                            : "border border-rose-300 text-rose-800 hover:bg-rose-50"
-                        }`}
-                      >
-                        {u.suspendedAt ? "Unsuspend user" : "Suspend user"}
-                      </button>
-                    </form>
+                    <div className="flex flex-col gap-2">
+                      <form action={adminSetUserRoleAction} className="flex items-center gap-1">
+                        <input type="hidden" name="userId" value={u.id} />
+                        <select
+                          name="role"
+                          defaultValue={u.role ?? "individual"}
+                          className="rounded border border-zinc-300 px-1 py-1 text-xs"
+                        >
+                          <option value="individual">individual</option>
+                          <option value="dealer">dealer</option>
+                          <option value="reclamation_yard">reclamation_yard</option>
+                        </select>
+                        <button
+                          type="submit"
+                          className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+                        >
+                          Save role
+                        </button>
+                      </form>
+                      <form action={adminToggleUserSuspensionAction} className="flex flex-col gap-2">
+                        <input type="hidden" name="userId" value={u.id} />
+                        <input type="hidden" name="mode" value={u.suspendedAt ? "unsuspend" : "suspend"} />
+                        {!u.suspendedAt ? (
+                          <input
+                            name="reason"
+                            placeholder="Reason (optional)"
+                            className="w-52 rounded border border-zinc-300 px-2 py-1 text-xs"
+                          />
+                        ) : null}
+                        <button
+                          type="submit"
+                          className={`rounded px-2 py-1 text-xs font-medium ${
+                            u.suspendedAt
+                              ? "border border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                              : "border border-rose-300 text-rose-800 hover:bg-rose-50"
+                          }`}
+                        >
+                          {u.suspendedAt ? "Unsuspend user" : "Suspend user"}
+                        </button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               ))}

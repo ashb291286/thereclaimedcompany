@@ -109,6 +109,7 @@ export function BrowseListingGrid({
                   categoryName={l.category.name}
                   conditionExtra={l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
                 />
+                <p className="mt-1 truncate font-mono text-[10px] text-zinc-400">ID: {l.id}</p>
                 {(() => {
                   const locLine = formatUkLocationLine({
                     postcodeLocality: l.postcodeLocality,

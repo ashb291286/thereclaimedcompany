@@ -10,16 +10,28 @@ import { DeleteListingButton } from "./DeleteListingButton";
 export default async function DashboardListingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ boosted?: string; boostError?: string }>;
+  searchParams: Promise<{ boosted?: string; boostError?: string; q?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
 
-  const { boosted, boostError } = await searchParams;
+  const { boosted, boostError, q: rawQ } = await searchParams;
   const now = new Date();
+  const q = rawQ?.trim() ?? "";
 
   const listings = await prisma.listing.findMany({
-    where: { sellerId: session.user.id },
+    where: {
+      sellerId: session.user.id,
+      ...(q
+        ? {
+            OR: [
+              { id: { contains: q } },
+              { title: { contains: q, mode: "insensitive" } },
+              { category: { name: { contains: q, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+    },
     orderBy: { updatedAt: "desc" },
     take: 120,
     select: {
@@ -37,6 +49,33 @@ export default async function DashboardListingsPage({
       _count: { select: { bids: true } },
     },
   });
+  const listingIds = listings.map((l) => l.id);
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [viewsTotal, views7d, favoritesTotal] = listingIds.length
+    ? await Promise.all([
+        prisma.listingViewEvent.groupBy({
+          by: ["listingId"],
+          where: { listingId: { in: listingIds } },
+          _count: { _all: true },
+        }),
+        prisma.listingViewEvent.groupBy({
+          by: ["listingId"],
+          where: {
+            listingId: { in: listingIds },
+            createdAt: { gte: sevenDaysAgo },
+          },
+          _count: { _all: true },
+        }),
+        prisma.listingFavorite.groupBy({
+          by: ["listingId"],
+          where: { listingId: { in: listingIds } },
+          _count: { _all: true },
+        }),
+      ])
+    : [[], [], []];
+  const viewsTotalByListing = new Map(viewsTotal.map((v) => [v.listingId, v._count._all]));
+  const views7dByListing = new Map(views7d.map((v) => [v.listingId, v._count._all]));
+  const favoritesByListing = new Map(favoritesTotal.map((v) => [v.listingId, v._count._all]));
 
   return (
     <div>
@@ -58,9 +97,25 @@ export default async function DashboardListingsPage({
           Couldn&apos;t start boost checkout. Ensure listing is active and try again.
         </p>
       ) : null}
+      <form className="mt-4 flex flex-wrap items-center gap-2">
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Search title, ID, category, or status"
+          className="w-full max-w-md rounded border border-zinc-300 px-3 py-2 text-sm"
+        />
+        <button type="submit" className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50">
+          Search
+        </button>
+        <Link href="/dashboard/listings" className="rounded border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50">
+          Clear
+        </Link>
+      </form>
 
       {listings.length === 0 ? (
-        <p className="mt-6 text-sm text-zinc-500">You have not added any listings yet.</p>
+        <p className="mt-6 text-sm text-zinc-500">
+          {q ? "No listings match your search." : "You have not added any listings yet."}
+        </p>
       ) : (
         <ul className="mt-6 space-y-3">
           {listings.map((l) => {
@@ -108,6 +163,10 @@ export default async function DashboardListingsPage({
                   ) : null}
                   <p className="mt-1 text-xs text-zinc-500">
                     Updated {l.updatedAt.toLocaleDateString("en-GB", { dateStyle: "medium" })}
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {viewsTotalByListing.get(l.id) ?? 0} visits · {views7dByListing.get(l.id) ?? 0} in last 7d ·{" "}
+                    {favoritesByListing.get(l.id) ?? 0} favourites
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

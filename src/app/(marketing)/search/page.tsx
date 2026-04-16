@@ -22,6 +22,7 @@ import { BrowseListingGrid } from "./BrowseListingGrid";
 import { BrowseMobileReels, type ReelListing } from "./BrowseMobileReels";
 import { MobileFiltersDrawer } from "./MobileFiltersDrawer";
 import type { SearchListingRow } from "@/lib/listing-search";
+import { publicSellerPath } from "@/lib/yard-public-path";
 
 export async function generateMetadata({
   searchParams,
@@ -98,6 +99,12 @@ export default async function SearchPage({
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
   const pageSize = 12;
   const skip = (page - 1) * pageSize;
+  const sellerFocusedBrowse =
+    params.sellerType === "reclamation_yard"
+      ? "reclamation_yard"
+      : params.sellerType === "dealer"
+        ? "dealer"
+        : null;
 
   const idList =
     params.ids
@@ -132,7 +139,7 @@ export default async function SearchPage({
   const sortQuery = browseSortQueryParam(params.sort, nearestAvailable);
   const listingTypeQuery = browseListingTypeQueryParam(params.listingType);
 
-  const [searchResult, categories] = await Promise.all([
+  const [searchResult, categories, sellerProfiles] = await Promise.all([
     searchListings({
       q: params.q,
       categoryId: activeCategoryRow?.id ?? params.categoryId,
@@ -155,6 +162,43 @@ export default async function SearchPage({
       where: { parentId: null },
       orderBy: { name: "asc" },
     }),
+    sellerFocusedBrowse
+      ? prisma.sellerProfile.findMany({
+          where: {
+            user: { role: sellerFocusedBrowse },
+            ...(sellerFocusedBrowse === "reclamation_yard"
+              ? { yardSlug: { not: null } }
+              : {}),
+            ...(params.q?.trim()
+              ? {
+                  OR: [
+                    { displayName: { contains: params.q.trim(), mode: "insensitive" } },
+                    { businessName: { contains: params.q.trim(), mode: "insensitive" } },
+                    { postcode: { contains: params.q.trim(), mode: "insensitive" } },
+                    { postcodeLocality: { contains: params.q.trim(), mode: "insensitive" } },
+                    { adminDistrict: { contains: params.q.trim(), mode: "insensitive" } },
+                    { region: { contains: params.q.trim(), mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          take: 80,
+          select: {
+            id: true,
+            userId: true,
+            displayName: true,
+            businessName: true,
+            yardSlug: true,
+            yardTagline: true,
+            postcode: true,
+            postcodeLocality: true,
+            adminDistrict: true,
+            region: true,
+            user: { select: { role: true } },
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
   const {
@@ -174,12 +218,8 @@ export default async function SearchPage({
 
   const totalPages = Math.ceil(total / pageSize);
   const fromImage = params.fromImage === "1";
-  const sellerFocusedBrowse =
-    params.sellerType === "reclamation_yard"
-      ? "reclamation_yard"
-      : params.sellerType === "dealer"
-        ? "dealer"
-        : null;
+  const showSellerProfileFallback =
+    !activeCategoryRow && sellerFocusedBrowse !== null && listingsOrdered.length === 0 && sellerProfiles.length > 0;
 
   const paramRecord: Record<string, string | undefined> = {
     q: params.q,
@@ -312,13 +352,52 @@ export default async function SearchPage({
           ) : null}
           <div className="mt-4 hidden flex-wrap items-center justify-between gap-3 md:flex">
             <p className="text-sm text-zinc-500">
-              {total} listing{total !== 1 ? "s" : ""} found
+              {showSellerProfileFallback
+                ? `${sellerProfiles.length} ${sellerFocusedBrowse === "reclamation_yard" ? "yard" : "dealer"}${sellerProfiles.length !== 1 ? "s" : ""} found`
+                : `${total} listing${total !== 1 ? "s" : ""} found`}
             </p>
             <Suspense fallback={null}>
               <BrowseSortSelect value={sortQuery} nearestAvailable={nearestAvailable} />
             </Suspense>
           </div>
-          {listingsOrdered.length === 0 ? (
+          {showSellerProfileFallback ? (
+            <div className="mt-6">
+              <p className="px-4 text-sm text-zinc-600 md:px-0">
+                No live listings matched these filters yet. Showing {sellerFocusedBrowse === "reclamation_yard" ? "reclamation yards" : "dealers"} with public profiles.
+              </p>
+              <ul className="mt-4 space-y-3">
+                {sellerProfiles.map((s) => {
+                  const href = publicSellerPath({
+                    sellerId: s.userId,
+                    role: s.user.role,
+                    yardSlug: s.yardSlug,
+                  });
+                  return (
+                    <li key={s.id}>
+                      <Link
+                        href={href}
+                        className="block rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-brand/35 hover:shadow-sm"
+                      >
+                        <p className="font-semibold text-zinc-900">{s.displayName}</p>
+                        {s.businessName && s.businessName !== s.displayName ? (
+                          <p className="text-sm text-zinc-600">{s.businessName}</p>
+                        ) : null}
+                        {s.yardTagline ? <p className="mt-2 text-sm text-zinc-600">{s.yardTagline}</p> : null}
+                        <p className="mt-2 text-xs text-zinc-500">
+                          {formatUkLocationLine({
+                            postcodeLocality: s.postcodeLocality,
+                            adminDistrict: s.adminDistrict,
+                            region: s.region,
+                            postcode: s.postcode,
+                          })}
+                        </p>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : listingsOrdered.length === 0 ? (
             <p className="mt-8 px-4 text-zinc-500 md:px-0">No listings match your filters.</p>
           ) : (
             <>

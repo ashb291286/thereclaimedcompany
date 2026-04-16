@@ -185,6 +185,7 @@ export default async function HomePage() {
                       vatSuffix=""
                       categoryName={l.category.name}
                     />
+                    <p className="mt-1 truncate font-mono text-[10px] text-zinc-400">ID: {l.id}</p>
                     {impact ? (
                       <div className="mt-2">
                         <CarbonBadge impact={impact} variant="compact" />

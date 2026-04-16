@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { isCarbonAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { ListingStatus } from "@/generated/prisma/client";
+import { ListingStatus, UserRole } from "@/generated/prisma/client";
 
 async function requireAdmin(): Promise<void> {
   const session = await auth();
@@ -26,6 +26,22 @@ export async function adminToggleUserSuspensionAction(formData: FormData): Promi
       mode === "suspend"
         ? { suspendedAt: new Date(), suspensionReason: reason }
         : { suspendedAt: null, suspensionReason: null },
+  });
+
+  revalidatePath("/dashboard/admin");
+}
+
+export async function adminSetUserRoleAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const userId = String(formData.get("userId") ?? "").trim();
+  const roleRaw = String(formData.get("role") ?? "").trim();
+  if (!userId) return;
+  const allowed: UserRole[] = ["individual", "dealer", "reclamation_yard"];
+  if (!allowed.includes(roleRaw as UserRole)) return;
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { role: roleRaw as UserRole },
   });
 
   revalidatePath("/dashboard/admin");

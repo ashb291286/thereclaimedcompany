@@ -310,6 +310,7 @@ function ListingCard({
           £{(l.price / 100).toFixed(2)} · {l.category.name}
           {l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
         </p>
+        <p className="mt-1 truncate font-mono text-[10px] text-zinc-400">ID: {l.id}</p>
       </div>
     </Link>
   );
