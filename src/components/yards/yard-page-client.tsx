@@ -231,13 +231,19 @@ export function YardRecentStrip({ listings }: { listings: YardListingCard[] }) {
               ) : (
                 <div className="flex h-full items-center justify-center text-xs text-zinc-400">No image</div>
               )}
-              <div className="pointer-events-none absolute right-1 top-1 z-10 drop-shadow-sm" aria-hidden>
-                <Image
+              <div
+                className="pointer-events-none absolute right-1 top-1 z-20 rounded-md bg-white/95 p-0.5 shadow-sm ring-1 ring-zinc-200/80"
+                aria-hidden
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src="/images/the-reclaimed-company-logo.png"
                   alt=""
-                  width={24}
-                  height={24}
-                  className="h-6 w-6 object-contain opacity-90"
+                  width={28}
+                  height={28}
+                  loading="lazy"
+                  decoding="async"
+                  className="block h-7 w-7 object-contain"
                 />
               </div>
             </div>

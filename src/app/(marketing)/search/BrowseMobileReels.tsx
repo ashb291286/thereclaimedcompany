@@ -400,13 +400,19 @@ export function BrowseMobileReels({
               </div>
 
               <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end p-4 pb-32 pt-16 text-white">
-                <div className="pointer-events-none absolute right-4 top-8 z-10 drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]" aria-hidden>
-                  <Image
+                <div
+                  className="pointer-events-none absolute right-4 top-8 z-20 rounded-lg bg-white p-1 shadow-md ring-1 ring-zinc-200/90"
+                  aria-hidden
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src="/images/the-reclaimed-company-logo.png"
                     alt=""
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 object-contain opacity-95"
+                    width={36}
+                    height={36}
+                    loading="lazy"
+                    decoding="async"
+                    className="block h-9 w-9 object-contain"
                   />
                 </div>
                 <div className="mb-2 flex min-h-[20px] flex-wrap content-start items-start gap-1.5 pr-11">
