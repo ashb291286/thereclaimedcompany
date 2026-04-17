@@ -16,6 +16,7 @@ import {
 } from "@/lib/actions/admin-overview";
 import { calculateMarketplaceFees } from "@/lib/marketplace-fees";
 import { SellerProfileImportForm } from "./SellerProfileImportForm";
+import { BlogFeaturedImageField } from "./BlogFeaturedImageField";
 
 export default async function AdminOverviewPage({
   searchParams,
@@ -372,6 +373,7 @@ export default async function AdminOverviewPage({
               className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
             />
           </label>
+          <BlogFeaturedImageField />
           <label className="text-sm">
             <span className="mb-1 block text-xs font-medium text-zinc-700">HTML content</span>
             <textarea

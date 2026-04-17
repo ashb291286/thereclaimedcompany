@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -12,7 +13,7 @@ export default async function BlogIndexPage() {
     where: { published: true },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: 50,
-    select: { id: true, title: true, slug: true, excerpt: true, publishedAt: true, createdAt: true },
+    select: { id: true, title: true, slug: true, excerpt: true, featuredImageUrl: true, publishedAt: true, createdAt: true },
   });
 
   return (
@@ -28,13 +29,27 @@ export default async function BlogIndexPage() {
             <li key={p.id}>
               <Link
                 href={`/blog/${p.slug}`}
-                className="block rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-brand/40"
+                className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition hover:border-brand/40"
               >
+                {p.featuredImageUrl ? (
+                  <div className="relative aspect-[16/9] w-full bg-zinc-100">
+                    <Image
+                      src={p.featuredImageUrl}
+                      alt={p.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 768px"
+                      unoptimized
+                    />
+                  </div>
+                ) : null}
+                <div className="p-4">
                 <p className="font-semibold text-zinc-900">{p.title}</p>
                 {p.excerpt ? <p className="mt-1 line-clamp-2 text-sm text-zinc-600">{p.excerpt}</p> : null}
                 <p className="mt-2 text-xs text-zinc-500">
                   {(p.publishedAt ?? p.createdAt).toISOString().slice(0, 10)}
                 </p>
+                </div>
               </Link>
             </li>
           ))}

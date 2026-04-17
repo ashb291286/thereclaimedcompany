@@ -315,6 +315,7 @@ model BlogPost {
   title       String
   slug        String   @unique
   excerpt     String?
+  featuredImageUrl String?
   htmlContent String   @db.Text
   published   Boolean  @default(false)
   publishedAt DateTime?

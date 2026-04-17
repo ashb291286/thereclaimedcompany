@@ -41,7 +41,15 @@ export default async function HomePage() {
       where: { published: true },
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
       take: 3,
-      select: { id: true, title: true, slug: true, excerpt: true, publishedAt: true, createdAt: true },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        featuredImageUrl: true,
+        publishedAt: true,
+        createdAt: true,
+      },
     }),
   ]);
 
@@ -201,7 +209,7 @@ export default async function HomePage() {
 
       <section className="mx-auto mt-10 w-full max-w-7xl px-4 sm:px-6">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-zinc-900">From the blog</h2>
+          <h2 className="text-2xl font-semibold text-zinc-900">On The Salvage Scence</h2>
           <Link href="/blog" className="text-sm font-medium text-brand hover:underline">
             View all posts
           </Link>
@@ -212,11 +220,25 @@ export default async function HomePage() {
               <li key={p.id}>
                 <Link
                   href={`/blog/${p.slug}`}
-                  className="block h-full rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-brand/40"
+                  className="block h-full overflow-hidden rounded-xl border border-zinc-200 bg-white transition hover:border-brand/40"
                 >
+                  {p.featuredImageUrl ? (
+                    <div className="relative aspect-[16/9] w-full bg-zinc-100">
+                      <Image
+                        src={p.featuredImageUrl}
+                        alt={p.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        unoptimized
+                      />
+                    </div>
+                  ) : null}
+                  <div className="p-4">
                   <p className="font-semibold text-zinc-900">{p.title}</p>
                   {p.excerpt ? <p className="mt-2 line-clamp-3 text-sm text-zinc-600">{p.excerpt}</p> : null}
                   <p className="mt-3 text-xs text-zinc-500">{(p.publishedAt ?? p.createdAt).toISOString().slice(0, 10)}</p>
+                  </div>
                 </Link>
               </li>
             ))}

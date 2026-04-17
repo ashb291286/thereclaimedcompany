@@ -117,6 +117,7 @@ export async function adminCreateBlogPostAction(formData: FormData): Promise<voi
   const title = String(formData.get("title") ?? "").trim().slice(0, 180);
   const slugInput = String(formData.get("slug") ?? "").trim();
   const excerptRaw = String(formData.get("excerpt") ?? "").trim();
+  const featuredImageUrlRaw = String(formData.get("featuredImageUrl") ?? "").trim();
   const htmlContent = String(formData.get("htmlContent") ?? "").trim();
   const published = String(formData.get("published") ?? "") === "on";
   if (!title || !htmlContent) return;
@@ -125,11 +126,17 @@ export async function adminCreateBlogPostAction(formData: FormData): Promise<voi
   const existing = await prisma.blogPost.findUnique({ where: { slug }, select: { id: true } });
   if (existing) redirect("/dashboard/admin?error=blog_slug_taken");
 
+  const featuredImageUrl =
+    featuredImageUrlRaw && /^https?:\/\//i.test(featuredImageUrlRaw)
+      ? featuredImageUrlRaw.slice(0, 2048)
+      : null;
+
   await prisma.blogPost.create({
     data: {
       title,
       slug,
       excerpt: excerptRaw ? excerptRaw.slice(0, 300) : null,
+      featuredImageUrl,
       htmlContent,
       published,
       publishedAt: published ? new Date() : null,
