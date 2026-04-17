@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/db";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { getAllDealerAreaSlugs } from "@/lib/dealer-area-seo";
+import { getAllYardAreaSlugs } from "@/lib/yard-area-seo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getSiteBaseUrl();
@@ -17,29 +19,38 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const [listings, categories, yards, blogPosts] = await Promise.all([
-      prisma.listing.findMany({
-        where: { status: "active", visibleOnMarketplace: true },
-        select: { id: true, updatedAt: true },
-        orderBy: { updatedAt: "desc" },
-        take: 5000,
-      }),
-      prisma.category.findMany({
-        where: { parentId: null },
-        select: { slug: true },
-      }),
-      prisma.sellerProfile.findMany({
-        where: { yardSlug: { not: null }, user: { role: "reclamation_yard" } },
-        select: { yardSlug: true, updatedAt: true },
-        take: 3000,
-      }),
-      prisma.blogPost.findMany({
-        where: { published: true },
-        select: { slug: true, publishedAt: true, updatedAt: true },
-        orderBy: { publishedAt: "desc" },
-        take: 3000,
-      }),
-    ]);
+    const [listings, categories, yards, blogPosts, dealerProfiles, dealerAreaSlugs, yardAreaSlugs] =
+      await Promise.all([
+        prisma.listing.findMany({
+          where: { status: "active", visibleOnMarketplace: true },
+          select: { id: true, updatedAt: true },
+          orderBy: { updatedAt: "desc" },
+          take: 5000,
+        }),
+        prisma.category.findMany({
+          select: { slug: true, updatedAt: true },
+        }),
+        prisma.sellerProfile.findMany({
+          where: { yardSlug: { not: null }, user: { role: "reclamation_yard" } },
+          select: { yardSlug: true, updatedAt: true },
+          orderBy: { updatedAt: "desc" },
+          take: 3000,
+        }),
+        prisma.blogPost.findMany({
+          where: { published: true },
+          select: { slug: true, publishedAt: true, updatedAt: true },
+          orderBy: { publishedAt: "desc" },
+          take: 3000,
+        }),
+        prisma.sellerProfile.findMany({
+          where: { user: { role: "dealer" } },
+          select: { userId: true, updatedAt: true },
+          orderBy: { updatedAt: "desc" },
+          take: 5000,
+        }),
+        getAllDealerAreaSlugs(),
+        getAllYardAreaSlugs(),
+      ]);
 
     const listingRoutes: MetadataRoute.Sitemap = listings.map((l) => ({
       url: `${base}/listings/${l.id}`,
@@ -50,7 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const categoryRoutes: MetadataRoute.Sitemap = categories.map((c) => ({
       url: `${base}/categories/${c.slug}`,
-      lastModified: now,
+      lastModified: c.updatedAt,
       changeFrequency: "weekly",
       priority: 0.7,
     }));
@@ -64,6 +75,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.75,
       }));
 
+    const dealerProfileRoutes: MetadataRoute.Sitemap = dealerProfiles.map((d) => ({
+      url: `${base}/sellers/${d.userId}`,
+      lastModified: d.updatedAt,
+      changeFrequency: "weekly",
+      priority: 0.72,
+    }));
+
+    const dealerAreaRoutes: MetadataRoute.Sitemap = dealerAreaSlugs.map((slug) => ({
+      url: `${base}/dealers/${slug}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.68,
+    }));
+
+    const yardAreaRoutes: MetadataRoute.Sitemap = yardAreaSlugs.map((slug) => ({
+      url: `${base}/reclamation-yards/${slug}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.68,
+    }));
+
     const blogRoutes: MetadataRoute.Sitemap = blogPosts.map((p) => ({
       url: `${base}/blog/${p.slug}`,
       lastModified: p.updatedAt ?? p.publishedAt ?? now,
@@ -71,7 +103,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.65,
     }));
 
-    return [...staticRoutes, ...categoryRoutes, ...yardRoutes, ...blogRoutes, ...listingRoutes];
+    return [
+      ...staticRoutes,
+      ...categoryRoutes,
+      ...yardAreaRoutes,
+      ...dealerAreaRoutes,
+      ...yardRoutes,
+      ...dealerProfileRoutes,
+      ...blogRoutes,
+      ...listingRoutes,
+    ];
   } catch {
     return staticRoutes;
   }

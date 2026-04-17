@@ -235,23 +235,33 @@ export function MarketingShell({
 
                   <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
                     <p className="text-xs font-semibold tracking-widest text-white/80">SALVAGERS</p>
-                    <p>Marketplace</p>
+                    <Link href="/search" className="block hover:text-white">
+                      Marketplace
+                    </Link>
                     <p>Free To Collect</p>
                     <p>Wanted</p>
                   </div>
 
                   <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
                     <p className="text-xs font-semibold tracking-widest text-white/80">LOCAL RECLAMATION YARDS</p>
-                    <p>Marketplace</p>
+                    <Link href="/search" className="block hover:text-white">
+                      Marketplace
+                    </Link>
                     <p>Free To Collect</p>
                     <p>Wanted</p>
                   </div>
 
                   <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
                     <p className="text-xs font-semibold tracking-widest text-white/80">RESOURCES</p>
-                    <p>Marketplace</p>
-                    <p>Antiques Dealers</p>
-                    <p>Reclamation Yards</p>
+                    <Link href="/search" className="block hover:text-white">
+                      Marketplace
+                    </Link>
+                    <Link href="/dealers" className="block hover:text-white">
+                      Antiques Dealers
+                    </Link>
+                    <Link href="/reclamation-yards" className="block hover:text-white">
+                      Reclamation Yards
+                    </Link>
                     <p>Press &amp; Media</p>
                   </div>
 
@@ -286,7 +296,10 @@ export function MarketingShell({
 
               <div className="mt-5 flex flex-col gap-3 text-xs text-white/70 sm:flex-row sm:items-center sm:justify-between">
                 <p>©2025 The Reclaimed Company 05769679 - All Rights Reserved.</p>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  <Link href="/sitemap.xml" className="hover:text-white">
+                    Sitemap
+                  </Link>
                   <Link href="/legal-hub" className="hover:text-white">
                     Privacy Policy
                   </Link>
