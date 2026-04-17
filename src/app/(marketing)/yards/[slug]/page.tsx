@@ -8,6 +8,7 @@ import { OpeningHoursBlock } from "@/components/OpeningHoursBlock";
 import { buildYardLocalBusinessJsonLd, getSiteUrl } from "@/lib/yard-json-ld";
 import { openingHoursCompactLine, scheduleFromDbField } from "@/lib/opening-hours";
 import { parseYardSocialJson } from "@/lib/yard-social";
+import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
 import { yardPublicHeadings } from "@/lib/yard-seo-headings";
 import { parseYardTrustFlagsJson, YARD_TRUST_FLAG_LABELS } from "@/lib/yard-trust-flags";
@@ -214,7 +215,7 @@ export default async function YardPublicPage({ params }: Props) {
     condition: l.condition,
     categoryId: l.categoryId,
     categoryName: l.category.name,
-    image: l.images[0] ?? null,
+    image: l.images[0] ? proxiedListingImageSrc(l.images[0]) : null,
     createdAt: l.createdAt.toISOString(),
     updatedAt: l.updatedAt.toISOString(),
   }));

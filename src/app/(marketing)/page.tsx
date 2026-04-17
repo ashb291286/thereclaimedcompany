@@ -7,6 +7,7 @@ import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
 import { MarketplaceListingCardBrandMark } from "@/components/branding/MarketplaceListingCardBrandMark";
+import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
 
 function auctionCountdownLabel(endsAt: Date | null): string | null {
@@ -155,7 +156,7 @@ export default async function HomePage() {
                     ) : null}
                     {l.images[0] ? (
                       <Image
-                        src={l.images[0]}
+                        src={proxiedListingImageSrc(l.images[0])}
                         alt={l.title}
                         fill
                         className="object-cover"

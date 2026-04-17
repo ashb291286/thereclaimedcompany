@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
+      /** Vercel Blob: URLs are often `https://<storeId>.public.blob.vercel-storage.com/...` */
       {
         protocol: "https",
         hostname: "public.blob.vercel-storage.com",
@@ -19,8 +20,19 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "**.public.blob.vercel-storage.com",
+        pathname: "/**",
+      },
+      /** WordPress + site media (apex + any subdomain, e.g. www / cdn). */
+      {
+        protocol: "https",
         hostname: "thereclaimedcompany.com",
-        pathname: "/uploads/**",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**.thereclaimedcompany.com",
+        pathname: "/**",
       },
     ],
   },

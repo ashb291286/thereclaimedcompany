@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({
-    listings,
+    listings: listings.map(withProxiedListingImages),
     total,
     page,
     pageSize,

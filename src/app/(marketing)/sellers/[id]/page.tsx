@@ -5,6 +5,7 @@ import Image from "next/image";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { OpeningHoursBlock } from "@/components/OpeningHoursBlock";
 import { auth } from "@/auth";
+import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
 import { parseYardSocialJson } from "@/lib/yard-social";
 import { YardStockAlertToggle } from "@/components/yards/yard-page-client";
@@ -303,7 +304,7 @@ function ListingCard({
       <div className="relative aspect-square bg-zinc-200">
         {l.images[0] ? (
           <Image
-            src={l.images[0]}
+            src={proxiedListingImageSrc(l.images[0])}
             alt={l.title}
             fill
             className="object-cover"

@@ -8,6 +8,7 @@ import { parseStoredCarbonImpact } from "@/lib/carbon/stored-impact";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
 import { MarketplaceListingCardBrandMark } from "@/components/branding/MarketplaceListingCardBrandMark";
+import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import type { SearchListingRow } from "@/lib/listing-search";
 
 function auctionCountdownLabel(endsAt: Date | null): string | null {
@@ -62,7 +63,7 @@ export function BrowseListingGrid({
                 ) : null}
                 {l.images[0] ? (
                   <Image
-                    src={l.images[0]}
+                    src={proxiedListingImageSrc(l.images[0])}
                     alt={l.title}
                     fill
                     className="object-cover"

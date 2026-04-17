@@ -32,12 +32,11 @@ type CurrencyContextValue = {
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
 async function fetchFrankfurterRates(): Promise<Rates> {
-  const res = await fetch("https://api.frankfurter.app/latest?from=GBP&to=USD,EUR");
+  const res = await fetch("/api/exchange-rates");
   if (!res.ok) throw new Error("rates fetch failed");
-  const data = (await res.json()) as { rates?: Record<string, number> };
-  const r = data.rates;
-  if (!r?.USD || !r?.EUR) throw new Error("invalid rates");
-  return { USD: r.USD, EUR: r.EUR };
+  const data = (await res.json()) as { USD?: number; EUR?: number };
+  if (data.USD == null || data.EUR == null) throw new Error("invalid rates");
+  return { USD: data.USD, EUR: data.EUR };
 }
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {

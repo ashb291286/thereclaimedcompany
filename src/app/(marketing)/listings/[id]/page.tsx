@@ -34,6 +34,7 @@ import { formatUkLocationLine } from "@/lib/postcode-uk";
 import { ListingImageGallery } from "./ListingImageGallery";
 import { ListingQaSection } from "@/components/listings/ListingQaSection";
 import type { Metadata } from "next";
+import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { getSiteBaseUrl } from "@/lib/site-url";
 
 export async function generateMetadata({
@@ -382,7 +383,7 @@ export default async function ListingPage({
         <div className="min-w-0 flex-1 lg:max-w-[min(100%,calc(100%-22rem))]">
           <div className={`${sectionClass} p-4 sm:p-5`}>
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Photos</p>
-            <ListingImageGallery images={listing.images} title={listing.title} />
+            <ListingImageGallery images={listing.images.map(proxiedListingImageSrc)} title={listing.title} />
           </div>
 
           <section className={`${sectionClass} mt-5 sm:mt-6`}>

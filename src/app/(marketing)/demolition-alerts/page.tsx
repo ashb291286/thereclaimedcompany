@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
+import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
 
 export const metadata: Metadata = {
@@ -66,7 +67,14 @@ export default async function DemolitionAlertsPage() {
                 >
                   <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-zinc-100 sm:h-28 sm:w-28">
                     {img ? (
-                      <Image src={img} alt="" fill className="object-cover" sizes="112px" unoptimized />
+                      <Image
+                        src={proxiedListingImageSrc(img)}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="112px"
+                        unoptimized
+                      />
                     ) : (
                       <div className="flex h-full items-center justify-center text-[10px] text-zinc-400">No photo</div>
                     )}

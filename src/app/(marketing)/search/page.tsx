@@ -22,6 +22,7 @@ import { BrowseListingGrid } from "./BrowseListingGrid";
 import { BrowseMobileReels, type ReelListing } from "./BrowseMobileReels";
 import { MobileFiltersDrawer } from "./MobileFiltersDrawer";
 import type { SearchListingRow } from "@/lib/listing-search";
+import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { publicSellerPath } from "@/lib/yard-public-path";
 
 export async function generateMetadata({
@@ -315,7 +316,7 @@ export default async function SearchPage({
     return {
       id: l.id,
       title: l.title,
-      imageUrl: l.images[0] ?? null,
+      imageUrl: l.images[0] ? proxiedListingImageSrc(l.images[0]) : null,
       auctionEndsAtIso: l.auctionEndsAt ? l.auctionEndsAt.toISOString() : null,
       buyerPenceGbp: buyerPence,
       vatSuffix: vatBit,
