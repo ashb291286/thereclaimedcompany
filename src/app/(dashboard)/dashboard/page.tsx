@@ -109,6 +109,8 @@ export default async function DashboardPage({
     sellerRole === "reclamation_yard" ||
     !!sellerProfile?.yardSlug ||
     !!sellerProfile?.businessName;
+  const isDealerAccount = sellerRole === "dealer";
+  const canManagePublicShop = isYardAccount || isDealerAccount;
 
   if (!sellerProfile) {
     return (
@@ -133,6 +135,12 @@ export default async function DashboardPage({
     );
   }
 
+  const publicShopHref = publicSellerPath({
+    sellerId: session.user.id,
+    role: sellerRole,
+    yardSlug: sellerProfile.yardSlug,
+  });
+
   return (
     <div>
       {justAddedId ? <DashboardJustAddedEffect listingId={justAddedId} /> : null}
@@ -145,35 +153,29 @@ export default async function DashboardPage({
         incomingAsSeller={pendingBuyerOffersAsSeller}
         pendingCountersAsBuyer={pendingSellerCountersAsBuyer}
       />
-      {isYardAccount ? (
+      {canManagePublicShop ? (
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-          <Link href="/dashboard/nearby-stock" className="font-medium text-emerald-800 hover:underline">
-            Nearby stock
-            {localStockPendingCount > 0 ? (
-              <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-bold text-white">
-                {localStockPendingCount > 9 ? "9+" : localStockPendingCount}
-              </span>
-            ) : null}
-          </Link>
-          <Link href="/dashboard/seller-profile" className="font-medium text-brand hover:underline">
-            Yard profile &amp; SEO
-          </Link>
-          {sellerProfile.yardSlug ? (
-            <Link
-              href={publicSellerPath({
-                sellerId: session.user.id,
-                role: sellerRole,
-                yardSlug: sellerProfile.yardSlug,
-              })}
-              className="font-medium text-emerald-800 hover:underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View public yard
+          {isYardAccount ? (
+            <Link href="/dashboard/nearby-stock" className="font-medium text-emerald-800 hover:underline">
+              Nearby stock
+              {localStockPendingCount > 0 ? (
+                <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-bold text-white">
+                  {localStockPendingCount > 9 ? "9+" : localStockPendingCount}
+                </span>
+              ) : null}
             </Link>
-          ) : (
-            <span className="text-zinc-500">Set a URL slug under Yard profile to publish.</span>
-          )}
+          ) : null}
+          <Link href="/dashboard/seller-profile" className="font-medium text-brand hover:underline">
+            Shop &amp; SEO
+          </Link>
+          <Link
+            href={publicShopHref}
+            className="font-medium text-emerald-800 hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View public shop
+          </Link>
         </div>
       ) : null}
       {stripeParam === "success" && sellerProfile.stripeAccountId && (

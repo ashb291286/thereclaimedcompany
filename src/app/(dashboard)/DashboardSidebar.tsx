@@ -59,7 +59,7 @@ export function DashboardSidebar({
 
   if (isYardAccount) {
     items.push({ href: "/dashboard/nearby-stock", label: "Nearby stock" });
-    items.push({ href: "/dashboard/seller-profile", label: "Yard profile" });
+    items.push({ href: "/dashboard/seller-profile", label: "Shop & SEO" });
     items.push({ href: "/dashboard/prop-yard", label: "Prop Yard", accent: "prop" });
   }
   if (carbonAdmin) {

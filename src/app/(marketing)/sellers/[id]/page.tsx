@@ -212,6 +212,14 @@ export default async function SellerPage({
         </aside>
         </section>
 
+        <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-5">
+          <h2 className="text-lg font-semibold text-zinc-900">Why buy from a dealer</h2>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+            Dealers typically curate stock, provide clearer condition context, and can help match pieces across eras
+            and styles. Following a dealer profile also makes it easier to track fresh arrivals that fit your project.
+          </p>
+        </section>
+
         <section className="mt-8">
         <h2 className="text-lg font-semibold text-zinc-900">For sale</h2>
         {forSaleListings.length === 0 ? (
@@ -244,7 +252,7 @@ export default async function SellerPage({
 
       {relatedDealers.length > 0 ? (
         <section className="mt-10 border-t border-zinc-200 pt-8">
-          <h2 className="text-lg font-semibold text-zinc-900">Other nearby dealers</h2>
+          <h2 className="text-lg font-semibold text-zinc-900">Other dealers you may like</h2>
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {relatedDealers.map((d) => (
               <Link key={d.userId} href={`/sellers/${d.userId}`} className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 hover:border-brand/40">
