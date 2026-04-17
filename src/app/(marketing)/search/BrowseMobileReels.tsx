@@ -400,7 +400,16 @@ export function BrowseMobileReels({
               </div>
 
               <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end p-4 pb-32 pt-16 text-white">
-                <div className="mb-2 flex min-h-[20px] flex-wrap content-start items-start gap-1.5">
+                <div className="pointer-events-none absolute right-4 top-8 z-10 drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]" aria-hidden>
+                  <Image
+                    src="/images/the-reclaimed-company-logo.png"
+                    alt=""
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 object-contain opacity-95"
+                  />
+                </div>
+                <div className="mb-2 flex min-h-[20px] flex-wrap content-start items-start gap-1.5 pr-11">
                   {l.listingKind === "auction" && (
                     <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide backdrop-blur-sm">
                       Auction
@@ -427,7 +436,7 @@ export function BrowseMobileReels({
                     </span>
                   ) : null}
                 </div>
-                <p className="line-clamp-2 text-lg font-semibold leading-snug drop-shadow-sm">{l.title}</p>
+                <p className="line-clamp-2 pr-10 text-lg font-semibold leading-snug drop-shadow-sm">{l.title}</p>
                 <p className="mt-1 text-sm font-medium text-white/95">
                   {l.freeToCollectPrice ? (
                     "Free to collect"

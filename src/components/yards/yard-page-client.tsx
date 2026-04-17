@@ -231,6 +231,15 @@ export function YardRecentStrip({ listings }: { listings: YardListingCard[] }) {
               ) : (
                 <div className="flex h-full items-center justify-center text-xs text-zinc-400">No image</div>
               )}
+              <div className="pointer-events-none absolute right-1 top-1 z-10 drop-shadow-sm" aria-hidden>
+                <Image
+                  src="/images/the-reclaimed-company-logo.png"
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="h-6 w-6 object-contain opacity-90"
+                />
+              </div>
             </div>
             <p className="line-clamp-2 p-2 text-xs font-medium text-zinc-900">{l.title}</p>
           </Link>

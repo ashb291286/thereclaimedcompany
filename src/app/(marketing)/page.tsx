@@ -6,6 +6,7 @@ import { TestimonialMarqueeFeed } from "./TestimonialMarqueeFeed";
 import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
+import { MarketplaceListingCardBrandMark } from "@/components/branding/MarketplaceListingCardBrandMark";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
 
 function auctionCountdownLabel(endsAt: Date | null): string | null {
@@ -167,8 +168,9 @@ export default async function HomePage() {
                       </div>
                     )}
                   </div>
-                  <div className="p-3">
-                    <div className="mb-1 flex min-h-[18px] flex-wrap content-start items-start gap-1">
+                  <div className="relative p-3">
+                    <MarketplaceListingCardBrandMark />
+                    <div className="mb-1 flex min-h-[18px] flex-wrap content-start items-start gap-1 pr-10">
                       {l.listingKind === "auction" && (
                         <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
                           Auction
@@ -185,7 +187,7 @@ export default async function HomePage() {
                         </span>
                       )}
                     </div>
-                    <p className="truncate font-medium text-zinc-900">{l.title}</p>
+                    <p className="truncate pr-10 font-medium text-zinc-900">{l.title}</p>
                     <BrowseListingPriceLine
                       listingKind={l.listingKind}
                       freeToCollector={l.freeToCollector}

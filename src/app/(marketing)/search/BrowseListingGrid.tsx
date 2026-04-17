@@ -7,6 +7,7 @@ import { buyerGrossPenceFromSellerNetPence, sellerChargesVat, vatLabelSuffix } f
 import { parseStoredCarbonImpact } from "@/lib/carbon/stored-impact";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
+import { MarketplaceListingCardBrandMark } from "@/components/branding/MarketplaceListingCardBrandMark";
 import type { SearchListingRow } from "@/lib/listing-search";
 
 function auctionCountdownLabel(endsAt: Date | null): string | null {
@@ -72,8 +73,9 @@ export function BrowseListingGrid({
                   <div className="flex h-full w-full items-center justify-center text-zinc-400">No image</div>
                 )}
               </div>
-              <div className="p-3">
-                <div className="mb-1 flex min-h-[18px] flex-wrap content-start items-start gap-1">
+              <div className="relative p-3">
+                <MarketplaceListingCardBrandMark />
+                <div className="mb-1 flex min-h-[18px] flex-wrap content-start items-start gap-1 pr-10">
                   {l.listingKind === "auction" && (
                     <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
                       Auction
@@ -100,7 +102,7 @@ export function BrowseListingGrid({
                     </span>
                   ) : null}
                 </div>
-                <p className="truncate font-medium text-zinc-900">{l.title}</p>
+                <p className="truncate pr-10 font-medium text-zinc-900">{l.title}</p>
                 <BrowseListingPriceLine
                   listingKind={l.listingKind}
                   freeToCollector={l.freeToCollector}

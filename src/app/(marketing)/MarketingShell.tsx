@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { Session } from "next-auth";
 import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
@@ -37,11 +38,14 @@ export function MarketingShell({
           }`}
         >
           <div className="mx-auto flex min-h-16 w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6 sm:py-0">
-            <Link href="/" className="flex items-center gap-3">
-              <img
-                src="https://thereclaimedcompany.com/wp-content/uploads/2022/09/the-reclaimed-company-logo-1-1.webp"
-                alt="The Reclaimed Company"
-                className="h-10 w-auto"
+            <Link href="/" className="flex items-center gap-2" aria-label="The Reclaimed Company — home">
+              <Image
+                src="/images/the-reclaimed-company-logo.png"
+                alt=""
+                width={160}
+                height={160}
+                className="h-10 w-10 object-contain sm:h-11 sm:w-11"
+                priority
               />
             </Link>
             <button
@@ -212,10 +216,12 @@ export function MarketingShell({
               <div className="mt-8 border-t border-b border-white/20 py-8">
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-[1.7fr_1fr_1fr_1fr_1fr]">
                   <div className="space-y-4">
-                    <img
-                      src="https://thereclaimedcompany.com/wp-content/uploads/2022/09/the-reclaimed-company-logo-1-1.webp"
-                      alt="Reclaimed"
-                      className="h-16 w-16 rounded-full border border-white/30 object-cover"
+                    <Image
+                      src="/images/the-reclaimed-company-logo.png"
+                      alt="The Reclaimed Company"
+                      width={200}
+                      height={200}
+                      className="h-20 w-20 object-contain sm:h-24 sm:w-24"
                     />
                     <p className="max-w-[230px] text-xl leading-snug tracking-tight text-white/95 sm:text-2xl">
                       Make this official, join and access the future of reclamation.
