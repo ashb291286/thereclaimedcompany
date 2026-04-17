@@ -432,6 +432,12 @@ export default async function AdminOverviewPage({
                         <Link href={`/blog/${p.slug}`} target="_blank" className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50">
                           View
                         </Link>
+                        <Link
+                          href={`/dashboard/admin/blog/${p.id}/edit`}
+                          className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+                        >
+                          Edit
+                        </Link>
                         <form action={adminSetBlogPublishedAction}>
                           <input type="hidden" name="id" value={p.id} />
                           <input type="hidden" name="published" value={p.published ? "0" : "1"} />

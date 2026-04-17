@@ -147,6 +147,63 @@ export async function adminCreateBlogPostAction(formData: FormData): Promise<voi
   revalidatePath("/dashboard/admin");
 }
 
+export async function adminUpdateBlogPostAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim().slice(0, 180);
+  const slugInput = String(formData.get("slug") ?? "").trim();
+  const excerptRaw = String(formData.get("excerpt") ?? "").trim();
+  const featuredImageUrlRaw = String(formData.get("featuredImageUrl") ?? "").trim();
+  const htmlContent = String(formData.get("htmlContent") ?? "").trim();
+  const published = String(formData.get("published") ?? "") === "on";
+  if (!id || !title || !htmlContent) return;
+
+  const existing = await prisma.blogPost.findUnique({
+    where: { id },
+    select: { slug: true, publishedAt: true },
+  });
+  if (!existing) return;
+
+  const newSlug = slugify(slugInput || title);
+  if (!newSlug) return;
+
+  const slugOwner = await prisma.blogPost.findFirst({
+    where: { slug: newSlug, NOT: { id } },
+    select: { id: true },
+  });
+  if (slugOwner) redirect(`/dashboard/admin/blog/${id}/edit?error=blog_slug_taken`);
+
+  const featuredImageUrl =
+    featuredImageUrlRaw && /^https?:\/\//i.test(featuredImageUrlRaw)
+      ? featuredImageUrlRaw.slice(0, 2048)
+      : null;
+
+  const publishedAt = published ? (existing.publishedAt ?? new Date()) : null;
+
+  await prisma.blogPost.update({
+    where: { id },
+    data: {
+      title,
+      slug: newSlug,
+      excerpt: excerptRaw ? excerptRaw.slice(0, 300) : null,
+      featuredImageUrl,
+      htmlContent,
+      published,
+      publishedAt,
+    },
+  });
+
+  if (existing.slug !== newSlug) {
+    revalidatePath(`/blog/${existing.slug}`);
+  }
+  revalidatePath("/");
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${newSlug}`);
+  revalidatePath("/dashboard/admin");
+  revalidatePath(`/dashboard/admin/blog/${id}/edit`);
+  redirect(`/dashboard/admin/blog/${id}/edit`);
+}
+
 export async function adminDeleteBlogPostAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();

@@ -4,11 +4,13 @@ import { type ChangeEvent, useMemo, useRef, useState } from "react";
 
 type Props = {
   name?: string;
+  /** Initial URL when editing an existing post */
+  defaultUrl?: string | null;
 };
 
-export function BlogFeaturedImageField({ name = "featuredImageUrl" }: Props) {
+export function BlogFeaturedImageField({ name = "featuredImageUrl", defaultUrl = null }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState(() => (defaultUrl ?? "").trim());
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
