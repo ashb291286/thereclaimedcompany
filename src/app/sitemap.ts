@@ -28,7 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           take: 5000,
         }),
         prisma.category.findMany({
-          select: { slug: true, updatedAt: true },
+          select: { slug: true },
         }),
         prisma.sellerProfile.findMany({
           where: { yardSlug: { not: null }, user: { role: "reclamation_yard" } },
@@ -61,7 +61,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const categoryRoutes: MetadataRoute.Sitemap = categories.map((c) => ({
       url: `${base}/categories/${c.slug}`,
-      lastModified: c.updatedAt,
+      // Category model has no updatedAt field in Prisma schema.
+      lastModified: now,
       changeFrequency: "weekly",
       priority: 0.7,
     }));
