@@ -99,7 +99,7 @@ export default async function SearchPage({
     redirect(`/search?${sp.toString()}`);
   }
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
-  const pageSize = 12;
+  const pageSize = 15;
   const skip = (page - 1) * pageSize;
   const sellerPage = Math.max(1, parseInt(params.sellerPage ?? "1", 10));
   const sellerPageSize = 12;

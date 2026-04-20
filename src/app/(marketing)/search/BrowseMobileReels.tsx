@@ -242,7 +242,7 @@ export function BrowseMobileReels({
     try {
       const qs = new URLSearchParams(queryString);
       qs.set("page", String(nextPage));
-      qs.set("pageSize", "12");
+      qs.set("pageSize", "15");
       const res = await fetch(`/api/listings?${qs.toString()}`, { method: "GET" });
       if (!res.ok) throw new Error("Failed to load listings");
       const data = (await res.json()) as { listings: ApiListingRow[]; page: number };

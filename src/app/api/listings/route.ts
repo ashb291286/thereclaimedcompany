@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     .filter(Boolean)
     .slice(0, 48);
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const pageSize = Math.min(24, parseInt(searchParams.get("pageSize") ?? "12", 10));
+  const pageSize = Math.min(24, parseInt(searchParams.get("pageSize") ?? "15", 10));
   const skip = (page - 1) * pageSize;
 
   const session = await auth();
