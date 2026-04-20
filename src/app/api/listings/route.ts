@@ -1,5 +1,6 @@
 import { parseBrowseRadiusParam } from "@/lib/browse-radius";
 import { resolveCategoryBrowseRow } from "@/lib/category-browse";
+import { withProxiedListingImages } from "@/lib/listing-image-url";
 import { searchListings } from "@/lib/listing-search";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
