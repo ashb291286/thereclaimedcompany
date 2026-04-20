@@ -228,6 +228,15 @@ export default async function AdminOverviewPage({
   const [userCount, suspendedCount, yardCount, listingCount, activeListingCount, activeAuctionCount] = stats;
   const notifByTypeSorted = [...notifByType].sort((a, b) => b._count.id - a._count.id);
   const smtpConfigured = Boolean(process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
+  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() ?? "";
+  const gaPropertyId = process.env.NEXT_PUBLIC_GA_PROPERTY_ID?.trim() ?? "";
+  const gaConnected = Boolean(gaMeasurementId);
+  const gaRealtimeUrl = gaPropertyId
+    ? `https://analytics.google.com/analytics/web/#/p${encodeURIComponent(gaPropertyId)}/reports/realtime`
+    : "https://analytics.google.com/analytics/web/";
+  const gaReportsUrl = gaPropertyId
+    ? `https://analytics.google.com/analytics/web/#/p${encodeURIComponent(gaPropertyId)}/reports`
+    : "https://analytics.google.com/analytics/web/";
   const smtpFromPreview =
     process.env.MAIL_FROM?.trim() ||
     process.env.SMTP_FROM?.trim() ||
@@ -1033,6 +1042,74 @@ export default async function AdminOverviewPage({
             Add-to-Home-Screen instructions (Safari).
           </li>
         </ul>
+      </section>
+
+      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-zinc-900">Analytics (GA4)</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Google Analytics is injected globally in <code className="rounded bg-zinc-100 px-1">src/app/layout.tsx</code>
+          when <code className="rounded bg-zinc-100 px-1">NEXT_PUBLIC_GA_MEASUREMENT_ID</code> is present.
+        </p>
+        <div className="mt-4 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
+            <h3 className="text-sm font-semibold text-zinc-900">Connection status</h3>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-700">
+              <li>
+                Tracking:{" "}
+                <span className={gaConnected ? "font-medium text-emerald-800" : "font-medium text-amber-800"}>
+                  {gaConnected ? "Enabled" : "Not configured"}
+                </span>
+              </li>
+              <li>
+                Measurement ID:{" "}
+                <code className="rounded bg-zinc-200 px-1 text-xs">
+                  {gaMeasurementId || "missing (set NEXT_PUBLIC_GA_MEASUREMENT_ID)"}
+                </code>
+              </li>
+              <li>
+                GA4 Property ID:{" "}
+                <code className="rounded bg-zinc-200 px-1 text-xs">
+                  {gaPropertyId || "optional (set NEXT_PUBLIC_GA_PROPERTY_ID for deep links)"}
+                </code>
+              </li>
+            </ul>
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
+            <h3 className="text-sm font-semibold text-zinc-900">Reporting links</h3>
+            <p className="mt-2 text-sm text-zinc-700">
+              Open GA dashboards for traffic, acquisition, and conversion monitoring.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a
+                href={gaRealtimeUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100"
+              >
+                Open Realtime
+              </a>
+              <a
+                href={gaReportsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100"
+              >
+                Open Reports
+              </a>
+              <a
+                href="https://analytics.google.com/analytics/web/"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100"
+              >
+                Open GA Home
+              </a>
+            </div>
+            <p className="mt-3 text-xs text-zinc-600">
+              Set env vars in Vercel project settings (Production/Preview as needed), then redeploy.
+            </p>
+          </div>
+        </div>
       </section>
     </div>
   );
