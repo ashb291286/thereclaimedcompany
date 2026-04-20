@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { isCarbonAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getMaterialOptionsForForm } from "@/lib/carbon/factors";
 import { redirect, notFound } from "next/navigation";
@@ -15,19 +16,20 @@ export default async function EditListingPage({
   if (!session?.user?.id) redirect("/auth/signin");
   const { id } = await params;
   const { error } = await searchParams;
+  const isAdmin = isCarbonAdmin(session);
 
-  const listing = await prisma.listing.findFirst({
-    where: { id, sellerId: session.user.id },
+  const listing = await prisma.listing.findUnique({
+    where: { id },
     include: { category: true },
   });
-  if (!listing) notFound();
+  if (!listing || (!isAdmin && listing.sellerId !== session.user.id)) notFound();
 
   const sellerProfile = await prisma.sellerProfile.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: listing.sellerId },
   });
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: listing.sellerId },
     select: { role: true },
   });
 

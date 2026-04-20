@@ -928,6 +928,12 @@ export default async function AdminOverviewPage({
                   <td className="py-2 pr-3 text-zinc-700">{l.visibleOnMarketplace ? "Yes" : "No"}</td>
                   <td className="py-2">
                     <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/dashboard/listings/${l.id}/edit`}
+                        className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+                      >
+                        Edit
+                      </Link>
                       <form action={adminSetListingVisibilityAction}>
                         <input type="hidden" name="listingId" value={l.id} />
                         <input type="hidden" name="visible" value={l.visibleOnMarketplace ? "0" : "1"} />

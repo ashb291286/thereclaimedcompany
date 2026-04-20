@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
+import { isCarbonAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import {
@@ -416,14 +417,17 @@ export async function createListing(formData: FormData) {
 export async function updateListing(id: string, formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
+  const canAdminEdit = isCarbonAdmin(session);
 
-  const listing = await prisma.listing.findFirst({
-    where: { id, sellerId: session.user.id },
+  const listing = await prisma.listing.findUnique({
+    where: { id },
   });
-  if (!listing) redirect("/dashboard?error=Listing+not+found");
+  if (!listing || (!canAdminEdit && listing.sellerId !== session.user.id)) {
+    redirect("/dashboard?error=Listing+not+found");
+  }
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: listing.sellerId },
     select: { role: true },
   });
 
