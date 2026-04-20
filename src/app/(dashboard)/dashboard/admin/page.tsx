@@ -10,6 +10,8 @@ import {
   adminSetListingStatusAction,
   adminSetListingVisibilityAction,
   adminSetBlogPublishedAction,
+  adminCreateOnboardedSellerAction,
+  adminAssignListingToUserAction,
   adminSetUserRoleAction,
   adminUpdateMarketplaceFeesAction,
   adminToggleUserSuspensionAction,
@@ -74,6 +76,7 @@ export default async function AdminOverviewPage({
     notificationUnread,
     blogPosts,
     feeSettings,
+    onboardedProfiles,
   ] = await Promise.all([
     prisma.user.findMany({
       where: userQ
@@ -213,6 +216,20 @@ export default async function AdminOverviewPage({
       },
     }),
     prisma.marketplaceFeeSettings.findUnique({ where: { id: "default" } }),
+    prisma.sellerProfile.findMany({
+      where: { importedByAdmin: true },
+      orderBy: { updatedAt: "desc" },
+      take: 20,
+      include: {
+        user: {
+          select: {
+            id: true,
+            role: true,
+            _count: { select: { listings: true, ordersAsSeller: true } },
+          },
+        },
+      },
+    }),
   ]);
   const effectiveFeeSettings = {
     commissionPercentBps: feeSettings?.commissionPercentBps ?? 1000,
@@ -273,6 +290,26 @@ export default async function AdminOverviewPage({
       {error === "blog_slug_taken" ? (
         <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
           Blog slug already exists. Use a unique slug.
+        </p>
+      ) : null}
+      {error === "onboard_missing" ? (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          Onboarding requires display name and a valid postcode.
+        </p>
+      ) : null}
+      {error === "onboard_postcode" ? (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          Onboarding failed: postcode could not be validated.
+        </p>
+      ) : null}
+      {error === "onboard_slug_taken" ? (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          That yard slug is already in use. Choose another or leave it blank for auto-allocation.
+        </p>
+      ) : null}
+      {error === "onboard_target" ? (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          Listing assignment target must be an imported admin-onboarded seller profile.
         </p>
       ) : null}
 
@@ -345,6 +382,114 @@ export default async function AdminOverviewPage({
       </section>
 
       <SellerProfileImportForm />
+
+      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-zinc-900">Admin onboarded sellers</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Create placeholder seller accounts with claim codes, then assign listings so the real owner can claim the
+          profile later.
+        </p>
+
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          <form action={adminCreateOnboardedSellerAction} className="grid gap-3 rounded-lg border border-zinc-200 p-4">
+            <h3 className="text-sm font-semibold text-zinc-900">Create onboarded seller + yard profile</h3>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm">
+                <span className="mb-1 block text-xs font-medium text-zinc-700">Role</span>
+                <select name="role" defaultValue="reclamation_yard" className="w-full rounded border border-zinc-300 px-3 py-2 text-sm">
+                  <option value="reclamation_yard">Reclamation yard</option>
+                  <option value="dealer">Dealer</option>
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs font-medium text-zinc-700">Postcode</span>
+                <input name="postcode" required placeholder="e.g. LS1 4AP" className="w-full rounded border border-zinc-300 px-3 py-2 text-sm" />
+              </label>
+            </div>
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-medium text-zinc-700">Display name</span>
+              <input name="displayName" required placeholder="Public business/person name" className="w-full rounded border border-zinc-300 px-3 py-2 text-sm" />
+            </label>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm">
+                <span className="mb-1 block text-xs font-medium text-zinc-700">Business name (yards)</span>
+                <input name="businessName" placeholder="Optional" className="w-full rounded border border-zinc-300 px-3 py-2 text-sm" />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs font-medium text-zinc-700">Yard slug (optional)</span>
+                <input name="yardSlug" placeholder="auto if empty" className="w-full rounded border border-zinc-300 px-3 py-2 text-sm" />
+              </label>
+            </div>
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-medium text-zinc-700">Claim contact email (optional)</span>
+              <input name="claimContactEmail" type="email" placeholder="owner@example.com" className="w-full rounded border border-zinc-300 px-3 py-2 text-sm" />
+            </label>
+            <div>
+              <button type="submit" className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800">
+                Create onboarded seller
+              </button>
+            </div>
+          </form>
+
+          <form action={adminAssignListingToUserAction} className="grid gap-3 rounded-lg border border-zinc-200 p-4">
+            <h3 className="text-sm font-semibold text-zinc-900">Assign listing to onboarded seller</h3>
+            <p className="text-xs text-zinc-600">
+              Moves an existing listing to the target onboarded user account.
+            </p>
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-medium text-zinc-700">Listing ID</span>
+              <input name="listingId" required placeholder="clx..." className="w-full rounded border border-zinc-300 px-3 py-2 text-sm font-mono" />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-medium text-zinc-700">Target user ID (onboarded seller)</span>
+              <input name="targetUserId" required placeholder="clx..." className="w-full rounded border border-zinc-300 px-3 py-2 text-sm font-mono" />
+            </label>
+            <div>
+              <button type="submit" className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-semibold hover:bg-zinc-50">
+                Assign listing
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="mt-5 overflow-x-auto rounded-lg border border-zinc-200">
+          <table className="min-w-full text-sm">
+            <thead className="text-left text-xs uppercase tracking-wide text-zinc-500">
+              <tr>
+                <th className="px-3 py-2">Seller</th>
+                <th className="px-3 py-2">User ID</th>
+                <th className="px-3 py-2">Role</th>
+                <th className="px-3 py-2">Claim code</th>
+                <th className="px-3 py-2">Listings</th>
+                <th className="px-3 py-2">Orders</th>
+              </tr>
+            </thead>
+            <tbody>
+              {onboardedProfiles.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-3 py-5 text-center text-zinc-500">
+                    No admin-onboarded profiles yet.
+                  </td>
+                </tr>
+              ) : (
+                onboardedProfiles.map((p) => (
+                  <tr key={p.id} className="border-t border-zinc-100">
+                    <td className="px-3 py-2">
+                      <p className="font-medium text-zinc-900">{p.businessName || p.displayName}</p>
+                      <p className="text-xs text-zinc-500">{p.yardSlug ? `/yards/${p.yardSlug}` : `/sellers/${p.userId}`}</p>
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs text-zinc-700">{p.userId}</td>
+                    <td className="px-3 py-2 text-zinc-700">{p.user.role}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-zinc-900">{p.claimCode || "—"}</td>
+                    <td className="px-3 py-2 text-zinc-700">{p.user._count.listings}</td>
+                    <td className="px-3 py-2 text-zinc-700">{p.user._count.ordersAsSeller}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-zinc-900">Blog publishing</h2>

@@ -70,16 +70,23 @@ export async function claimImportedSellerProfileAction(
   }
 
   const hasCommercialActivity =
-    target.user._count.listings > 0 || target.user._count.ordersAsSeller > 0;
+    target.user._count.ordersAsSeller > 0;
   if (hasCommercialActivity) {
     return {
       status: "error",
       message:
-        "This profile already has marketplace activity and requires admin support for transfer. Please contact support.",
+        "This profile already has seller orders and requires admin support for transfer. Please contact support.",
     };
   }
 
   await prisma.$transaction(async (tx) => {
+    if (target.user._count.listings > 0) {
+      await tx.listing.updateMany({
+        where: { sellerId: target.userId },
+        data: { sellerId: me.id },
+      });
+    }
+
     await tx.user.update({
       where: { id: me.id },
       data: { role: target.user.role ?? "dealer", registrationIntent: "selling" },

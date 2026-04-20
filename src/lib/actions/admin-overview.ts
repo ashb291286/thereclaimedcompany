@@ -1,11 +1,14 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { isCarbonAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ListingStatus, UserRole } from "@/generated/prisma/client";
+import { lookupUkPostcode } from "@/lib/postcode-uk";
+import { allocateYardSlug } from "@/lib/yard-slug";
 
 async function requireAdmin(): Promise<void> {
   const session = await auth();
@@ -232,6 +235,102 @@ export async function adminSetBlogPublishedAction(formData: FormData): Promise<v
   revalidatePath("/");
   revalidatePath("/blog");
   revalidatePath(`/blog/${post.slug}`);
+  revalidatePath("/dashboard/admin");
+}
+
+function randomClaimCode(): string {
+  return randomBytes(6).toString("hex").toUpperCase();
+}
+
+export async function adminCreateOnboardedSellerAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+
+  const roleRaw = String(formData.get("role") ?? "").trim();
+  const role: UserRole = roleRaw === "dealer" ? "dealer" : "reclamation_yard";
+  const displayName = String(formData.get("displayName") ?? "").trim().slice(0, 200);
+  const businessNameRaw = String(formData.get("businessName") ?? "").trim().slice(0, 200);
+  const postcodeRaw = String(formData.get("postcode") ?? "").trim();
+  const claimContactEmailRaw = String(formData.get("claimContactEmail") ?? "").trim().toLowerCase();
+  const yardSlugRaw = String(formData.get("yardSlug") ?? "").trim().toLowerCase();
+
+  if (!displayName || !postcodeRaw) {
+    redirect("/dashboard/admin?error=onboard_missing");
+  }
+
+  const postcode = await lookupUkPostcode(postcodeRaw);
+  if (!postcode) {
+    redirect("/dashboard/admin?error=onboard_postcode");
+  }
+
+  const claimContactEmail = claimContactEmailRaw || null;
+
+  const user = await prisma.user.create({
+    data: {
+      email: null,
+      password: null,
+      name: displayName,
+      role,
+      registrationIntent: "selling",
+    },
+    select: { id: true },
+  });
+
+  let yardSlug: string | null = null;
+  if (role === "reclamation_yard") {
+    if (yardSlugRaw) {
+      const taken = await prisma.sellerProfile.findUnique({
+        where: { yardSlug: yardSlugRaw },
+        select: { id: true },
+      });
+      if (taken) {
+        redirect("/dashboard/admin?error=onboard_slug_taken");
+      }
+      yardSlug = yardSlugRaw;
+    } else {
+      yardSlug = await allocateYardSlug(prisma, businessNameRaw || displayName, user.id);
+    }
+  }
+
+  await prisma.sellerProfile.create({
+    data: {
+      userId: user.id,
+      businessName: role === "reclamation_yard" ? businessNameRaw || null : null,
+      displayName,
+      postcode: postcode.postcode,
+      lat: postcode.lat,
+      lng: postcode.lng,
+      adminDistrict: postcode.adminDistrict,
+      region: postcode.region,
+      postcodeLocality: postcode.postcodeLocality,
+      yardSlug,
+      importedByAdmin: true,
+      claimCode: randomClaimCode(),
+      claimContactEmail,
+    },
+  });
+
+  revalidatePath("/dashboard/admin");
+}
+
+export async function adminAssignListingToUserAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const listingId = String(formData.get("listingId") ?? "").trim();
+  const targetUserId = String(formData.get("targetUserId") ?? "").trim();
+  if (!listingId || !targetUserId) return;
+
+  const target = await prisma.sellerProfile.findUnique({
+    where: { userId: targetUserId },
+    select: { userId: true, importedByAdmin: true },
+  });
+  if (!target?.importedByAdmin) {
+    redirect("/dashboard/admin?error=onboard_target");
+  }
+
+  await prisma.listing.update({
+    where: { id: listingId },
+    data: { sellerId: target.userId },
+  });
+
   revalidatePath("/dashboard/admin");
 }
 
