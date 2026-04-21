@@ -24,7 +24,7 @@ function auctionCountdownLabel(endsAt: Date | null): string | null {
 }
 
 export default async function HomePage() {
-  const [listings, demolitionAlerts, blogPosts] = await Promise.all([
+  const [listings, demolitionAlerts, blogPosts, latestYards] = await Promise.all([
     prisma.listing.findMany({
       where: { status: "active", visibleOnMarketplace: true },
       orderBy: [{ boostedUntil: "desc" }, { createdAt: "desc" }],
@@ -51,6 +51,26 @@ export default async function HomePage() {
         featuredImageUrl: true,
         publishedAt: true,
         createdAt: true,
+      },
+    }),
+    prisma.sellerProfile.findMany({
+      where: {
+        yardSlug: { not: null },
+        user: { role: "reclamation_yard" },
+      },
+      orderBy: [{ user: { createdAt: "desc" } }, { updatedAt: "desc" }],
+      take: 6,
+      select: {
+        id: true,
+        yardSlug: true,
+        displayName: true,
+        businessName: true,
+        yardTagline: true,
+        postcode: true,
+        postcodeLocality: true,
+        adminDistrict: true,
+        region: true,
+        yardLogoUrl: true,
       },
     }),
   ]);
@@ -310,6 +330,71 @@ export default async function HomePage() {
             </p>
           )}
         </div>
+      </section>
+
+      <section className="mx-auto mt-10 w-full max-w-7xl px-4 sm:px-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-zinc-900">Latest reclamation yards</h2>
+          <Link href="/reclamation-yards" className="text-sm font-medium text-brand hover:underline">
+            View all yards
+          </Link>
+        </div>
+        <p className="mb-6 rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
+          Newly listed yards and salvage specialists joining The Reclaimed Company.
+        </p>
+        {latestYards.length > 0 ? (
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {latestYards.map((yard) => (
+              <li key={yard.id}>
+                <Link
+                  href={`/yards/${yard.yardSlug}`}
+                  className="block h-full overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
+                >
+                  <div className="relative aspect-square bg-zinc-100">
+                    {yard.yardLogoUrl ? (
+                      <Image
+                        src={yard.yardLogoUrl}
+                        alt={`${yard.businessName?.trim() || yard.displayName} logo`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-zinc-200 text-4xl font-semibold text-zinc-500">
+                        {(yard.businessName?.trim() || yard.displayName).slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-brand">Reclamation yard</p>
+                    <p className="mt-1 truncate font-medium text-zinc-900">
+                      {yard.businessName?.trim() || yard.displayName}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {formatUkLocationLine({
+                        postcodeLocality: yard.postcodeLocality,
+                        adminDistrict: yard.adminDistrict,
+                        region: yard.region,
+                        postcode: yard.postcode,
+                      })}
+                    </p>
+                    {yard.yardTagline?.trim() ? (
+                      <p className="mt-2 line-clamp-2 text-sm text-zinc-600">{yard.yardTagline.trim()}</p>
+                    ) : (
+                      <p className="mt-2 text-sm text-zinc-500">Browse this yard's latest reclaimed stock.</p>
+                    )}
+                    <p className="mt-3 text-sm font-medium text-brand">View yard</p>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500">
+            No yards listed yet. Check back soon.
+          </p>
+        )}
       </section>
 
       <TestimonialMarqueeFeed />
