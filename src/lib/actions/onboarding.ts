@@ -25,6 +25,8 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   const vatRegisteredRaw = String(formData.get("vatRegistered") ?? "").trim();
   const vatNumberRaw = String(formData.get("vatNumber") ?? "").trim();
   const salvoCodeMemberRaw = String(formData.get("salvoCodeMember") ?? "").trim();
+  const isRegisteredCharityRaw = String(formData.get("isRegisteredCharity") ?? "").trim();
+  const charityNumberRaw = String(formData.get("charityNumber") ?? "").trim();
 
   if (!sellerType || !displayName?.trim() || !postcodeRaw?.trim()) {
     redirect("/dashboard/onboarding?error=Display+name+and+postcode+required");
@@ -71,6 +73,15 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
     );
   }
   const salvoCodeMember = sellerType === "reclamation_yard" && salvoCodeMemberRaw === "yes";
+  const isRegisteredCharity =
+    (sellerType === "reclamation_yard" || sellerType === "dealer") && isRegisteredCharityRaw === "yes";
+  const charityNumber = isRegisteredCharity ? charityNumberRaw.toUpperCase().replace(/\s+/g, "") : "";
+  if (isRegisteredCharity && charityNumber.length < 5) {
+    redirect(
+      "/dashboard/onboarding?error=" +
+        encodeURIComponent("Enter a valid charity number when registered charity is selected.")
+    );
+  }
   if (sellerType === "reclamation_yard") {
     const baseName = (businessName?.trim() || displayName.trim()) as string;
     yardSlug = await allocateYardSlug(prisma, baseName, session.user.id);
@@ -102,6 +113,8 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
           sellerType === "reclamation_yard" || sellerType === "dealer" ? vatRegistered : false,
         vatNumber: vatRegistered ? vatNumber : null,
         salvoCodeMember,
+        isRegisteredCharity,
+        charityNumber: isRegisteredCharity ? charityNumber : null,
       },
     }),
   ]);

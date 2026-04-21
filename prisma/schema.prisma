@@ -208,6 +208,10 @@ model SellerProfile {
   vatNumber         String?
   /// Indicates the yard is part of the Salvo Code.
   salvoCodeMember   Boolean   @default(false)
+  /// Registered UK charity sellers pay Stripe processing only (no seller/platform commission fees).
+  isRegisteredCharity Boolean @default(false)
+  /// UK Charity Commission / regulator number shown only for compliance/admin use.
+  charityNumber      String?
   stripeAccountId   String?   // Stripe Connect account id when onboarding complete
   /// Up to three buyer-facing material labels (e.g. timber, brick) for SEO H2 and pills.
   yardPrimaryMaterials      String[] @default([])

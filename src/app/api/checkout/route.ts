@@ -6,7 +6,11 @@ import { ListingPricingMode } from "@/generated/prisma/client";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat } from "@/lib/vat-pricing";
 import { getSiteBaseUrl } from "@/lib/site-url";
-import { calculateMarketplaceFees, getMarketplaceFeeSettings } from "@/lib/marketplace-fees";
+import {
+  applyCharitySupportFeePolicy,
+  calculateMarketplaceFees,
+  getMarketplaceFeeSettings,
+} from "@/lib/marketplace-fees";
 import { NextResponse } from "next/server";
 
 const MAX_CHECKOUT_QUANTITY = 10_000;
@@ -229,7 +233,10 @@ export async function POST(req: Request) {
   }
 
   const feeSettings = await getMarketplaceFeeSettings();
-  const feeBreakdown = calculateMarketplaceFees(amount, feeSettings);
+  const feeBreakdown = applyCharitySupportFeePolicy(
+    calculateMarketplaceFees(amount, feeSettings),
+    Boolean(sellerProfile?.isRegisteredCharity)
+  );
   const applicationFeeAmount = feeBreakdown.totalMarketplaceFeesPence;
 
   const carbonLine =

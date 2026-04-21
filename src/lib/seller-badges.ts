@@ -20,10 +20,11 @@ export function buildSellerBadges(input: {
   role: UserRole | null;
   verificationStatus: string | null;
   memberSince: Date;
+  isRegisteredCharity?: boolean;
 }): SellerBadgeVM[] {
   const badges: SellerBadgeVM[] = [];
 
-  const { paidSalesCount, activeListingsCount, role, verificationStatus, memberSince } = input;
+  const { paidSalesCount, activeListingsCount, role, verificationStatus, memberSince, isRegisteredCharity } = input;
 
   let tier: SellerBadgeVM;
   if (paidSalesCount >= 25) {
@@ -70,6 +71,14 @@ export function buildSellerBadges(input: {
       label: "Salvage yard",
       href: BROWSE_YARDS,
       title: "Find reclamation yards and yards selling reclaimed materials",
+    });
+  }
+  if (isRegisteredCharity) {
+    badges.push({
+      key: "charity",
+      label: "Charity Support",
+      href: BROWSE_RECLAIMED,
+      title: "Support registered charity sellers on the marketplace",
     });
   }
 

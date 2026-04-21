@@ -9,7 +9,7 @@ const searchListingInclude = {
   seller: {
     select: {
       role: true,
-      sellerProfile: { select: { vatRegistered: true, salvoCodeMember: true } },
+      sellerProfile: { select: { vatRegistered: true, salvoCodeMember: true, isRegisteredCharity: true } },
     },
   },
 } as const;

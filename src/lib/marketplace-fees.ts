@@ -80,6 +80,27 @@ export function calculateMarketplaceFees(
   };
 }
 
+export function applyCharitySupportFeePolicy<
+  T extends ReturnType<typeof calculateMarketplaceFees>,
+>(feeBreakdown: T, isRegisteredCharity: boolean): T {
+  if (!isRegisteredCharity) return feeBreakdown;
+  const commissionNetPence = 0;
+  const commissionVatPence = 0;
+  const commissionGrossPence = 0;
+  const digitalMarketplaceFeePence = 0;
+  const totalMarketplaceFeesPence = feeBreakdown.stripeProcessingFeePence;
+  const sellerPayoutPence = Math.max(0, feeBreakdown.grossAmountPence - totalMarketplaceFeesPence);
+  return {
+    ...feeBreakdown,
+    commissionNetPence,
+    commissionVatPence,
+    commissionGrossPence,
+    digitalMarketplaceFeePence,
+    totalMarketplaceFeesPence,
+    sellerPayoutPence,
+  };
+}
+
 export function invoiceNumberForOrder(orderId: string): string {
   return `RM-${orderId.slice(0, 10).toUpperCase()}`;
 }

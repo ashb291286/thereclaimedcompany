@@ -167,6 +167,7 @@ export default async function YardPublicPage({ params }: Props) {
     if (trust[key]) trustPills.push(YARD_TRUST_FLAG_LABELS[key]);
   }
   if (profile.yardCustomTrustLine?.trim()) trustPills.unshift(profile.yardCustomTrustLine.trim());
+  if (profile.isRegisteredCharity) trustPills.unshift("Charity Support");
 
   const delivery = parseYardDeliveryOptionsJson(profile.yardDeliveryOptionsJson);
   const addressLocality =

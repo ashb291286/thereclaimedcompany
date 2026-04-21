@@ -201,6 +201,9 @@ export default async function SellerPage({
           {profile.salvoCodeMember ? (
             <p className="mt-3 rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-900">Salvo Code Member</p>
           ) : null}
+          {profile.isRegisteredCharity ? (
+            <p className="mt-2 rounded bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-900">Charity Support</p>
+          ) : null}
           {profile.openingHoursSchedule || profile.openingHours ? (
             <div className="mt-4">
               <OpeningHoursBlock

@@ -10,6 +10,8 @@ export function YardFieldsToggle() {
   const [vatRegistered, setVatRegistered] = useState(false);
   const [vatNumber, setVatNumber] = useState("");
   const [salvoCodeMember, setSalvoCodeMember] = useState(false);
+  const [isRegisteredCharity, setIsRegisteredCharity] = useState(false);
+  const [charityNumber, setCharityNumber] = useState("");
   const showBusiness = sellerType === "reclamation_yard" || sellerType === "dealer";
   const showSalvo = sellerType === "reclamation_yard";
 
@@ -23,6 +25,8 @@ export function YardFieldsToggle() {
         <input type="hidden" name="vatRegistered" value={vatRegistered ? "yes" : "no"} />
         <input type="hidden" name="vatNumber" value={vatNumber} />
         <input type="hidden" name="salvoCodeMember" value={salvoCodeMember ? "yes" : "no"} />
+        <input type="hidden" name="isRegisteredCharity" value={isRegisteredCharity ? "yes" : "no"} />
+        <input type="hidden" name="charityNumber" value={charityNumber} />
         <div className="grid gap-3 sm:grid-cols-3">
           <button
             type="button"
@@ -133,6 +137,63 @@ export function YardFieldsToggle() {
                 <p className="mt-1 text-xs text-zinc-600">
                   We will save this against your seller profile for invoicing/compliance records.
                 </p>
+              </div>
+            ) : null}
+          </fieldset>
+          <fieldset className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
+            <legend className="px-1 text-sm font-semibold text-zinc-900">Charity support</legend>
+            <p className="mt-1 text-xs text-zinc-600">
+              Registered charities can list without seller fees. You only pay Stripe transaction charges.
+            </p>
+            <div className="mt-3 space-y-2">
+              <label className="flex cursor-pointer gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm has-[:checked]:border-brand has-[:checked]:ring-1 has-[:checked]:ring-brand/25">
+                <input
+                  type="radio"
+                  name="charityChoice"
+                  className="mt-0.5"
+                  checked={!isRegisteredCharity}
+                  onChange={() => {
+                    setIsRegisteredCharity(false);
+                    setCharityNumber("");
+                  }}
+                />
+                <span>
+                  <span className="font-medium text-zinc-900">Not a registered charity</span>
+                  <span className="mt-0.5 block text-xs text-zinc-600">
+                    Standard marketplace seller fees apply.
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm has-[:checked]:border-brand has-[:checked]:ring-1 has-[:checked]:ring-brand/25">
+                <input
+                  type="radio"
+                  name="charityChoice"
+                  className="mt-0.5"
+                  checked={isRegisteredCharity}
+                  onChange={() => setIsRegisteredCharity(true)}
+                />
+                <span>
+                  <span className="font-medium text-zinc-900">Registered charity</span>
+                  <span className="mt-0.5 block text-xs text-zinc-600">
+                    We show a “Charity Support” pill on your profile and listings.
+                  </span>
+                </span>
+              </label>
+            </div>
+            {isRegisteredCharity ? (
+              <div className="mt-3">
+                <label htmlFor="charityNumber" className="block text-xs font-semibold text-zinc-800">
+                  Charity number
+                </label>
+                <input
+                  id="charityNumber"
+                  type="text"
+                  value={charityNumber}
+                  onChange={(e) => setCharityNumber(e.target.value.toUpperCase())}
+                  placeholder="e.g. 1234567"
+                  className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+                <p className="mt-1 text-xs text-zinc-600">Please enter your registered charity number.</p>
               </div>
             ) : null}
           </fieldset>

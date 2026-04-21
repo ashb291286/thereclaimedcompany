@@ -5,6 +5,7 @@ import { purchaseCarbonSnapshotFromListing } from "@/lib/order-carbon";
 import { ListingStatus } from "@/generated/prisma/client";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat } from "@/lib/vat-pricing";
 import {
+  applyCharitySupportFeePolicy,
   calculateMarketplaceFees,
   getMarketplaceFeeSettings,
   invoiceNumberForOrder,
@@ -87,7 +88,10 @@ export async function finalizeAuctionListing(listingId: string): Promise<void> {
   });
   const amount = buyerGrossPenceFromSellerNetPence(top.amountPence, winChargesVat);
   const feeSettings = await getMarketplaceFeeSettings();
-  const feeBreakdown = calculateMarketplaceFees(amount, feeSettings);
+  const feeBreakdown = applyCharitySupportFeePolicy(
+    calculateMarketplaceFees(amount, feeSettings),
+    Boolean(listing.seller.sellerProfile?.isRegisteredCharity)
+  );
   const applicationFeeAmount = feeBreakdown.totalMarketplaceFeesPence;
 
   if (!buyer?.stripeCustomerId || !buyer?.bidPaymentMethodId || !destination) {

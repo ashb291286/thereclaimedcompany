@@ -317,6 +317,7 @@ export default async function ListingPage({
     role: listing.seller?.role ?? null,
     verificationStatus: sellerProfile?.verificationStatus ?? null,
     memberSince: listing.seller?.createdAt ?? new Date(0),
+    isRegisteredCharity: sellerProfile?.isRegisteredCharity ?? false,
   });
 
   const sectionClass =
@@ -413,6 +414,11 @@ export default async function ListingPage({
               {sellerProfile?.salvoCodeMember ? (
                 <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-900">
                   Salvo Code Member
+                </span>
+              ) : null}
+              {sellerProfile?.isRegisteredCharity ? (
+                <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-900">
+                  Charity Support
                 </span>
               ) : null}
               {listing.listingKind === "sell" && listing.freeToCollector && (

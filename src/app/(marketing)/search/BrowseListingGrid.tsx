@@ -102,6 +102,11 @@ export function BrowseListingGrid({
                       Salvo Code Member
                     </span>
                   ) : null}
+                  {l.seller.sellerProfile?.isRegisteredCharity ? (
+                    <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-violet-900">
+                      Charity Support
+                    </span>
+                  ) : null}
                 </div>
                 <p className="truncate pr-10 font-medium text-zinc-900">{l.title}</p>
                 <BrowseListingPriceLine
