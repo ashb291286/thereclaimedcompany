@@ -59,7 +59,7 @@ export default async function HomePage() {
         user: { role: "reclamation_yard" },
       },
       orderBy: [{ user: { createdAt: "desc" } }, { updatedAt: "desc" }],
-      take: 6,
+      take: 8,
       select: {
         id: true,
         yardSlug: true,
@@ -343,14 +343,14 @@ export default async function HomePage() {
           Newly listed yards and salvage specialists joining The Reclaimed Company.
         </p>
         {latestYards.length > 0 ? (
-          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {latestYards.map((yard) => (
               <li key={yard.id}>
                 <Link
                   href={`/yards/${yard.yardSlug}`}
                   className="block h-full overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
                 >
-                  <div className="relative aspect-square bg-zinc-100">
+                  <div className="relative aspect-[4/3] bg-zinc-100">
                     {yard.yardLogoUrl ? (
                       <Image
                         src={yard.yardLogoUrl}
