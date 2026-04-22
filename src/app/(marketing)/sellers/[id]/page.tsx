@@ -11,6 +11,8 @@ import { parseYardSocialJson } from "@/lib/yard-social";
 import { YardStockAlertToggle } from "@/components/yards/yard-page-client";
 import { formatMiles, haversineMiles } from "@/lib/geo";
 
+const DEFAULT_DEALER_FALLBACK_IMAGE_PATH = "/images/dealer-fallback.png";
+
 export default async function SellerPage({
   params,
 }: {
@@ -45,6 +47,8 @@ export default async function SellerPage({
   });
   const social = parseYardSocialJson(profile.yardSocialJson);
   const displayTitle = profile.businessName?.trim() || profile.displayName;
+  const dealerHeaderImage = profile.yardHeaderImageUrl || profile.yardLogoUrl || DEFAULT_DEALER_FALLBACK_IMAGE_PATH;
+  const dealerProfileImage = profile.yardLogoUrl || profile.yardHeaderImageUrl || DEFAULT_DEALER_FALLBACK_IMAGE_PATH;
   const activeListings = seller.listings;
   const forSaleListings = activeListings.filter((l) => l.listingKind === "sell");
   const auctionListings = activeListings.filter((l) => l.listingKind === "auction");
@@ -106,22 +110,49 @@ export default async function SellerPage({
   return (
     <article className="pb-12">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Meet the dealer</p>
-        <h1 className="mt-1 text-3xl font-semibold text-zinc-900">{displayTitle}</h1>
-        <p className="mt-2 text-zinc-600">{placeLine}</p>
-        <p className="mt-1 text-sm text-zinc-500">
-          On Reclaimed since {seller.createdAt.toLocaleDateString("en-GB", { dateStyle: "medium" })}
-        </p>
-        {profile.yardTagline ? <p className="mt-3 text-sm text-zinc-700">{profile.yardTagline}</p> : null}
-        {profile.importedByAdmin && profile.claimCode ? (
-          <Link
-            href={`/claim-profile?sellerProfileId=${profile.id}`}
-            className="mt-3 inline-block text-xs font-medium text-brand underline"
-          >
-            Own this dealer profile? Claim it
-          </Link>
-        ) : null}
+        <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+        <div className="relative h-44 w-full bg-zinc-100 sm:h-56">
+          <Image
+            src={dealerHeaderImage}
+            alt={`${displayTitle} header`}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 1200px"
+            unoptimized
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
+        </div>
+        <div className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">
+              <Image
+                src={dealerProfileImage}
+                alt={`${displayTitle} profile`}
+                fill
+                className="object-cover"
+                sizes="64px"
+                unoptimized
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Meet the dealer</p>
+              <h1 className="mt-1 text-3xl font-semibold text-zinc-900">{displayTitle}</h1>
+              <p className="mt-2 text-zinc-600">{placeLine}</p>
+              <p className="mt-1 text-sm text-zinc-500">
+                On Reclaimed since {seller.createdAt.toLocaleDateString("en-GB", { dateStyle: "medium" })}
+              </p>
+            </div>
+          </div>
+          {profile.yardTagline ? <p className="mt-3 text-sm text-zinc-700">{profile.yardTagline}</p> : null}
+          {profile.importedByAdmin && profile.claimCode ? (
+            <Link
+              href={`/claim-profile?sellerProfileId=${profile.id}`}
+              className="mt-3 inline-block text-xs font-medium text-brand underline"
+            >
+              Own this dealer profile? Claim it
+            </Link>
+          ) : null}
+        </div>
         </section>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -261,9 +292,14 @@ export default async function SellerPage({
             {relatedDealers.map((d) => (
               <Link key={d.userId} href={`/sellers/${d.userId}`} className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 hover:border-brand/40">
                 <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
-                  {d.yardLogoUrl ? (
-                    <Image src={d.yardLogoUrl} alt="" fill className="object-contain p-0.5" sizes="48px" />
-                  ) : null}
+                  <Image
+                    src={d.yardLogoUrl || DEFAULT_DEALER_FALLBACK_IMAGE_PATH}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="48px"
+                    unoptimized
+                  />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate font-medium text-zinc-900">{d.businessName || d.displayName}</p>

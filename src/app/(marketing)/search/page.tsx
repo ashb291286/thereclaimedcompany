@@ -25,6 +25,9 @@ import type { SearchListingRow } from "@/lib/listing-search";
 import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { publicSellerPath } from "@/lib/yard-public-path";
 
+const DEFAULT_DEALER_FALLBACK_IMAGE_PATH = "/images/dealer-fallback.png";
+const DEFAULT_YARD_FALLBACK_IMAGE_PATH = "/images/yard-header-default.png";
+
 export async function generateMetadata({
   searchParams,
 }: {
@@ -435,7 +438,11 @@ export default async function SearchPage({
                         role: s.user.role,
                         yardSlug: s.yardSlug,
                       });
-                      const img = s.yardHeaderImageUrl || s.yardLogoUrl || "/images/yard-header-default.png";
+                  const roleFallback =
+                    s.user.role === "dealer"
+                      ? DEFAULT_DEALER_FALLBACK_IMAGE_PATH
+                      : DEFAULT_YARD_FALLBACK_IMAGE_PATH;
+                  const img = s.yardHeaderImageUrl || s.yardLogoUrl || roleFallback;
                       return (
                         <li key={s.id}>
                           <Link
