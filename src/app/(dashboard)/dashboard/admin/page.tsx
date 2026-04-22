@@ -103,7 +103,7 @@ export default async function AdminOverviewPage({
       take: 20,
       include: {
         sellerProfile: {
-          select: { displayName: true, businessName: true, postcode: true, yardSlug: true },
+          select: { id: true, displayName: true, businessName: true, postcode: true, yardSlug: true },
         },
         _count: {
           select: { listings: true, bids: true, offersMade: true },
@@ -310,6 +310,11 @@ export default async function AdminOverviewPage({
       {error === "onboard_target" ? (
         <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
           Listing assignment target must be an imported admin-onboarded seller profile.
+        </p>
+      ) : null}
+      {error === "yard_edit_missing" ? (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          That yard profile could not be edited (missing record or non-yard account).
         </p>
       ) : null}
 
@@ -889,6 +894,14 @@ export default async function AdminOverviewPage({
                           {u.suspendedAt ? "Unsuspend user" : "Suspend user"}
                         </button>
                       </form>
+                      {u.role === "reclamation_yard" && u.sellerProfile?.id ? (
+                        <Link
+                          href={`/dashboard/admin/yards/${u.sellerProfile.id}/edit`}
+                          className="w-fit rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+                        >
+                          Edit yard details
+                        </Link>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -932,6 +945,7 @@ export default async function AdminOverviewPage({
                 <th className="py-2 pr-3">Postcode</th>
                 <th className="py-2 pr-3">Listings</th>
                 <th className="py-2 pr-3">Suspended</th>
+                <th className="py-2 pr-3">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -950,6 +964,14 @@ export default async function AdminOverviewPage({
                   <td className="py-2 pr-3 text-zinc-700">{y.postcode}</td>
                   <td className="py-2 pr-3 text-zinc-700">{y.user._count.listings}</td>
                   <td className="py-2 pr-3 text-zinc-700">{y.user.suspendedAt ? "Yes" : "No"}</td>
+                  <td className="py-2 pr-3">
+                    <Link
+                      href={`/dashboard/admin/yards/${y.id}/edit`}
+                      className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+                    >
+                      Edit details
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

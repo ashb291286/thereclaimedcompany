@@ -9,6 +9,9 @@ import { redirect } from "next/navigation";
 import { ListingStatus, UserRole } from "@/generated/prisma/client";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
 import { allocateYardSlug } from "@/lib/yard-slug";
+import { resolveYardSlugForUpdate } from "@/lib/yard-slug";
+import { slugifyAdminDistrict } from "@/lib/yard-area-seo";
+import { revalidateYardPublicPaths } from "@/lib/revalidate-yard";
 
 async function requireAdmin(): Promise<void> {
   const session = await auth();
@@ -113,6 +116,105 @@ function slugify(raw: string): string {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 120);
+}
+
+function normalizeWebsiteUrl(raw: string | null | undefined): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  if (/^https?:\/\//i.test(t)) return t;
+  return `https://${t}`;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export async function adminUpdateYardDetailsAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const sellerProfileId = String(formData.get("sellerProfileId") ?? "").trim();
+  if (!sellerProfileId) return;
+
+  const existing = await prisma.sellerProfile.findUnique({
+    where: { id: sellerProfileId },
+    select: {
+      id: true,
+      userId: true,
+      yardSlug: true,
+      adminDistrict: true,
+      user: { select: { role: true } },
+    },
+  });
+  if (!existing || existing.user.role !== "reclamation_yard") {
+    redirect("/dashboard/admin?error=yard_edit_missing");
+  }
+
+  const displayName = String(formData.get("displayName") ?? "").trim();
+  const businessName = String(formData.get("businessName") ?? "").trim();
+  const postcodeRaw = String(formData.get("postcode") ?? "").trim();
+  const yardSlugRaw = String(formData.get("yardSlug") ?? "").trim();
+  const yardTagline = String(formData.get("yardTagline") ?? "").trim();
+  const yardContactEmail = String(formData.get("yardContactEmail") ?? "").trim();
+  const yardContactPhone = String(formData.get("yardContactPhone") ?? "").trim();
+  const yardWebsiteUrlRaw = String(formData.get("yardWebsiteUrl") ?? "").trim();
+  const vatRegistered = String(formData.get("vatRegistered") ?? "").trim() === "yes";
+  const salvoCodeMember = String(formData.get("salvoCodeMember") ?? "").trim() === "yes";
+  const isRegisteredCharity = String(formData.get("isRegisteredCharity") ?? "").trim() === "yes";
+  const charityNumber = String(formData.get("charityNumber") ?? "").trim().toUpperCase().replace(/\s+/g, "");
+
+  if (!displayName || !postcodeRaw) {
+    redirect(`/dashboard/admin/yards/${sellerProfileId}/edit?error=required`);
+  }
+  if (yardContactEmail && !EMAIL_RE.test(yardContactEmail)) {
+    redirect(`/dashboard/admin/yards/${sellerProfileId}/edit?error=email`);
+  }
+  if (isRegisteredCharity && charityNumber.length < 5) {
+    redirect(`/dashboard/admin/yards/${sellerProfileId}/edit?error=charity_number`);
+  }
+  const resolvedPostcode = await lookupUkPostcode(postcodeRaw);
+  if (!resolvedPostcode) {
+    redirect(`/dashboard/admin/yards/${sellerProfileId}/edit?error=postcode`);
+  }
+  const slugResult = await resolveYardSlugForUpdate(prisma, yardSlugRaw, existing.userId);
+  if (!slugResult.ok) {
+    redirect(`/dashboard/admin/yards/${sellerProfileId}/edit?error=slug`);
+  }
+
+  await prisma.sellerProfile.update({
+    where: { id: sellerProfileId },
+    data: {
+      displayName,
+      businessName: businessName || null,
+      postcode: resolvedPostcode.postcode,
+      lat: resolvedPostcode.lat,
+      lng: resolvedPostcode.lng,
+      adminDistrict: resolvedPostcode.adminDistrict,
+      region: resolvedPostcode.region,
+      postcodeLocality: resolvedPostcode.postcodeLocality,
+      yardSlug: slugResult.slug,
+      yardTagline: yardTagline || null,
+      yardContactEmail: yardContactEmail || null,
+      yardContactPhone: yardContactPhone || null,
+      yardWebsiteUrl: normalizeWebsiteUrl(yardWebsiteUrlRaw),
+      vatRegistered,
+      salvoCodeMember,
+      isRegisteredCharity,
+      charityNumber: isRegisteredCharity ? charityNumber : null,
+    },
+  });
+
+  if (existing.adminDistrict?.trim()) {
+    revalidatePath(`/reclamation-yards/${slugifyAdminDistrict(existing.adminDistrict)}`);
+  }
+  if (resolvedPostcode.adminDistrict?.trim()) {
+    revalidatePath(`/reclamation-yards/${slugifyAdminDistrict(resolvedPostcode.adminDistrict)}`);
+  }
+  if (existing.yardSlug && existing.yardSlug !== slugResult.slug) {
+    revalidatePath(`/yards/${existing.yardSlug}`);
+  }
+  revalidateYardPublicPaths(slugResult.slug);
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/reclamation-yards");
+  revalidatePath("/search");
+  revalidatePath(`/sellers/${existing.userId}`);
+  redirect(`/dashboard/admin/yards/${sellerProfileId}/edit?saved=1`);
 }
 
 export async function adminCreateBlogPostAction(formData: FormData): Promise<void> {
