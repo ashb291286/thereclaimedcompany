@@ -143,25 +143,29 @@ export default async function SearchPage({
   const sortQuery = browseSortQueryParam(params.sort, nearestAvailable);
   const listingTypeQuery = browseListingTypeQueryParam(params.listingType);
 
+  const sellerDirectoryMode = sellerFocusedBrowse !== null && !activeCategoryRow;
+
   const [searchResult, categories, sellerProfiles] = await Promise.all([
-    searchListings({
-      q: params.q,
-      categoryId: activeCategoryRow?.id ?? params.categoryId,
-      sellerType: params.sellerType,
-      hireOnly: params.hireOnly === "1",
-      availableNow: params.availableNow === "1",
-      listingType: params.listingType,
-      postcode: params.postcode,
-      radiusMiles,
-      radiusNationwide,
-      idList: idList.length > 0 ? idList : undefined,
-      skip,
-      take: pageSize,
-      viewerHomeLat: userPrefs?.homeLat ?? undefined,
-      viewerHomeLng: userPrefs?.homeLng ?? undefined,
-      viewerHomePostcode: userPrefs?.homePostcode ?? undefined,
-      sort: params.sort,
-    }),
+    sellerDirectoryMode
+      ? Promise.resolve(null)
+      : searchListings({
+          q: params.q,
+          categoryId: activeCategoryRow?.id ?? params.categoryId,
+          sellerType: params.sellerType,
+          hireOnly: params.hireOnly === "1",
+          availableNow: params.availableNow === "1",
+          listingType: params.listingType,
+          postcode: params.postcode,
+          radiusMiles,
+          radiusNationwide,
+          idList: idList.length > 0 ? idList : undefined,
+          skip,
+          take: pageSize,
+          viewerHomeLat: userPrefs?.homeLat ?? undefined,
+          viewerHomeLng: userPrefs?.homeLng ?? undefined,
+          viewerHomePostcode: userPrefs?.homePostcode ?? undefined,
+          sort: params.sort,
+        }),
     prisma.category.findMany({
       where: { parentId: null },
       orderBy: { name: "asc" },
@@ -209,14 +213,12 @@ export default async function SearchPage({
       : Promise.resolve([]),
   ]);
 
-  const {
-    listings: listingsOrdered,
-    total,
-    sortByDistance,
-    searchOriginPostcode,
-    usingSavedHomeForDistance,
-    distanceNotePostcode,
-  } = searchResult;
+  const listingsOrdered = searchResult?.listings ?? [];
+  const total = searchResult?.total ?? 0;
+  const sortByDistance = searchResult?.sortByDistance ?? false;
+  const searchOriginPostcode = searchResult?.searchOriginPostcode ?? null;
+  const usingSavedHomeForDistance = searchResult?.usingSavedHomeForDistance ?? false;
+  const distanceNotePostcode = searchResult?.distanceNotePostcode ?? null;
 
   const showBuyerWelcome =
     params.welcome === "1" &&
@@ -226,9 +228,7 @@ export default async function SearchPage({
 
   const totalPages = Math.ceil(total / pageSize);
   const fromImage = params.fromImage === "1";
-  const showSellerProfileFallback =
-    !activeCategoryRow && sellerFocusedBrowse !== null && listingsOrdered.length === 0 && sellerProfiles.length > 0;
-  const sellerIdsForFallback = showSellerProfileFallback ? sellerProfiles.map((s) => s.userId) : [];
+  const sellerIdsForDirectory = sellerDirectoryMode ? sellerProfiles.map((s) => s.userId) : [];
 
   const originForSellerDistance = (() => {
     if (params.postcode?.trim()) return { mode: "postcode" as const, postcode: params.postcode.trim() };
@@ -246,11 +246,11 @@ export default async function SearchPage({
         : null;
 
   const listingCounts =
-    showSellerProfileFallback && sellerIdsForFallback.length
+    sellerDirectoryMode && sellerIdsForDirectory.length
       ? await prisma.listing.groupBy({
           by: ["sellerId"],
           where: {
-            sellerId: { in: sellerIdsForFallback },
+            sellerId: { in: sellerIdsForDirectory },
             status: "active",
             visibleOnMarketplace: true,
           },
@@ -258,7 +258,7 @@ export default async function SearchPage({
         })
       : [];
   const listingCountBySellerId = new Map(listingCounts.map((r) => [r.sellerId, r._count._all]));
-  const sellerCards = showSellerProfileFallback
+  const sellerCards = sellerDirectoryMode
     ? sellerProfiles
         .map((s) => {
           const distanceMiles =
@@ -270,6 +270,11 @@ export default async function SearchPage({
             distanceMiles,
             listingCount: listingCountBySellerId.get(s.userId) ?? 0,
           };
+        })
+        .filter((s) => {
+          if (!originCoords || radiusNationwide) return true;
+          if (s.distanceMiles == null) return false;
+          return s.distanceMiles <= radiusMiles;
         })
         .sort((a, b) => (a.distanceMiles ?? 9999) - (b.distanceMiles ?? 9999))
     : [];
@@ -407,89 +412,94 @@ export default async function SearchPage({
           ) : null}
           <div className="mt-4 hidden flex-wrap items-center justify-between gap-3 md:flex">
             <p className="text-sm text-zinc-500">
-              {showSellerProfileFallback
-                ? `${sellerProfiles.length} ${sellerFocusedBrowse === "reclamation_yard" ? "yard" : "dealer"}${sellerProfiles.length !== 1 ? "s" : ""} found`
+              {sellerDirectoryMode
+                ? `${sellerCards.length} ${sellerFocusedBrowse === "reclamation_yard" ? "yard" : "dealer"}${sellerCards.length !== 1 ? "s" : ""} found`
                 : `${total} listing${total !== 1 ? "s" : ""} found`}
             </p>
             <Suspense fallback={null}>
               <BrowseSortSelect value={sortQuery} nearestAvailable={nearestAvailable} />
             </Suspense>
           </div>
-          {showSellerProfileFallback ? (
+          {sellerDirectoryMode ? (
             <div id="seller-cards" className="mt-6 scroll-mt-24">
-              <p className="px-4 text-sm text-zinc-600 md:px-0">
-                No live listings matched these filters yet. Showing {sellerFocusedBrowse === "reclamation_yard" ? "reclamation yards" : "dealers"} with public profiles.
-              </p>
-              <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {sellerCardsShown.map((s) => {
-                  const href = publicSellerPath({
-                    sellerId: s.userId,
-                    role: s.user.role,
-                    yardSlug: s.yardSlug,
-                  });
-                  const img = s.yardHeaderImageUrl || s.yardLogoUrl || "/images/yard-header-default.png";
-                  return (
-                    <li key={s.id}>
+              {sellerCards.length === 0 ? (
+                <p className="px-4 text-sm text-zinc-600 md:px-0">
+                  No {sellerFocusedBrowse === "reclamation_yard" ? "reclamation yards" : "dealers"} matched these filters.
+                </p>
+              ) : (
+                <>
+                  <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {sellerCardsShown.map((s) => {
+                      const href = publicSellerPath({
+                        sellerId: s.userId,
+                        role: s.user.role,
+                        yardSlug: s.yardSlug,
+                      });
+                      const img = s.yardHeaderImageUrl || s.yardLogoUrl || "/images/yard-header-default.png";
+                      return (
+                        <li key={s.id}>
+                          <Link
+                            href={href}
+                            className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition hover:border-brand/35 hover:shadow-sm"
+                          >
+                            <div className="relative aspect-square bg-zinc-100">
+                              <Image
+                                src={img}
+                                alt=""
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 640px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                                unoptimized
+                              />
+                            </div>
+                            <div className="p-3">
+                              <p className="truncate font-semibold text-zinc-900">{s.displayName}</p>
+                              {s.businessName && s.businessName !== s.displayName ? (
+                                <p className="truncate text-sm text-zinc-600">{s.businessName}</p>
+                              ) : null}
+                              <p className="mt-1 truncate text-xs text-zinc-500">
+                                {formatUkLocationLine({
+                                  postcodeLocality: s.postcodeLocality,
+                                  adminDistrict: s.adminDistrict,
+                                  region: s.region,
+                                  postcode: s.postcode,
+                                })}
+                              </p>
+                              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
+                                {s.distanceMiles != null ? (
+                                  <span className="rounded bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700">
+                                    {formatMiles(s.distanceMiles)} away
+                                  </span>
+                                ) : null}
+                                <span className="rounded bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700">
+                                  {s.listingCount} listing{s.listingCount === 1 ? "" : "s"}
+                                </span>
+                              </div>
+                            </div>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {hasMoreSellerCards ? (
+                    <div className="mt-6 flex justify-center">
                       <Link
-                        href={href}
-                        className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition hover:border-brand/35 hover:shadow-sm"
+                        href={`/search?${(() => {
+                          const sp = new URLSearchParams();
+                          for (const [k, v] of Object.entries(paramRecord)) {
+                            if (v != null && String(v) !== "") sp.set(k, String(v));
+                          }
+                          sp.set("sellerPage", String(sellerPage + 1));
+                          return sp.toString();
+                        })()}#seller-cards`}
+                        className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
                       >
-                        <div className="relative aspect-square bg-zinc-100">
-                          <Image
-                            src={img}
-                            alt=""
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 640px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                            unoptimized
-                          />
-                        </div>
-                        <div className="p-3">
-                          <p className="truncate font-semibold text-zinc-900">{s.displayName}</p>
-                          {s.businessName && s.businessName !== s.displayName ? (
-                            <p className="truncate text-sm text-zinc-600">{s.businessName}</p>
-                          ) : null}
-                          <p className="mt-1 truncate text-xs text-zinc-500">
-                            {formatUkLocationLine({
-                              postcodeLocality: s.postcodeLocality,
-                              adminDistrict: s.adminDistrict,
-                              region: s.region,
-                              postcode: s.postcode,
-                            })}
-                          </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
-                            {s.distanceMiles != null ? (
-                              <span className="rounded bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700">
-                                {formatMiles(s.distanceMiles)} away
-                              </span>
-                            ) : null}
-                            <span className="rounded bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700">
-                              {s.listingCount} listing{s.listingCount === 1 ? "" : "s"}
-                            </span>
-                          </div>
-                        </div>
+                        Load more
                       </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-              {hasMoreSellerCards ? (
-                <div className="mt-6 flex justify-center">
-                  <Link
-                    href={`/search?${(() => {
-                      const sp = new URLSearchParams();
-                      for (const [k, v] of Object.entries(paramRecord)) {
-                        if (v != null && String(v) !== "") sp.set(k, String(v));
-                      }
-                      sp.set("sellerPage", String(sellerPage + 1));
-                      return sp.toString();
-                    })()}#seller-cards`}
-                    className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-                  >
-                    Load more
-                  </Link>
-                </div>
-              ) : null}
+                    </div>
+                  ) : null}
+                </>
+              )}
             </div>
           ) : listingsOrdered.length === 0 ? (
             <p className="mt-8 px-4 text-zinc-500 md:px-0">No listings match your filters.</p>

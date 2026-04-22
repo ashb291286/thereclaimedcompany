@@ -112,7 +112,7 @@ export default async function ReclamationYardsHubPage() {
 
       <p className="mt-10 text-sm text-zinc-600">
         Prefer the full filter panel?{" "}
-        <Link href="/search?sellerType=reclamation_yard" className="font-medium text-brand hover:underline">
+        <Link href="/reclamation-yards" className="font-medium text-brand hover:underline">
           Open browse yards
         </Link>
         .
