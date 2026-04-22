@@ -232,7 +232,7 @@ export default async function HomePage() {
 
       <section className="mx-auto mt-10 w-full max-w-7xl px-4 sm:px-6">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-zinc-900">On The Salvage Scence</h2>
+          <h2 className="text-2xl font-semibold text-zinc-900">On The Salvage Scene</h2>
           <Link href="/blog" className="text-sm font-medium text-brand hover:underline">
             View all posts
           </Link>
@@ -246,7 +246,7 @@ export default async function HomePage() {
                   className="block h-full overflow-hidden rounded-xl border border-zinc-200 bg-white transition hover:border-brand/40"
                 >
                   {p.featuredImageUrl ? (
-                    <div className="relative aspect-[16/9] w-full bg-zinc-100">
+                    <div className="relative aspect-[4/3] w-full bg-zinc-100">
                       <Image
                         src={p.featuredImageUrl}
                         alt={p.title}
