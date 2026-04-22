@@ -1,23 +1,39 @@
 import Link from "next/link";
 import { signIn } from "@/auth";
+import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { safeInternalPath } from "@/lib/safe-internal-path";
 
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; callbackUrl?: string }>;
+  searchParams: Promise<{ error?: string; callbackUrl?: string; reset?: string }>;
 }) {
-  const { error, callbackUrl: rawCallback } = await searchParams;
+  const { error, callbackUrl: rawCallback, reset } = await searchParams;
   const callbackUrl = safeInternalPath(rawCallback) ?? "";
   const registerHref =
     callbackUrl !== "" ? `/auth/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/register";
+  const claimHref =
+    callbackUrl !== "" ? `/claim-profile?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/claim-profile";
+  const forgotHref =
+    callbackUrl !== "" ? `/auth/forgot-password?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/forgot-password";
+  const displayError =
+    error === "CredentialsSignin"
+      ? "We couldn’t sign you in with those details. Check your email/password, or if this account was admin-onboarded, claim the profile first."
+      : error === "AccountSetupRequired"
+        ? "This account exists but has no password yet. If it was admin-onboarded, claim the profile first, or sign up with this email to finish setup."
+        : error;
   return (
     <div className="mx-auto w-full max-w-md rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
       <h1 className="text-2xl font-semibold text-zinc-900 mb-6">Sign in</h1>
+      {reset === "success" ? (
+        <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          Your password was updated. Sign in with your new password.
+        </p>
+      ) : null}
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+          {displayError}
         </p>
       )}
       <form
@@ -31,7 +47,19 @@ export default async function SignInPage({
               redirectTo: cb ?? "/",
             });
           } catch {
-            const q = new URLSearchParams({ error: "Invalid email or password" });
+            const email = String(formData.get("email") ?? "").trim().toLowerCase();
+            let nextError = "CredentialsSignin";
+            if (email) {
+              const existing = await prisma.user.findUnique({
+                where: { email },
+                select: { id: true, password: true, sellerProfile: { select: { importedByAdmin: true } } },
+              });
+              if (existing && !existing.password) {
+                nextError = "AccountSetupRequired";
+              }
+            }
+
+            const q = new URLSearchParams({ error: nextError });
             if (callbackUrl) q.set("callbackUrl", callbackUrl);
             redirect(`/auth/signin?${q.toString()}`);
           }
@@ -53,9 +81,14 @@ export default async function SignInPage({
           />
         </div>
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-zinc-700 mb-1">
-            Password
-          </label>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
+              Password
+            </label>
+            <Link href={forgotHref} className="text-sm font-medium text-brand hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <input
             id="password"
             name="password"
@@ -76,6 +109,12 @@ export default async function SignInPage({
         Don&apos;t have an account?{" "}
         <Link href={registerHref} className="font-medium text-brand hover:underline">
           Sign up
+        </Link>
+      </p>
+      <p className="mt-2 text-center text-sm text-zinc-600">
+        Onboarded by admin?{" "}
+        <Link href={claimHref} className="font-medium text-brand hover:underline">
+          Claim your profile
         </Link>
       </p>
     </div>
