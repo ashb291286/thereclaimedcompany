@@ -62,6 +62,13 @@ enum OfferStatus {
   superseded
 }
 
+enum DealerDealStatus {
+  open
+  presented
+  completed
+  archived
+}
+
 enum ListingLocalYardAlertStatus {
   PENDING
   DECLINED
@@ -107,6 +114,9 @@ model User {
   ordersAsSeller Order[]    @relation("Seller")
   listings      Listing[]
   offersMade    Offer[]     @relation("OffersMade")
+  dealerDealsAsBuyer  DealerDeal[] @relation("DealerDealBuyer")
+  dealerDealsAsSeller DealerDeal[] @relation("DealerDealSeller")
+  dealerDealMessages  DealerDealMessage[]
   bids          Bid[]
   wantedAds     WantedAd[]
   notifications Notification[]
@@ -404,7 +414,11 @@ model Listing {
   eraTags                String[]  @default([])
   dateSpecific           String?
   styleTags              String[]  @default([])
+  /// Dealer-only attribution (e.g. "Frits Henningsen")
+  dealerDesigner         String?
   geographicOrigin       String?
+  /// Dealer-only provenance story for certificate/readout.
+  dealerAcquisitionStory String?   @db.Text
   genreTags              String[]  @default([])
   settingInteriorTags    String[]  @default([])
   settingExteriorTags    String[]  @default([])
@@ -473,6 +487,7 @@ model Listing {
   favorites ListingFavorite[]
   viewEvents ListingViewEvent[]
   localYardAlerts ListingLocalYardAlert[]
+  dealerDeals DealerDeal[]
   propRentalOffer PropRentalOffer?
   propListingDrafts PropListingDraft[]
   seenOnScreenRequests SeenOnScreenVerificationRequest[]
@@ -791,10 +806,47 @@ model Offer {
   buyer   User    @relation("OffersMade", fields: [buyerId], references: [id], onDelete: Cascade)
   order   Order?
   localYardAlert ListingLocalYardAlert?
+  agreedDealerDeal DealerDeal? @relation("DealerDealAgreedOffer")
 
   @@index([listingId])
   @@index([buyerId])
   @@index([listingId, status])
+}
+
+model DealerDeal {
+  id            String           @id @default(cuid())
+  listingId     String
+  sellerId      String
+  buyerId       String
+  status        DealerDealStatus @default(open)
+  agreedOfferId String?          @unique
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  listing     Listing             @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  seller      User                @relation("DealerDealSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  buyer       User                @relation("DealerDealBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  agreedOffer Offer?              @relation("DealerDealAgreedOffer", fields: [agreedOfferId], references: [id])
+  messages    DealerDealMessage[]
+  orders      Order[]
+
+  @@unique([listingId, buyerId])
+  @@index([sellerId, updatedAt])
+  @@index([buyerId, updatedAt])
+}
+
+model DealerDealMessage {
+  id        String   @id @default(cuid())
+  dealId    String
+  senderId  String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  deal   DealerDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  sender User       @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([dealId, createdAt])
+  @@index([senderId, createdAt])
 }
 
 model WantedAd {
@@ -924,6 +976,7 @@ model Order {
   status                OrderStatus @default(pending)
   offerId               String?     @unique
   bidId                 String?     @unique
+  dealerDealId          String?
   chargeBreakdown       OrderChargeBreakdown?
   /** Snapshot from listing at purchase (kg CO2e avoided vs new). */
   purchaseCarbonSavedKg       Float?
@@ -962,10 +1015,12 @@ model Order {
   seller  User    @relation("Seller", fields: [sellerId], references: [id])
   offer   Offer?  @relation(fields: [offerId], references: [id])
   bid     Bid?    @relation(fields: [bidId], references: [id])
+  dealerDeal DealerDeal? @relation(fields: [dealerDealId], references: [id], onDelete: SetNull)
 
   @@index([buyerId])
   @@index([sellerId])
   @@index([listingId])
+  @@index([dealerDealId])
   @@index([status])
 }
 

@@ -255,6 +255,62 @@ function parseSellerReference(formData: FormData): string | null {
   return raw.length > 120 ? raw.slice(0, 120) : raw;
 }
 
+function parseOptionalPositiveFloat(raw: string | null): number | null {
+  if (!raw) return null;
+  const value = parseFloat(raw.trim());
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return value;
+}
+
+function parseDealerListingFields(
+  formData: FormData,
+  opts: { isDealer: boolean }
+): Pick<
+  Prisma.ListingUncheckedCreateInput,
+  | "dimensionsW"
+  | "dimensionsH"
+  | "dimensionsD"
+  | "propMaterials"
+  | "styleTags"
+  | "dateSpecific"
+  | "dealerDesigner"
+  | "geographicOrigin"
+  | "dealerAcquisitionStory"
+> {
+  if (!opts.isDealer) {
+    return {
+      dimensionsW: null,
+      dimensionsH: null,
+      dimensionsD: null,
+      propMaterials: [],
+      styleTags: [],
+      dateSpecific: null,
+      dealerDesigner: null,
+      geographicOrigin: null,
+      dealerAcquisitionStory: null,
+    };
+  }
+
+  const materialText = String(formData.get("dealerMaterialText") ?? "").trim();
+  const styleText = String(formData.get("dealerStyleText") ?? "").trim();
+  const manufacturingDate = String(formData.get("dealerManufacturingDate") ?? "").trim();
+  const designer = String(formData.get("dealerDesigner") ?? "").trim();
+  const countryOfOrigin = String(formData.get("dealerCountryOfOrigin") ?? "").trim();
+  const acquisitionStory = String(formData.get("dealerAcquisitionStory") ?? "").trim();
+
+  return {
+    dimensionsW: parseOptionalPositiveFloat(String(formData.get("dealerWidthCm") ?? "")),
+    dimensionsH: parseOptionalPositiveFloat(String(formData.get("dealerHeightCm") ?? "")),
+    dimensionsD: parseOptionalPositiveFloat(String(formData.get("dealerDepthCm") ?? "")),
+    propMaterials: materialText ? [materialText.slice(0, 120)] : [],
+    styleTags: styleText ? [styleText.slice(0, 120)] : [],
+    dateSpecific: manufacturingDate ? manufacturingDate.slice(0, 120) : null,
+    dealerDesigner: designer ? designer.slice(0, 120) : null,
+    geographicOrigin: countryOfOrigin ? countryOfOrigin.slice(0, 120) : null,
+    dealerAcquisitionStory: acquisitionStory ? acquisitionStory.slice(0, 2000) : null,
+  };
+}
+
 async function materialCarbonFromForm(formData: FormData) {
   const materialType = ((formData.get("materialType") as string) ?? "").trim() || null;
   const qtyRaw = ((formData.get("materialQuantity") as string) ?? "").trim();
@@ -362,6 +418,7 @@ export async function createListing(formData: FormData) {
     listingKind === "sell" && !freeToCollector && formData.get("notifyLocalYards") === "on";
 
   const sellerReference = parseSellerReference(formData);
+  const dealerFields = parseDealerListingFields(formData, { isDealer: dbUser?.role === "dealer" });
 
   const created = await prisma.listing.create({
     data: {
@@ -385,6 +442,7 @@ export async function createListing(formData: FormData) {
       freeToCollector,
       notifyLocalYards,
       visibleOnMarketplace,
+      ...dealerFields,
       offersDelivery,
       deliveryNotes,
       deliveryCostPence,
@@ -510,6 +568,7 @@ export async function updateListing(id: string, formData: FormData) {
     listingKind === "sell" && !freeToCollector && formData.get("notifyLocalYards") === "on";
 
   const sellerReference = parseSellerReference(formData);
+  const dealerFields = parseDealerListingFields(formData, { isDealer: dbUser?.role === "dealer" });
 
   const wasLive =
     listing.status === ListingStatus.active && Boolean(listing.visibleOnMarketplace);
@@ -541,6 +600,7 @@ export async function updateListing(id: string, formData: FormData) {
       freeToCollector,
       notifyLocalYards,
       visibleOnMarketplace,
+      ...dealerFields,
       offersDelivery,
       deliveryNotes,
       deliveryCostPence,

@@ -5,6 +5,7 @@ import { ListingPricingMode } from "@/lib/listing-client-enums";
 import { useDisplayCurrency } from "@/components/currency/CurrencyProvider";
 import { BuyButton } from "./BuyButton";
 import { FreeCollectButton } from "./FreeCollectButton";
+import Link from "next/link";
 
 export function ListingCheckoutActions({
   listingId,
@@ -12,6 +13,7 @@ export function ListingCheckoutActions({
   pricingMode,
   unitsAvailable,
   unitPricePence,
+  sellerRole,
   offerId,
   offerPayLabel,
   offerPayPenceGbp,
@@ -24,6 +26,7 @@ export function ListingCheckoutActions({
   unitsAvailable: number | null;
   /** Listed price in pence (per unit when PER_UNIT, or full lot when LOT). */
   unitPricePence: number;
+  sellerRole?: string | null;
   offerId?: string;
   /** @deprecated Prefer offerPayPenceGbp + offerVatSuffix for currency display */
   offerPayLabel?: string;
@@ -69,7 +72,18 @@ export function ListingCheckoutActions({
       : "Price for full lot";
 
   const buyLabel =
-    quantity === 1 ? `Buy for ${formatPence(totalPence)}` : `Buy ${quantity} for ${formatPence(totalPence)}`;
+    sellerRole === "dealer"
+      ? quantity === 1
+        ? `Secure this piece · ${formatPence(totalPence)}`
+        : `Secure ${quantity} pieces · ${formatPence(totalPence)}`
+      : quantity === 1
+        ? `Buy for ${formatPence(totalPence)}`
+        : `Buy ${quantity} for ${formatPence(totalPence)}`;
+  const dealerEnquiryMode =
+    sellerRole === "dealer" && !offerId && !freeToCollector && totalPence >= 260000;
+  const enquiryHref = isGuest
+    ? `/auth/register?callbackUrl=${encodeURIComponent(`/dashboard/deals/${listingId}`)}`
+    : `/dashboard/deals/${listingId}`;
 
   const freeLabel =
     quantity === 1
@@ -119,6 +133,13 @@ export function ListingCheckoutActions({
           ) : null}
           <FreeCollectButton listingId={listingId} quantity={quantity} label={freeLabel} isGuest={isGuest} />
         </div>
+      ) : dealerEnquiryMode ? (
+        <Link
+          href={enquiryHref}
+          className="block w-full rounded-lg bg-brand px-4 py-3 text-center font-medium text-white hover:bg-brand-hover"
+        >
+          Enquire about this piece
+        </Link>
       ) : (
         <BuyButton listingId={listingId} label={buyLabel} quantity={quantity} isGuest={isGuest} />
       )}

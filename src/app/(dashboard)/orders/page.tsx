@@ -25,7 +25,7 @@ export default async function OrdersPage({
     take: 40,
     include: {
       listing: { select: { id: true, title: true, status: true } },
-      seller: { select: { email: true } },
+      seller: { select: { email: true, role: true } },
       chargeBreakdown: true,
     },
   });
@@ -142,6 +142,25 @@ export default async function OrdersPage({
                 <Link href={`/orders/${o.id}/invoice`} className="mt-1 inline-block text-xs text-brand underline">
                   View invoice
                 </Link>
+                <Link href={`/orders/${o.id}/receipt`} className="ml-3 mt-1 inline-block text-xs text-brand underline">
+                  Receipt
+                </Link>
+                {o.dealerDealId ? (
+                  <Link
+                    href={`/dashboard/deals/${o.listingId}?buyer=${o.buyerId}`}
+                    className="ml-3 mt-1 inline-block text-xs text-brand underline"
+                  >
+                    Deal discussion
+                  </Link>
+                ) : null}
+                {o.seller.role === "dealer" ? (
+                  <Link
+                    href={`/orders/${o.id}/authenticity`}
+                    className="ml-3 mt-1 inline-block text-xs text-brand underline"
+                  >
+                    Authenticity certificate
+                  </Link>
+                ) : null}
               </div>
               <div className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-700 sm:w-auto sm:min-w-[300px]">
                 {o.fulfillmentMethod === "collection" ? (
@@ -249,8 +268,19 @@ export default async function OrdersPage({
                   <Link href={`/listings/${o.listingId}`} className="text-xs font-medium text-brand hover:underline">
                     Open listing
                   </Link>
+                  {o.dealerDealId ? (
+                    <Link
+                      href={`/dashboard/deals/${o.listingId}?buyer=${o.buyerId}`}
+                      className="text-xs font-medium text-brand hover:underline"
+                    >
+                      Deal discussion
+                    </Link>
+                  ) : null}
                   <Link href={`/orders/${o.id}/invoice`} className="text-xs font-medium text-brand hover:underline">
                     Invoice
+                  </Link>
+                  <Link href={`/orders/${o.id}/receipt`} className="text-xs font-medium text-brand hover:underline">
+                    Receipt
                   </Link>
                 </div>
               </div>

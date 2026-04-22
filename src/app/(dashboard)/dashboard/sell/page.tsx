@@ -68,6 +68,7 @@ export default async function SellPage({
         defaultPostcode={sellerProfile.postcode}
         sellerDisplayName={sellerProfile.displayName}
         materialOptions={materialOptions}
+        isDealer={dbUser?.role === "dealer"}
         isReclamationYard={dbUser?.role === "reclamation_yard"}
         yardPricesExcludeVat={
           dbUser?.role === "reclamation_yard" && Boolean(sellerProfile.vatRegistered)

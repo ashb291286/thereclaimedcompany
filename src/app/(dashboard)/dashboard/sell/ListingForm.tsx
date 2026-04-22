@@ -113,6 +113,7 @@ export function ListingForm({
   listing,
   sellerDisplayName,
   materialOptions,
+  isDealer = false,
   isReclamationYard = false,
   yardPricesExcludeVat = false,
 }: {
@@ -121,6 +122,7 @@ export function ListingForm({
   listing?: ListingWithCategory;
   sellerDisplayName?: string;
   materialOptions: MaterialOption[];
+  isDealer?: boolean;
   isReclamationYard?: boolean;
   yardPricesExcludeVat?: boolean;
 }) {
@@ -183,6 +185,32 @@ export function ListingForm({
     listing?.materialQuantity != null ? String(listing.materialQuantity) : ""
   );
   const [materialUnit, setMaterialUnit] = useState(listing?.materialUnit ?? "kg");
+  const [dealerWidthStr, setDealerWidthStr] = useState(
+    listing?.dimensionsW != null ? String(listing.dimensionsW) : ""
+  );
+  const [dealerHeightStr, setDealerHeightStr] = useState(
+    listing?.dimensionsH != null ? String(listing.dimensionsH) : ""
+  );
+  const [dealerDepthStr, setDealerDepthStr] = useState(
+    listing?.dimensionsD != null ? String(listing.dimensionsD) : ""
+  );
+  const [dealerMaterialText, setDealerMaterialText] = useState(
+    listing?.propMaterials?.[0] ?? ""
+  );
+  const [dealerStyleText, setDealerStyleText] = useState(listing?.styleTags?.[0] ?? "");
+  const [dealerManufacturingDate, setDealerManufacturingDate] = useState(
+    listing?.dateSpecific ?? ""
+  );
+  const [dealerDesigner, setDealerDesigner] = useState(
+    (listing as (ListingWithCategory & { dealerDesigner?: string }) | undefined)?.dealerDesigner ?? ""
+  );
+  const [dealerCountryOfOrigin, setDealerCountryOfOrigin] = useState(
+    listing?.geographicOrigin ?? ""
+  );
+  const [dealerAcquisitionStory, setDealerAcquisitionStory] = useState(
+    (listing as (ListingWithCategory & { dealerAcquisitionStory?: string }) | undefined)
+      ?.dealerAcquisitionStory ?? ""
+  );
   const [pricingModeUi, setPricingModeUi] = useState<ListingPricingMode>(
     () => listing?.pricingMode ?? ListingPricingMode.LOT
   );
@@ -945,6 +973,157 @@ export function ListingForm({
             </div>
           </div>
         </div>
+        {isDealer ? (
+          <div className="border-t border-zinc-100 pt-5">
+            <p className="text-sm font-medium text-zinc-800">Dealer provenance details</p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Complete this to generate a premium authenticity certificate for the buyer at purchase.
+            </p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-3">
+              <div>
+                <label htmlFor="dealerWidthCm" className="mb-1 block text-sm font-medium text-zinc-700">
+                  Width (cm)
+                </label>
+                <input
+                  id="dealerWidthCm"
+                  name="dealerWidthCm"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={dealerWidthStr}
+                  onChange={(e) => setDealerWidthStr(e.target.value)}
+                  placeholder="e.g. 210"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+              <div>
+                <label htmlFor="dealerHeightCm" className="mb-1 block text-sm font-medium text-zinc-700">
+                  Height (cm)
+                </label>
+                <input
+                  id="dealerHeightCm"
+                  name="dealerHeightCm"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={dealerHeightStr}
+                  onChange={(e) => setDealerHeightStr(e.target.value)}
+                  placeholder="e.g. 88"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+              <div>
+                <label htmlFor="dealerDepthCm" className="mb-1 block text-sm font-medium text-zinc-700">
+                  Depth (cm)
+                </label>
+                <input
+                  id="dealerDepthCm"
+                  name="dealerDepthCm"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={dealerDepthStr}
+                  onChange={(e) => setDealerDepthStr(e.target.value)}
+                  placeholder="e.g. 94"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="dealerMaterialText" className="mb-1 block text-sm font-medium text-zinc-700">
+                  Material
+                </label>
+                <input
+                  id="dealerMaterialText"
+                  name="dealerMaterialText"
+                  type="text"
+                  value={dealerMaterialText}
+                  onChange={(e) => setDealerMaterialText(e.target.value)}
+                  placeholder="e.g. Danish oak, hand-stitched leather"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+              <div>
+                <label htmlFor="dealerStyleText" className="mb-1 block text-sm font-medium text-zinc-700">
+                  Style
+                </label>
+                <input
+                  id="dealerStyleText"
+                  name="dealerStyleText"
+                  type="text"
+                  value={dealerStyleText}
+                  onChange={(e) => setDealerStyleText(e.target.value)}
+                  placeholder="e.g. Art Deco"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="dealerManufacturingDate"
+                  className="mb-1 block text-sm font-medium text-zinc-700"
+                >
+                  Manufacturing date
+                </label>
+                <input
+                  id="dealerManufacturingDate"
+                  name="dealerManufacturingDate"
+                  type="text"
+                  value={dealerManufacturingDate}
+                  onChange={(e) => setDealerManufacturingDate(e.target.value)}
+                  placeholder="e.g. c.1930s"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+              <div>
+                <label htmlFor="dealerDesigner" className="mb-1 block text-sm font-medium text-zinc-700">
+                  Designer
+                </label>
+                <input
+                  id="dealerDesigner"
+                  name="dealerDesigner"
+                  type="text"
+                  value={dealerDesigner}
+                  onChange={(e) => setDealerDesigner(e.target.value)}
+                  placeholder="e.g. Frits Henningsen"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="dealerCountryOfOrigin"
+                  className="mb-1 block text-sm font-medium text-zinc-700"
+                >
+                  Country of origin
+                </label>
+                <input
+                  id="dealerCountryOfOrigin"
+                  name="dealerCountryOfOrigin"
+                  type="text"
+                  value={dealerCountryOfOrigin}
+                  onChange={(e) => setDealerCountryOfOrigin(e.target.value)}
+                  placeholder="e.g. Denmark"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+              <div className="sm:col-span-3">
+                <label
+                  htmlFor="dealerAcquisitionStory"
+                  className="mb-1 block text-sm font-medium text-zinc-700"
+                >
+                  How did this piece come into your possession?
+                </label>
+                <textarea
+                  id="dealerAcquisitionStory"
+                  name="dealerAcquisitionStory"
+                  rows={3}
+                  value={dealerAcquisitionStory}
+                  onChange={(e) => setDealerAcquisitionStory(e.target.value)}
+                  placeholder="e.g. Acquired from a private Copenhagen estate sale in 2024..."
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
       </FormSection>
 
       <FormSection

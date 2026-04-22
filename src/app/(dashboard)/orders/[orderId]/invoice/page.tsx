@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 
 export default async function OrderInvoicePage({ params }: { params: Promise<{ orderId: string }> }) {
   const session = await auth();
@@ -9,9 +10,9 @@ export default async function OrderInvoicePage({ params }: { params: Promise<{ o
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
-      listing: { select: { title: true } },
+      listing: { select: { id: true, title: true } },
       buyer: { select: { email: true } },
-      seller: { select: { email: true } },
+      seller: { select: { email: true, role: true } },
       chargeBreakdown: true,
     },
   });
@@ -47,6 +48,21 @@ export default async function OrderInvoicePage({ params }: { params: Promise<{ o
         ) : (
           <p className="mt-3 text-zinc-600">Fee breakdown not recorded for this legacy order.</p>
         )}
+        {order.seller.role === "dealer" ? (
+          <div className="mt-3 flex flex-wrap gap-3">
+            {order.dealerDealId ? (
+              <Link href={`/dashboard/deals/${order.listing.id}?buyer=${order.buyerId}`} className="text-brand underline">
+                Deal discussion
+              </Link>
+            ) : null}
+            <Link href={`/orders/${order.id}/receipt`} className="text-brand underline">
+              Receipt
+            </Link>
+            <Link href={`/orders/${order.id}/authenticity`} className="text-brand underline">
+              Authenticity certificate
+            </Link>
+          </div>
+        ) : null}
       </div>
     </div>
   );

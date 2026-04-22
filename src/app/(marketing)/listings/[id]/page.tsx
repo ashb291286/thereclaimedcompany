@@ -245,6 +245,11 @@ export default async function ListingPage({
   const buyerListPricePence = buyerGrossPenceFromSellerNetPence(listing.price, chargesVat);
   const buyerMinNextPence = buyerGrossPenceFromSellerNetPence(minNextPence, chargesVat);
   const minNextPounds = buyerMinNextPence / 100;
+  const dealerPrivateEnquiryMode =
+    listing.seller?.role === "dealer" &&
+    listing.listingKind === "sell" &&
+    !listing.freeToCollector &&
+    buyerListPricePence >= 260000;
   const base = getSiteBaseUrl();
   const listingUrl = `${base}/listings/${listing.id}`;
   const sellerName =
@@ -396,6 +401,75 @@ export default async function ListingPage({
               {listing.description}
             </p>
           </section>
+
+          {listing.seller?.role === "dealer" &&
+          (listing.dimensionsW != null ||
+            listing.dimensionsH != null ||
+            listing.dimensionsD != null ||
+            listing.propMaterials.length > 0 ||
+            listing.styleTags.length > 0 ||
+            listing.dateSpecific ||
+            listing.dealerDesigner ||
+            listing.geographicOrigin ||
+            listing.dealerAcquisitionStory) ? (
+            <section className={`${sectionClass} mt-5 sm:mt-6`}>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Dealer provenance &amp; specification
+              </h2>
+              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                {listing.dimensionsW != null || listing.dimensionsH != null || listing.dimensionsD != null ? (
+                  <div>
+                    <dt className="text-zinc-500">Dimensions (W x H x D)</dt>
+                    <dd className="font-medium text-zinc-900">
+                      {listing.dimensionsW != null ? `${listing.dimensionsW} cm` : "?"} x{" "}
+                      {listing.dimensionsH != null ? `${listing.dimensionsH} cm` : "?"} x{" "}
+                      {listing.dimensionsD != null ? `${listing.dimensionsD} cm` : "?"}
+                    </dd>
+                  </div>
+                ) : null}
+                {listing.propMaterials[0] ? (
+                  <div>
+                    <dt className="text-zinc-500">Material</dt>
+                    <dd className="font-medium text-zinc-900">{listing.propMaterials[0]}</dd>
+                  </div>
+                ) : null}
+                {listing.styleTags[0] ? (
+                  <div>
+                    <dt className="text-zinc-500">Style</dt>
+                    <dd className="font-medium text-zinc-900">{listing.styleTags[0]}</dd>
+                  </div>
+                ) : null}
+                {listing.dateSpecific ? (
+                  <div>
+                    <dt className="text-zinc-500">Manufacturing date</dt>
+                    <dd className="font-medium text-zinc-900">{listing.dateSpecific}</dd>
+                  </div>
+                ) : null}
+                {listing.dealerDesigner ? (
+                  <div>
+                    <dt className="text-zinc-500">Designer</dt>
+                    <dd className="font-medium text-zinc-900">{listing.dealerDesigner}</dd>
+                  </div>
+                ) : null}
+                {listing.geographicOrigin ? (
+                  <div>
+                    <dt className="text-zinc-500">Country of origin</dt>
+                    <dd className="font-medium text-zinc-900">{listing.geographicOrigin}</dd>
+                  </div>
+                ) : null}
+              </dl>
+              {listing.dealerAcquisitionStory ? (
+                <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Dealer provenance note
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700">
+                    {listing.dealerAcquisitionStory}
+                  </p>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
           {carbonImpact ? (
             <div className="mt-5 sm:mt-6">
@@ -644,6 +718,7 @@ export default async function ListingPage({
                   pricingMode={listing.pricingMode}
                   unitsAvailable={listing.unitsAvailable}
                   unitPricePence={buyerListPricePence}
+                  sellerRole={listing.seller?.role ?? null}
                   offerId={acceptedMine?.id}
                   offerPayPenceGbp={
                     acceptedMine
@@ -653,7 +728,7 @@ export default async function ListingPage({
                   offerVatSuffix={acceptedMine ? vatLabelSuffix(chargesVat) : undefined}
                   isGuest={!session?.user?.id}
                 />
-                {!listing.freeToCollector ? (
+                {!listing.freeToCollector && !dealerPrivateEnquiryMode ? (
                   <HaggleForm
                     listingId={listing.id}
                     listPricePence={buyerListPricePence}

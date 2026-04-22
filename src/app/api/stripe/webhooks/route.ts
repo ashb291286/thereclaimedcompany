@@ -173,6 +173,22 @@ export async function POST(req: Request) {
               ...carbonSnap,
               ...(offerIdMeta ? { offerId: offerIdMeta } : {}),
               ...(bidIdMeta ? { bidId: bidIdMeta } : {}),
+              ...(offerIdMeta
+                ? {
+                    dealerDealId:
+                      (
+                        await tx.dealerDeal.findUnique({
+                          where: {
+                            listingId_buyerId: {
+                              listingId,
+                              buyerId,
+                            },
+                          },
+                          select: { id: true },
+                        })
+                      )?.id ?? null,
+                  }
+                : {}),
             },
           });
           const feeSettings = await getMarketplaceFeeSettings();
@@ -234,6 +250,10 @@ export async function POST(req: Request) {
               data: { status: "sold" },
             });
           }
+          await tx.dealerDeal.updateMany({
+            where: { listingId, buyerId },
+            data: { status: "completed" },
+          });
         });
       }
     }
@@ -278,6 +298,18 @@ export async function POST(req: Request) {
               bidId: bidIdMeta,
               quantity: 1,
               ...carbonSnap,
+              dealerDealId:
+                (
+                  await prisma.dealerDeal.findUnique({
+                    where: {
+                      listingId_buyerId: {
+                        listingId,
+                        buyerId,
+                      },
+                    },
+                    select: { id: true },
+                  })
+                )?.id ?? null,
             },
           });
           const commissionNetPence = Number.isFinite(feeCommissionNet) && feeCommissionNet > 0 ? feeCommissionNet : computed.commissionNetPence;
@@ -320,6 +352,10 @@ export async function POST(req: Request) {
             prisma.listing.update({
               where: { id: listingId },
               data: { status: "sold" },
+            }),
+            prisma.dealerDeal.updateMany({
+              where: { listingId, buyerId },
+              data: { status: "completed" },
             }),
           ]);
         }
