@@ -18,8 +18,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { areaSlug } = await params;
   const { label, dealers } = await getDealersInAreaBySlug(areaSlug);
   if (!label || dealers.length === 0) return { title: "Dealers" };
-  const title = `Antiques dealers in ${label} | UK dealers and reclaimed stock`;
-  const description = `Browse ${dealers.length} dealer${dealers.length === 1 ? "" : "s"} in ${label}. View profiles and listings.`;
+  const title = `Antiques dealers in ${label} | Curated dealer pieces`;
+  const description = `Browse ${dealers.length} dealer${dealers.length === 1 ? "" : "s"} in ${label}. View profiles and curated pieces.`;
   return { title, description, openGraph: { title, description } };
 }
 
@@ -68,10 +68,11 @@ export default async function DealersAreaPage({ params }: Props) {
         <span className="text-zinc-800">{label}</span>
       </nav>
 
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">Dealers in {label}</h1>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-600 sm:text-base">
+      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/80">Curated by area</p>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">Dealers in {label}</h1>
+      <p className="mt-3 text-sm leading-relaxed text-zinc-700 sm:text-base">
         {dealers.length} dealer{dealers.length === 1 ? "" : "s"} in this area. Visit a profile for contact
-        details and listings, or{" "}
+        details and curated pieces, or{" "}
         <Link href="/search?sellerType=dealer" className="font-medium text-brand hover:underline">
           search all dealers by postcode
         </Link>
@@ -90,7 +91,7 @@ export default async function DealersAreaPage({ params }: Props) {
             <li key={d.userId}>
               <Link
                 href={`/sellers/${d.userId}`}
-                className="block rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-brand/35 hover:shadow-sm"
+                className="block rounded-xl border border-amber-200/70 bg-white p-4 transition hover:border-amber-500/60 hover:shadow-sm"
               >
                 <p className="font-semibold text-zinc-900">{d.displayName}</p>
                 {d.businessName && d.businessName !== d.displayName ? (
@@ -98,6 +99,7 @@ export default async function DealersAreaPage({ params }: Props) {
                 ) : null}
                 {d.yardTagline ? <p className="mt-2 text-sm text-zinc-600">{d.yardTagline}</p> : null}
                 <p className="mt-2 text-xs text-zinc-500">{locLine}</p>
+                <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-amber-900">View pieces</p>
               </Link>
             </li>
           );

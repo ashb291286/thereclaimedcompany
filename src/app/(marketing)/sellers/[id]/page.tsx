@@ -164,8 +164,8 @@ export default async function SellerPage({
             </div>
           ) : (
             <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-              Browse live listings from this dealer on Reclaimed Marketplace, including unique reclaimed stock and
-              regular inventory updates.
+              Browse curated dealer pieces on Reclaimed Marketplace, including distinctive reclaimed stock and
+              regular collection updates.
             </p>
           )}
           <div className="mt-4">
@@ -248,17 +248,18 @@ export default async function SellerPage({
         </section>
 
         <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-5">
-          <h2 className="text-lg font-semibold text-zinc-900">Why buy from a dealer</h2>
+          <h2 className="text-lg font-semibold text-zinc-900">Why source from this dealer</h2>
           <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-            Dealers typically curate stock, provide clearer condition context, and can help match pieces across eras
-            and styles. Following a dealer profile also makes it easier to track fresh arrivals that fit your project.
+            Dealers typically curate exceptional pieces, provide clearer condition context, and can help match
+            provenance across eras and styles. Following a dealer profile makes it easier to track new arrivals that
+            fit premium projects.
           </p>
         </section>
 
         <section className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-900">For sale</h2>
+        <h2 className="text-lg font-semibold text-zinc-900">Available pieces</h2>
         {forSaleListings.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">No active sale listings.</p>
+          <p className="mt-3 text-sm text-zinc-500">No available pieces right now.</p>
         ) : (
           <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {forSaleListings.map((l) => (
@@ -357,7 +358,7 @@ function ListingCard({
       <div className="p-3">
         <p className="truncate font-medium text-zinc-900">{l.title}</p>
         <p className="text-sm text-zinc-500">
-          £{(l.price / 100).toFixed(2)} · {l.category.name}
+          £{(l.price / 100).toFixed(2)} · {l.category.name} piece
           {l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
         </p>
       </div>

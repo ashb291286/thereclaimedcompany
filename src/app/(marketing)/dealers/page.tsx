@@ -30,21 +30,22 @@ export default async function DealersHubPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">Dealers near you</h1>
-      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600 sm:text-base">
-        Enter your postcode to see antiques dealer listings sorted by distance, or explore dealer profiles
-        by area below.
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/80">Curated collections</p>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">Dealers near you</h1>
+      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-700 sm:text-base">
+        Discover high-value antique and reclaimed pieces from specialist dealers. Search by postcode to browse
+        dealer pieces by distance, or explore dealer profiles by area below.
       </p>
 
       <form
         action="/search"
         method="get"
-        className="mt-8 rounded-xl border-2 border-brand bg-brand-soft/50 p-5 shadow-sm ring-1 ring-brand/15"
+        className="mt-8 rounded-xl border border-amber-300/70 bg-gradient-to-br from-amber-50 via-white to-orange-50/50 p-5 shadow-sm ring-1 ring-amber-200/60"
       >
         <input type="hidden" name="sellerType" value="dealer" />
         <p className="text-sm font-semibold text-zinc-900">Search by postcode</p>
         <p className="mt-1 text-xs text-zinc-700">
-          Matches the marketplace dealer view and sorts results by distance from your location.
+          Opens the dealer browse experience with curated piece cards, sorted by distance from your location.
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <div className="min-w-[180px] flex-1">
@@ -56,7 +57,7 @@ export default async function DealersHubPage() {
               name="postcode"
               type="text"
               placeholder="e.g. M1 1AE"
-              className="w-full rounded-lg border-2 border-brand/40 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400"
+              className="w-full rounded-lg border border-amber-300/80 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400"
             />
           </div>
           <div>
@@ -67,7 +68,7 @@ export default async function DealersHubPage() {
               id="dealer-hub-radius"
               name="radius"
               defaultValue="50"
-              className="rounded-lg border-2 border-brand/40 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900"
+              className="rounded-lg border border-amber-300/80 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900"
             >
               <option value="10">10 mi</option>
               <option value="25">25 mi</option>
@@ -77,7 +78,7 @@ export default async function DealersHubPage() {
           </div>
           <button
             type="submit"
-            className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover"
+            className="rounded-lg bg-amber-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-950"
           >
             Find dealers
           </button>
@@ -86,7 +87,7 @@ export default async function DealersHubPage() {
 
       <div className="mt-10">
         <h2 className="text-lg font-semibold text-zinc-900">Browse by area</h2>
-        <p className="mt-1 text-sm text-zinc-600">Area pages update as dealers complete their profiles.</p>
+        <p className="mt-1 text-sm text-zinc-600">Area pages update as dealers refine their public showcases.</p>
         {areas.length === 0 ? (
           <p className="mt-4 text-sm text-zinc-500">Area pages will appear when dealers complete profiles.</p>
         ) : (
@@ -95,7 +96,7 @@ export default async function DealersHubPage() {
               <li key={a.slug}>
                 <Link
                   href={`/dealers/${a.slug}`}
-                  className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-800 transition hover:border-brand/40 hover:bg-brand-soft/40"
+                  className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-sm text-zinc-800 transition hover:border-amber-500/60 hover:bg-amber-50"
                 >
                   {a.label}
                   <span className="ml-1.5 text-zinc-500">({a.dealerCount})</span>
