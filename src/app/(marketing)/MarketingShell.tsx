@@ -71,7 +71,7 @@ export function MarketingShell({
                 Dealers
               </Link>
               <Link
-                href="/reclamation-yards"
+                href="/search?sellerType=reclamation_yard#search-filters"
                 className="text-sm font-medium text-zinc-700 hover:text-zinc-900"
               >
                 Yards
@@ -171,7 +171,7 @@ export function MarketingShell({
                 <Link href="/search" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Browse</Link>
                 <Link href="/dealers" onClick={() => setMobileOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-100">Dealers</Link>
                 <Link
-                  href="/reclamation-yards"
+                  href="/search?sellerType=reclamation_yard#search-filters"
                   onClick={() => setMobileOpen(false)}
                   className="rounded-md px-2 py-2 hover:bg-zinc-100"
                 >
