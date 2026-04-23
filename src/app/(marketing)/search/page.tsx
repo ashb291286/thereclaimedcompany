@@ -408,7 +408,7 @@ export default async function SearchPage({
               href={browseSourceHref("yards")}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                 browseSource === "yards"
-                  ? "bg-zinc-900 text-white"
+                  ? "bg-brand text-white"
                   : "text-zinc-700 hover:bg-zinc-100"
               }`}
             >
@@ -418,7 +418,7 @@ export default async function SearchPage({
               href={browseSourceHref("emporiums")}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                 browseSource === "emporiums"
-                  ? "bg-zinc-900 text-white"
+                  ? "bg-amber-900 text-white"
                   : "text-zinc-700 hover:bg-zinc-100"
               }`}
             >

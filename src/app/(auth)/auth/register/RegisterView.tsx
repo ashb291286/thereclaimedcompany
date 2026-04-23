@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { RegisterForm } from "./RegisterForm";
 
@@ -82,7 +83,20 @@ export function RegisterView({
     callbackUrl !== "" ? `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/signin";
 
   return (
-    <div className="grid w-full grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10 lg:items-stretch">
+    <div className="w-full">
+      <div className="mb-5">
+        <Link href="/" className="inline-flex items-center gap-2" aria-label="The Reclaimed Company home">
+          <Image
+            src="/images/the-reclaimed-company-logo.png"
+            alt="The Reclaimed Company"
+            width={56}
+            height={56}
+            className="h-12 w-12 object-contain"
+            priority
+          />
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10 lg:items-stretch">
       <aside className="order-2 flex flex-col justify-center rounded-2xl border border-zinc-200/90 bg-gradient-to-br from-brand-soft/50 via-white to-zinc-50 p-8 shadow-sm lg:order-1 lg:p-10">
         <div key={accountIntent}>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand">{copy.eyebrow}</p>
@@ -129,6 +143,7 @@ export function RegisterView({
             Sign in
           </Link>
         </p>
+      </div>
       </div>
     </div>
   );
