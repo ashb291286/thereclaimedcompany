@@ -8,7 +8,8 @@ import { slugifyAdminDistrict } from "@/lib/yard-area-seo";
 import { slugifyDealerArea } from "@/lib/dealer-area-seo";
 import { revalidateYardPublicPaths } from "@/lib/revalidate-yard";
 import type { UserRole } from "@/generated/prisma/client";
-import { lookupUkPostcode } from "@/lib/postcode-uk";
+import { formatUkLocationLine, lookupUkPostcode } from "@/lib/postcode-uk";
+import { sendReclamationYardWelcomeEmail } from "@/lib/email/send-reclamation-yard-welcome-email";
 import { defaultYardOpeningHours, parseOpeningHoursSchedule } from "@/lib/opening-hours";
 import type { Prisma } from "@/generated/prisma/client";
 import { allocateYardSlug } from "@/lib/yard-slug";
@@ -142,6 +143,27 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   }
   if (sellerType === "reclamation_yard" && yardSlug) {
     revalidateYardPublicPaths(yardSlug);
+  }
+
+  if (sellerType === "reclamation_yard") {
+    const u = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { email: true },
+    });
+    if (u?.email) {
+      const yardName = (businessName?.trim() || displayName.trim()) as string;
+      const locationLine = formatUkLocationLine({
+        postcodeLocality: resolved.postcodeLocality,
+        adminDistrict: resolved.adminDistrict,
+        region: resolved.region,
+        postcode: resolved.postcode,
+      });
+      await sendReclamationYardWelcomeEmail({
+        toEmail: u.email,
+        yardName,
+        locationLine: locationLine || "United Kingdom",
+      });
+    }
   }
 
   redirect("/dashboard/onboarding?phase=payments");
