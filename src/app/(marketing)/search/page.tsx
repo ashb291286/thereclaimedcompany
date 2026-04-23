@@ -404,6 +404,12 @@ export default async function SearchPage({
             >
               List your item
             </Link>
+            <Link
+              href="/auth/register"
+              className="mt-2 inline-flex text-sm font-medium text-brand underline hover:text-brand-hover"
+            >
+              Add your business
+            </Link>
           </div>
         </aside>
 

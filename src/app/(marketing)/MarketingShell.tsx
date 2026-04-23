@@ -253,6 +253,9 @@ export function MarketingShell({
                     <Link href="/search" className="block hover:text-white">
                       Marketplace
                     </Link>
+                    <Link href="/auth/register" className="block hover:text-white">
+                      Add Your Yard FREE
+                    </Link>
                     <p>Free To Collect</p>
                     <p>Wanted</p>
                   </div>

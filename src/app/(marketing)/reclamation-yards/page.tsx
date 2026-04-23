@@ -30,13 +30,23 @@ export default async function ReclamationYardsHubPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
-        Reclamation yards near you
-      </h1>
-      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600 sm:text-base">
-        Enter your postcode to see yard stock sorted by distance, or explore reclamation yards we list
-        by area below.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
+            Reclamation yards near you
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600 sm:text-base">
+            Enter your postcode to see yard stock sorted by distance, or explore reclamation yards we
+            list by area below.
+          </p>
+        </div>
+        <Link
+          href="/auth/register"
+          className="inline-flex rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover"
+        >
+          Add your yard FREE
+        </Link>
+      </div>
 
       <form
         action="/search"
