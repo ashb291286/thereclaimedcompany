@@ -824,6 +824,12 @@ model DealerDeal {
   buyerId       String
   status        DealerDealStatus @default(open)
   agreedOfferId String?          @unique
+  /// When presenting a deal: true = buyer arranges shipping; false = dealer quotes shipping (see pence fields).
+  buyerArrangesShipping Boolean?
+  /// Item subtotal in pence (seller net, before shipping line) when deal was presented.
+  agreedItemPence       Int?
+  /// Extra shipping in pence when buyer does not arrange (0 if buyer arranges).
+  agreedShippingPence   Int?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -844,6 +850,8 @@ model DealerDealMessage {
   dealId    String
   senderId  String
   body      String   @db.Text
+  /// Optional image URLs (e.g. blob) attached to this chat message.
+  imageUrls String[] @default([])
   createdAt DateTime @default(now())
 
   deal   DealerDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)

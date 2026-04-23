@@ -86,7 +86,17 @@ export async function postDealerDealMessageAction(formData: FormData) {
   const listingId = String(formData.get("listingId") ?? "").trim();
   const buyerId = String(formData.get("buyerId") ?? "").trim();
   const message = String(formData.get("message") ?? "").trim();
-  if (!listingId || !message) redirect(`/dashboard/deals/${listingId}`);
+  const imageUrlsRaw = String(formData.get("imageUrls") ?? "").trim();
+  const imageUrls = imageUrlsRaw
+    ? imageUrlsRaw
+        .split(",")
+        .map((u) => u.trim())
+        .filter((u) => u.startsWith("https://"))
+        .slice(0, 6)
+    : [];
+  if (!listingId || (!message && imageUrls.length === 0)) {
+    redirect(`/dashboard/deals/${listingId}`);
+  }
 
   const deal = await prisma.dealerDeal.findUnique({
     where: { listingId_buyerId: { listingId, buyerId } },
@@ -102,11 +112,15 @@ export async function postDealerDealMessageAction(formData: FormData) {
     redirect("/dashboard/deals?error=forbidden");
   }
 
+  const body =
+    message.slice(0, 4000) || (imageUrls.length ? (imageUrls.length > 1 ? "Images shared" : "Image shared") : "");
+
   await prisma.dealerDealMessage.create({
     data: {
       dealId: deal.id,
       senderId: session.user.id,
-      body: message.slice(0, 4000),
+      body,
+      imageUrls,
     },
   });
 
@@ -128,13 +142,27 @@ export async function presentDealerDealAction(formData: FormData) {
 
   const listingId = String(formData.get("listingId") ?? "").trim();
   const buyerId = String(formData.get("buyerId") ?? "").trim();
-  const amountPounds = parseFloat(String(formData.get("agreedTotal") ?? ""));
+  const itemPounds = parseFloat(String(formData.get("agreedItemTotal") ?? ""));
+  const buyerArrangesShipping = String(formData.get("buyerArrangesShipping") ?? "") === "on";
+  const shippingPounds = buyerArrangesShipping
+    ? 0
+    : parseFloat(String(formData.get("shippingPounds") ?? ""));
+
   const note = String(formData.get("note") ?? "").trim();
 
-  if (!listingId || !buyerId || !Number.isFinite(amountPounds) || amountPounds <= 0) {
+  if (!listingId || !buyerId || !Number.isFinite(itemPounds) || itemPounds <= 0) {
     redirect(`/dashboard/deals/${listingId}?error=invalid_deal_total`);
   }
-  const offeredPrice = Math.round(amountPounds * 100);
+  if (!buyerArrangesShipping && (!Number.isFinite(shippingPounds) || shippingPounds < 0)) {
+    redirect(`/dashboard/deals/${listingId}?error=invalid_shipping`);
+  }
+  const itemPence = Math.round(itemPounds * 100);
+  const shippingPence = buyerArrangesShipping ? 0 : Math.round(shippingPounds * 100);
+  const offeredPrice = itemPence + shippingPence;
+  if (offeredPrice < 1) {
+    redirect(`/dashboard/deals/${listingId}?error=invalid_deal_total`);
+  }
+  const amountPounds = offeredPrice / 100;
 
   const deal = await prisma.dealerDeal.findUnique({
     where: { listingId_buyerId: { listingId, buyerId } },
@@ -159,28 +187,45 @@ export async function presentDealerDealAction(formData: FormData) {
       },
       data: { status: "superseded", respondedAt: now },
     });
+    const shipLine = buyerArrangesShipping
+      ? "Buyer arranges shipping."
+      : `Dealer-quoted shipping: £${(shippingPence / 100).toFixed(2)}.`;
+    const offerMessageParts = [
+      `Dealer agreed item: £${itemPounds.toFixed(2)}. ${shipLine} Total: £${amountPounds.toFixed(2)}.`,
+    ];
+    if (note) offerMessageParts.push(note);
     const createdOffer = await tx.offer.create({
       data: {
         listingId,
         buyerId,
         offeredPrice,
-        message: note ? `Dealer agreed total: £${amountPounds.toFixed(2)}. ${note}` : `Dealer agreed total: £${amountPounds.toFixed(2)}.`,
+        message: offerMessageParts.join(" "),
         status: "accepted",
         fromSellerCounter: true,
         respondedAt: now,
       },
     });
+    const threadMsg = [
+      `Deal presented — item £${itemPounds.toFixed(2)}`,
+      buyerArrangesShipping
+        ? "buyer arranges shipping"
+        : `shipping £${(shippingPence / 100).toFixed(2)}`,
+      `total £${amountPounds.toFixed(2)}`,
+    ]
+      .join(", ")
+      .concat(note ? `. ${note}` : ".");
     await tx.dealerDeal.update({
       where: { id: deal.id },
       data: {
         status: "presented",
         agreedOfferId: createdOffer.id,
+        buyerArrangesShipping,
+        agreedItemPence: itemPence,
+        agreedShippingPence: shippingPence,
         messages: {
           create: {
             senderId: session.user.id,
-            body: note
-              ? `Deal presented at £${amountPounds.toFixed(2)}. ${note}`
-              : `Deal presented at £${amountPounds.toFixed(2)}.`,
+            body: threadMsg,
           },
         },
       },

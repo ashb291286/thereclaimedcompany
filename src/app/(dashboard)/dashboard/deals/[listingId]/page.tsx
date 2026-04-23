@@ -5,24 +5,25 @@ import Link from "next/link";
 import { BuyButton } from "@/app/(marketing)/listings/[id]/BuyButton";
 import {
   notifyDealerOfNewPrivateDealEnquiry,
-  postDealerDealMessageAction,
   presentDealerDealAction,
 } from "@/lib/actions/dealer-deals";
 import { revalidatePath } from "next/cache";
 import { sellerChargesVat, vatLabelSuffix } from "@/lib/vat-pricing";
 import { buyerGrossPenceFromSellerNetPence } from "@/lib/vat-pricing";
+import { DealerDealProvenancePanel } from "@/components/deals/DealerDealProvenancePanel";
+import { DealerDealMessageForm } from "@/components/deals/DealerDealMessageForm";
 
 export default async function DealerDealThreadPage({
   params,
   searchParams,
 }: {
   params: Promise<{ listingId: string }>;
-  searchParams: Promise<{ buyer?: string }>;
+  searchParams: Promise<{ buyer?: string; error?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
   const { listingId } = await params;
-  const { buyer } = await searchParams;
+  const { buyer, error: dealError } = await searchParams;
 
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },
@@ -126,6 +127,12 @@ export default async function DealerDealThreadPage({
       ? buyerGrossPenceFromSellerNetPence(deal.agreedOffer.offeredPrice, chargesVat)
       : null;
 
+  const hasShippingBreakdown =
+    deal.agreedItemPence != null &&
+    deal.agreedShippingPence != null &&
+    deal.buyerArrangesShipping != null &&
+    deal.agreedOffer;
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -135,6 +142,22 @@ export default async function DealerDealThreadPage({
         </Link>
       </div>
 
+      {dealError === "invalid_deal_total" ? (
+        <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Enter a valid agreed item price (and total must be at least 1p).
+        </p>
+      ) : null}
+      {dealError === "invalid_shipping" ? (
+        <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          When the dealer arranges delivery, add a valid shipping amount (0 or more).
+        </p>
+      ) : null}
+      {dealError === "listing_not_eligible" ? (
+        <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          This listing is not eligible for a presented deal.
+        </p>
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <section className="rounded-2xl border border-zinc-200 bg-white p-4">
           <p className="text-xs uppercase tracking-wide text-zinc-500">
@@ -143,6 +166,7 @@ export default async function DealerDealThreadPage({
           <div className="mt-4 space-y-3">
             {deal.messages.map((m) => {
               const mine = m.senderId === session.user.id;
+              const images = m.imageUrls?.length ? m.imageUrls : [];
               return (
                 <div
                   key={m.id}
@@ -150,7 +174,27 @@ export default async function DealerDealThreadPage({
                     mine ? "ml-auto bg-brand text-white" : "bg-zinc-100 text-zinc-800"
                   }`}
                 >
-                  <p>{m.body}</p>
+                  {m.body.trim() ? <p className="whitespace-pre-wrap">{m.body}</p> : null}
+                  {images.length > 0 ? (
+                    <div className={`mt-2 flex flex-wrap gap-1.5 ${m.body.trim() ? "" : ""}`}>
+                      {images.map((url) => (
+                        <a
+                          key={url}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block overflow-hidden rounded-lg border border-white/20"
+                        >
+                          <img
+                            src={url}
+                            alt=""
+                            className="h-28 w-28 object-cover sm:h-32 sm:w-32"
+                            loading="lazy"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
                   <p className={`mt-1 text-[11px] ${mine ? "text-white/75" : "text-zinc-500"}`}>
                     {m.createdAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
                   </p>
@@ -158,20 +202,8 @@ export default async function DealerDealThreadPage({
               );
             })}
           </div>
-          <form action={postDealerDealMessageAction} className="mt-4 border-t border-zinc-200 pt-4">
-            <input type="hidden" name="listingId" value={listingId} />
-            <input type="hidden" name="buyerId" value={deal.buyerId} />
-            <textarea
-              name="message"
-              rows={3}
-              required
-              placeholder="Write your message..."
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-            />
-            <button type="submit" className="mt-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white">
-              Send message
-            </button>
-          </form>
+          <DealerDealMessageForm listingId={listingId} buyerId={deal.buyerId} />
+          <DealerDealProvenancePanel listing={listing} />
         </section>
 
         <aside className="space-y-4">
@@ -188,21 +220,56 @@ export default async function DealerDealThreadPage({
             ) : null}
           </section>
 
-          {isSeller ? (
+          {isSeller && !deal.agreedOffer ? (
             <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
               <p className="text-sm font-semibold text-amber-950">Present agreed deal</p>
-              <form action={presentDealerDealAction} className="mt-3 space-y-2">
+              <p className="mt-1 text-xs text-amber-900/90">
+                Set the item price, then either let the buyer arrange shipping or add a dealer-quoted shipping line that
+                is included in the checkout total.
+              </p>
+              <form action={presentDealerDealAction} className="mt-3 space-y-3">
                 <input type="hidden" name="listingId" value={listingId} />
                 <input type="hidden" name="buyerId" value={deal.buyerId} />
-                <input
-                  name="agreedTotal"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  required
-                  placeholder="Agreed total (£)"
-                  className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm"
-                />
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-amber-950">Agreed item price (£)</label>
+                  <input
+                    name="agreedItemTotal"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    placeholder="0.00"
+                    className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm"
+                  />
+                </div>
+                <label className="flex cursor-pointer items-start gap-2 text-sm text-amber-950">
+                  <input
+                    type="checkbox"
+                    name="buyerArrangesShipping"
+                    value="on"
+                    defaultChecked
+                    className="mt-1 h-4 w-4 rounded border-amber-400"
+                  />
+                  <span>
+                    <span className="font-medium">Buyer arranges shipping / collection</span>
+                    <span className="mt-0.5 block text-xs font-normal text-amber-900/85">
+                      No extra delivery line is added to the total (buyer organises with you separately).
+                    </span>
+                  </span>
+                </label>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-amber-950">
+                    Dealer-quoted shipping (£) <span className="font-normal text-amber-800">(if not ticked above)</span>
+                  </label>
+                  <input
+                    name="shippingPounds"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm"
+                  />
+                </div>
                 <textarea
                   name="note"
                   rows={2}
@@ -217,13 +284,41 @@ export default async function DealerDealThreadPage({
                 </button>
               </form>
             </section>
+          ) : isSeller && deal.agreedOffer ? (
+            <section className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-4 text-sm text-amber-950">
+              <p className="font-semibold">A deal is already presented</p>
+              <p className="mt-1 text-xs text-amber-900/90">The customer can use checkout on the right. Contact support to change an accepted offer.</p>
+            </section>
           ) : deal.agreedOffer ? (
             <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
               <p className="text-sm font-semibold text-emerald-950">Deal ready for checkout</p>
-              <p className="mt-1 text-sm text-emerald-900">
-                Agreed total: £{((agreedBuyerGross ?? deal.agreedOffer.offeredPrice) / 100).toFixed(2)}
-                {vatLabelSuffix(chargesVat)}
-              </p>
+              {hasShippingBreakdown ? (
+                <div className="mt-2 space-y-1 text-sm text-emerald-900">
+                  <p>
+                    Item: £
+                    {(buyerGrossPenceFromSellerNetPence(deal.agreedItemPence!, chargesVat) / 100).toFixed(2)}
+                    {vatLabelSuffix(chargesVat)}
+                  </p>
+                  {deal.buyerArrangesShipping ? (
+                    <p>Shipping: buyer arranges (not added to the payment total here)</p>
+                  ) : (
+                    <p>
+                      Shipping: £
+                      {(buyerGrossPenceFromSellerNetPence(deal.agreedShippingPence!, chargesVat) / 100).toFixed(2)}
+                      {vatLabelSuffix(chargesVat)}
+                    </p>
+                  )}
+                  <p className="border-t border-emerald-200/80 pt-1 font-semibold">
+                    Total: £{((agreedBuyerGross ?? deal.agreedOffer.offeredPrice) / 100).toFixed(2)}
+                    {vatLabelSuffix(chargesVat)}
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-1 text-sm text-emerald-900">
+                  Agreed total: £{((agreedBuyerGross ?? deal.agreedOffer.offeredPrice) / 100).toFixed(2)}
+                  {vatLabelSuffix(chargesVat)}
+                </p>
+              )}
               <div className="mt-3">
                 <BuyButton
                   listingId={listing.id}
