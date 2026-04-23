@@ -23,6 +23,7 @@ import {
   type YardListingCard,
 } from "@/components/yards/yard-page-client";
 import { YardMaterialPillsSection, YardRelatedYardsSection } from "@/components/yards/yard-material-and-related";
+import { YardAboutExpandable } from "@/components/yards/YardAboutExpandable";
 
 export const revalidate = 900;
 
@@ -398,9 +399,7 @@ export default async function YardPublicPage({ params }: Props) {
               About this yard
             </h2>
             {profile.yardAbout?.trim() ? (
-              <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
-                {profile.yardAbout.trim()}
-              </div>
+              <YardAboutExpandable text={profile.yardAbout.trim()} />
             ) : (
               <p className="mt-3 text-sm leading-relaxed text-zinc-600">
                 Browse live listings from this reclamation yard. Materials are listed by the yard on Reclaimed

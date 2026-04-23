@@ -30,12 +30,27 @@ export default async function DealersHubPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/80">Curated collections</p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">Dealers near you</h1>
-      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-700 sm:text-base">
-        Discover high-value antique and reclaimed pieces from specialist dealers. Search by postcode to browse
-        dealer pieces by distance, or explore dealer profiles by area below.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/80">Curated collections</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">Dealers near you</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-700 sm:text-base">
+            Discover high-value antique and reclaimed pieces from specialist dealers. Search by postcode to browse
+            dealer pieces by distance, or explore dealer profiles by area below.
+          </p>
+        </div>
+        <div className="flex flex-col items-start">
+          <Link
+            href="/auth/register?sellerFlow=dealer"
+            className="inline-flex rounded-lg bg-amber-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-950"
+          >
+            Add Your Gallery
+          </Link>
+          <p className="mt-2 text-xs font-medium text-zinc-600">
+            showcase your unique edit of pieces
+          </p>
+        </div>
+      </div>
 
       <form
         action="/search"

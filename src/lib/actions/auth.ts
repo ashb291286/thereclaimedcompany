@@ -10,6 +10,13 @@ export async function register(formData: FormData) {
   const password = formData.get("password") as string;
   const name = formData.get("name") as string;
   const accountIntent = ((formData.get("accountIntent") as string) ?? "buying").trim();
+  const sellerTypePrefRaw = ((formData.get("sellerTypePref") as string) ?? "").trim();
+  const sellerTypePref =
+    sellerTypePrefRaw === "reclamation_yard" || sellerTypePrefRaw === "dealer"
+      ? sellerTypePrefRaw
+      : null;
+  const businessNamePrefill = ((formData.get("businessNamePrefill") as string) ?? "").trim();
+  const yearsTradingRaw = ((formData.get("yearsTrading") as string) ?? "").trim();
   const agreeLegalHub = String(formData.get("agreeLegalHub") ?? "") === "on";
 
   if (!email?.trim() || !password?.trim()) {
@@ -38,7 +45,18 @@ export async function register(formData: FormData) {
   });
 
   const callback = safeInternalPath(String(formData.get("callbackUrl") ?? ""));
-  const defaultSelling = "/dashboard/onboarding?welcome=1";
+  const yearsTrading = yearsTradingRaw ? parseInt(yearsTradingRaw, 10) : NaN;
+  const yearEstablishedPrefill =
+    Number.isFinite(yearsTrading) && yearsTrading >= 0 && yearsTrading <= 200
+      ? new Date().getFullYear() - yearsTrading
+      : null;
+  const onboardingParams = new URLSearchParams({ welcome: "1" });
+  if (sellerTypePref) onboardingParams.set("sellerType", sellerTypePref);
+  if (businessNamePrefill) onboardingParams.set("businessName", businessNamePrefill.slice(0, 120));
+  if (yearEstablishedPrefill && yearEstablishedPrefill > 1800) {
+    onboardingParams.set("yearEstablished", String(yearEstablishedPrefill));
+  }
+  const defaultSelling = `/dashboard/onboarding?${onboardingParams.toString()}`;
   const defaultBuying = "/search?welcome=1";
   const redirectTo =
     callback ??

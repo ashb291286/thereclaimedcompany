@@ -404,9 +404,15 @@ export default async function SearchPage({
             >
               List your item
             </Link>
+          </div>
+          <div className="mt-3 rounded-xl border border-brand/30 bg-brand-soft/40 p-4">
+            <p className="text-sm font-semibold text-zinc-900">Run a reclamation yard?</p>
+            <p className="mt-1 text-sm text-zinc-700">
+              Join with a dedicated yard onboarding journey and start getting found by local buyers.
+            </p>
             <Link
-              href="/auth/register"
-              className="mt-2 inline-flex text-sm font-medium text-brand underline hover:text-brand-hover"
+              href="/auth/register?sellerFlow=yard"
+              className="mt-3 inline-flex rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
             >
               Add your business
             </Link>

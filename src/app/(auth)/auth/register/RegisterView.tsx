@@ -35,13 +35,49 @@ const sellingBenefits = {
 export function RegisterView({
   register,
   callbackUrl = "",
+  sellerFlow = null,
 }: {
   register: RegisterAction;
   /** Sanitized internal path only (from server). */
   callbackUrl?: string;
+  sellerFlow?: "yard" | "dealer" | null;
 }) {
-  const [accountIntent, setAccountIntent] = useState<"buying" | "selling">("buying");
-  const copy = accountIntent === "buying" ? buyingBenefits : sellingBenefits;
+  const flowLockedToSelling = sellerFlow === "yard" || sellerFlow === "dealer";
+  const [accountIntent, setAccountIntent] = useState<"buying" | "selling">(
+    flowLockedToSelling ? "selling" : "buying"
+  );
+  const yardBenefits = {
+    eyebrow: "For reclamation yards",
+    title: "Get your yard discovered by local buyers",
+    subtitle:
+      "Set up a dedicated yard profile, publish stock quickly, and grow repeat trade with a marketplace built around salvage.",
+    points: [
+      "Create a public yard profile with your opening hours and trust signals.",
+      "List yard stock fast and reach buyers searching by postcode and distance.",
+      "Receive enquiries, offers, and paid orders in one dashboard.",
+      "Use fulfilment tools to manage collection and delivery handovers clearly.",
+    ],
+  };
+  const dealerBenefits = {
+    eyebrow: "For dealers",
+    title: "Present high-value pieces with confidence",
+    subtitle:
+      "Build a premium dealer profile, capture provenance details, and run private deal threads before secure checkout.",
+    points: [
+      "Use dealer-tailored listing fields for dimensions, style, and provenance.",
+      "Open private buyer discussions for premium pieces and present agreed deals.",
+      "Issue authenticity certificates automatically on completed sales.",
+      "Track invoicing, receipts, and handover progress in one place.",
+    ],
+  };
+  const copy =
+    sellerFlow === "yard"
+      ? yardBenefits
+      : sellerFlow === "dealer"
+        ? dealerBenefits
+        : accountIntent === "buying"
+          ? buyingBenefits
+          : sellingBenefits;
   const signInHref =
     callbackUrl !== "" ? `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/signin";
 
@@ -72,14 +108,19 @@ export function RegisterView({
         <p className="text-xs font-semibold uppercase tracking-wider text-brand">Welcome to The Reclaimed Company</p>
         <h1 className="mt-2 text-2xl font-semibold text-zinc-900">Create your account</h1>
         <p className="mt-1 text-sm text-zinc-600">
-          Choose how you plan to use the platform — you can always do both later.
+          {flowLockedToSelling
+            ? sellerFlow === "yard"
+              ? "Start your yard onboarding journey. We pre-configure this sign-up for reclamation yards."
+              : "Start your dealer onboarding journey with the right setup from the first step."
+            : "Choose how you plan to use the platform — you can always do both later."}
         </p>
         <div className="mt-6">
           <RegisterForm
             register={register}
             accountIntent={accountIntent}
-            onAccountIntentChange={setAccountIntent}
+            onAccountIntentChange={flowLockedToSelling ? undefined : setAccountIntent}
             callbackUrl={callbackUrl}
+            sellerFlow={sellerFlow}
           />
         </div>
         <p className="mt-6 text-center text-sm text-zinc-600">

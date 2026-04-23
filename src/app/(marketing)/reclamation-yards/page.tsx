@@ -41,7 +41,7 @@ export default async function ReclamationYardsHubPage() {
           </p>
         </div>
         <Link
-          href="/auth/register"
+          href="/auth/register?sellerFlow=yard"
           className="inline-flex rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover"
         >
           Add your yard FREE

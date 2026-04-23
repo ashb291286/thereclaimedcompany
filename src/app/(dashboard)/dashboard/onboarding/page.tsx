@@ -19,12 +19,32 @@ function CompleteModalShell({ stripeSuccess }: { stripeSuccess: boolean }) {
 export default async function OnboardingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string; error?: string; phase?: string; stripe?: string }>;
+  searchParams: Promise<{
+    welcome?: string;
+    error?: string;
+    phase?: string;
+    stripe?: string;
+    sellerType?: string;
+    businessName?: string;
+    yearEstablished?: string;
+  }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
 
-  const { welcome, error, phase, stripe: stripeParam } = await searchParams;
+  const {
+    welcome,
+    error,
+    phase,
+    stripe: stripeParam,
+    sellerType,
+    businessName,
+    yearEstablished,
+  } = await searchParams;
+  const prefillSellerType =
+    sellerType === "reclamation_yard" || sellerType === "dealer" ? sellerType : "individual";
+  const prefillBusinessName = (businessName ?? "").trim();
+  const prefillYearEstablished = (yearEstablished ?? "").trim();
 
   const profile = await prisma.sellerProfile.findUnique({
     where: { userId: session.user.id },
@@ -56,7 +76,11 @@ export default async function OnboardingPage({
           <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         )}
         <form action={completeSellerOnboarding} className="mt-8 space-y-6">
-          <YardFieldsToggle />
+          <YardFieldsToggle
+            initialSellerType={prefillSellerType}
+            initialBusinessName={prefillBusinessName}
+            initialYearEstablished={prefillYearEstablished}
+          />
           <div>
             <label htmlFor="displayName" className="mb-1 block text-sm font-medium text-zinc-700">
               Display name
@@ -66,6 +90,7 @@ export default async function OnboardingPage({
               name="displayName"
               type="text"
               required
+              defaultValue={prefillBusinessName}
               placeholder="How you want to appear to buyers"
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />

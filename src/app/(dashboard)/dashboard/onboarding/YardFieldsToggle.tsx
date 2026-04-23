@@ -3,15 +3,25 @@
 import { useState } from "react";
 import { OpeningHoursEditor } from "@/components/OpeningHoursEditor";
 
-export function YardFieldsToggle() {
+export function YardFieldsToggle({
+  initialSellerType = "individual",
+  initialBusinessName = "",
+  initialYearEstablished = "",
+}: {
+  initialSellerType?: "individual" | "reclamation_yard" | "dealer";
+  initialBusinessName?: string;
+  initialYearEstablished?: string;
+}) {
   const [sellerType, setSellerType] = useState<"individual" | "reclamation_yard" | "dealer">(
-    "individual"
+    initialSellerType
   );
   const [vatRegistered, setVatRegistered] = useState(false);
   const [vatNumber, setVatNumber] = useState("");
   const [salvoCodeMember, setSalvoCodeMember] = useState(false);
   const [isRegisteredCharity, setIsRegisteredCharity] = useState(false);
   const [charityNumber, setCharityNumber] = useState("");
+  const [businessName, setBusinessName] = useState(initialBusinessName);
+  const [yearEstablished, setYearEstablished] = useState(initialYearEstablished);
   const showBusiness = sellerType === "reclamation_yard" || sellerType === "dealer";
   const showSalvo = sellerType === "reclamation_yard";
 
@@ -76,7 +86,25 @@ export function YardFieldsToggle() {
               id="businessName"
               name="businessName"
               type="text"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
               placeholder={sellerType === "dealer" ? "Your dealer business name" : "Your reclamation yard name"}
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            />
+          </div>
+          <div>
+            <label htmlFor="yearEstablished" className="block text-sm font-medium text-zinc-700 mb-1">
+              Year established (optional)
+            </label>
+            <input
+              id="yearEstablished"
+              name="yearEstablished"
+              type="number"
+              min={1800}
+              max={new Date().getFullYear()}
+              value={yearEstablished}
+              onChange={(e) => setYearEstablished(e.target.value)}
+              placeholder="e.g. 1998"
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>

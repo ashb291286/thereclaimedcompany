@@ -22,6 +22,7 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   const postcodeRaw = formData.get("postcode") as string;
   const businessName = formData.get("businessName") as string | null;
   const openingHoursScheduleRaw = formData.get("openingHoursSchedule") as string | null;
+  const yearEstablishedRaw = String(formData.get("yearEstablished") ?? "").trim();
   const vatRegisteredRaw = String(formData.get("vatRegistered") ?? "").trim();
   const vatNumberRaw = String(formData.get("vatNumber") ?? "").trim();
   const salvoCodeMemberRaw = String(formData.get("salvoCodeMember") ?? "").trim();
@@ -76,6 +77,14 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   const isRegisteredCharity =
     (sellerType === "reclamation_yard" || sellerType === "dealer") && isRegisteredCharityRaw === "yes";
   const charityNumber = isRegisteredCharity ? charityNumberRaw.toUpperCase().replace(/\s+/g, "") : "";
+  const yearEstablished =
+    yearEstablishedRaw.length > 0 ? parseInt(yearEstablishedRaw, 10) : NaN;
+  const validYearEstablished =
+    Number.isFinite(yearEstablished) &&
+    yearEstablished >= 1800 &&
+    yearEstablished <= new Date().getFullYear()
+      ? yearEstablished
+      : null;
   if (isRegisteredCharity && charityNumber.length < 5) {
     redirect(
       "/dashboard/onboarding?error=" +
@@ -105,6 +114,10 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
         businessName:
           sellerType === "reclamation_yard" || sellerType === "dealer"
             ? (businessName?.trim() || null)
+            : null,
+        yearEstablished:
+          sellerType === "reclamation_yard" || sellerType === "dealer"
+            ? validYearEstablished
             : null,
         openingHours: null,
         openingHoursSchedule,

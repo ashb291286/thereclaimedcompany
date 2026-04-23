@@ -253,7 +253,7 @@ export function MarketingShell({
                     <Link href="/search" className="block hover:text-white">
                       Marketplace
                     </Link>
-                    <Link href="/auth/register" className="block hover:text-white">
+                    <Link href="/auth/register?sellerFlow=yard" className="block hover:text-white">
                       Add Your Yard FREE
                     </Link>
                     <p>Free To Collect</p>
@@ -291,11 +291,16 @@ export function MarketingShell({
                 </div>
 
                 <div className="mt-8 rounded-xl border border-white/20 bg-white/10 px-5 py-4 sm:flex sm:items-center sm:justify-between">
-                  <p className="max-w-2xl text-2xl font-semibold leading-tight tracking-tight sm:text-[32px]">
-                    Get found fast. Connect with homeowners and salvagers who need reclaimed items all online.
-                  </p>
+                  <div className="max-w-2xl">
+                    <p className="text-2xl font-semibold leading-tight tracking-tight sm:text-[32px]">
+                      Get Found fast. Sell More. Grow Your Yard.
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-white/90">
+                      The global marketplace for local reclamation. Reclamation without borders, local yards global reach.
+                    </p>
+                  </div>
                   <Link
-                    href="/auth/register"
+                    href="/auth/register?sellerFlow=yard"
                     className="mt-4 inline-flex rounded-full border border-white/60 bg-brand px-5 py-2 text-sm font-semibold text-white hover:bg-brand-hover sm:mt-0"
                   >
                     Add Your Business
