@@ -341,6 +341,12 @@ export default async function HomePage() {
         </div>
         <p className="mb-6 rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
           Newly listed yards and salvage specialists joining The Reclaimed Company.
+          <Link
+            href="/auth/register?sellerFlow=yard"
+            className="ml-3 inline-flex rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-hover"
+          >
+            Add your yard free
+          </Link>
         </p>
         {latestYards.length > 0 ? (
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
