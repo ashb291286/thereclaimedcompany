@@ -326,6 +326,10 @@ export default async function ListingPage({
     isRegisteredCharity: sellerProfile?.isRegisteredCharity ?? false,
   });
 
+  const dealerProvenanceDocs = coalesceDealerProvenanceDocuments(
+    listing.dealerProvenanceDocuments
+  );
+
   const sectionClass =
     "rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6";
 
