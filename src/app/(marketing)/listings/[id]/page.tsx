@@ -36,6 +36,7 @@ import { ListingQaSection } from "@/components/listings/ListingQaSection";
 import type { Metadata } from "next";
 import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { coalesceDealerProvenanceDocuments } from "@/lib/dealer-provenance";
 
 export async function generateMetadata({
   params,
@@ -411,7 +412,8 @@ export default async function ListingPage({
             listing.dateSpecific ||
             listing.dealerDesigner ||
             listing.geographicOrigin ||
-            listing.dealerAcquisitionStory) ? (
+            listing.dealerAcquisitionStory ||
+            dealerProvenanceDocs.length > 0) ? (
             <section className={`${sectionClass} mt-5 sm:mt-6`}>
               <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Dealer provenance &amp; specification
@@ -468,6 +470,51 @@ export default async function ListingPage({
                   </p>
                 </div>
               ) : null}
+              {dealerProvenanceDocs.length > 0 ? (
+                <div className="mt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Supporting documents</p>
+                  <p className="mt-1 text-sm text-zinc-600">
+                    Receipts, repairs, and certificates. Full set is on the{" "}
+                    <Link href={`/listings/${listing.id}/passport`} className="font-medium text-brand hover:underline">
+                      Piece Passport
+                    </Link>
+                    .
+                  </p>
+                  <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {dealerProvenanceDocs.slice(0, 6).map((doc) => (
+                      <li
+                        key={doc.url}
+                        className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50/80"
+                      >
+                        {doc.kind === "image" ? (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block aspect-[4/3] bg-zinc-100"
+                          >
+                            <img
+                              src={proxiedListingImageSrc(doc.url)}
+                              alt={doc.label}
+                              className="h-full w-full object-cover"
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex aspect-[4/3] items-center justify-center bg-zinc-200/80 text-sm font-semibold text-zinc-700"
+                          >
+                            {doc.kind === "pdf" ? "PDF" : "File"}
+                          </a>
+                        )}
+                        <p className="line-clamp-2 px-2 py-1.5 text-xs font-medium text-zinc-800">{doc.label}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </section>
           ) : null}
 
@@ -497,7 +544,7 @@ export default async function ListingPage({
               ) : null}
               {listing.seller?.role === "dealer" ? (
                 <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
-                  Comes with Piece Passport
+                  Comes with Piece Passport™
                 </span>
               ) : null}
               {listing.listingKind === "sell" && listing.freeToCollector && (
@@ -572,7 +619,7 @@ export default async function ListingPage({
             </p>
             {listing.seller?.role === "dealer" ? (
               <p className="mt-2 text-sm text-zinc-700">
-                This piece includes a Reclaimed Company <strong>Piece Passport</strong> to support provenance,
+                This piece includes a Reclaimed Company <strong>Piece Passport™</strong> to support provenance,
                 heritage context, and long-term investment value.{" "}
                 <Link href={`/listings/${listing.id}/passport`} className="font-medium text-brand underline">
                   View passport

@@ -10,7 +10,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  const [unreadCount, unreadOutbidCount, dbUserMeta] =
+  const [unreadCount, unreadOutbidCount, dbUserMeta, dealerDealsAsSellerCount] =
     session?.user?.id != null
       ? await Promise.all([
           prisma.notification.count({
@@ -23,12 +23,14 @@ export default async function DashboardLayout({
             where: { id: session.user.id },
             select: { role: true, suspendedAt: true },
           }),
-        ]).then(([count, outbid, user]) => [count, outbid, user ?? null] as const)
-      : [0, 0, null];
+          prisma.dealerDeal.count({ where: { sellerId: session.user.id } }),
+        ]).then(([count, outbid, user, dealCount]) => [count, outbid, user ?? null, dealCount] as const)
+      : [0, 0, null, 0];
   if (dbUserMeta?.suspendedAt) {
     await signOut({ redirectTo: "/auth/signout?suspended=1" });
   }
   const isYardAccount = (session?.user?.role ?? dbUserMeta?.role ?? null) === "reclamation_yard";
+  const isDealerAccount = (session?.user?.role ?? dbUserMeta?.role ?? null) === "dealer";
   const carbonAdmin = session ? isCarbonAdmin(session) : false;
 
   return (
@@ -36,6 +38,8 @@ export default async function DashboardLayout({
       unreadCount={unreadCount}
       unreadOutbidCount={unreadOutbidCount}
       isYardAccount={isYardAccount}
+      isDealerAccount={isDealerAccount}
+      dealerDealsAsSellerCount={isDealerAccount ? dealerDealsAsSellerCount : 0}
       carbonAdmin={carbonAdmin}
     >
       {children}

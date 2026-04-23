@@ -12,6 +12,7 @@ import {
   type ListingKind,
 } from "@/generated/prisma/client";
 import { slugifyCategoryName } from "@/lib/category-suggest";
+import { parseDealerProvenanceDocumentsFromFormJson } from "@/lib/dealer-provenance";
 import { STRIPE_MIN_AMOUNT_PENCE } from "@/lib/constants";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
 import {
@@ -31,6 +32,8 @@ type ParsedListing = {
   auctionEndsAt: Date | null;
   auctionReservePence: number | null;
 };
+
+type DealerTimelineEntry = { date: string; event: string };
 
 function parseListingCommerce(
   formData: FormData,
@@ -276,6 +279,8 @@ function parseDealerListingFields(
   | "dealerDesigner"
   | "geographicOrigin"
   | "dealerAcquisitionStory"
+  | "dealerProvenanceTimeline"
+  | "dealerProvenanceDocuments"
 > {
   if (!opts.isDealer) {
     return {
@@ -288,6 +293,8 @@ function parseDealerListingFields(
       dealerDesigner: null,
       geographicOrigin: null,
       dealerAcquisitionStory: null,
+      dealerProvenanceTimeline: Prisma.DbNull,
+      dealerProvenanceDocuments: Prisma.DbNull,
     };
   }
 
@@ -297,6 +304,30 @@ function parseDealerListingFields(
   const designer = String(formData.get("dealerDesigner") ?? "").trim();
   const countryOfOrigin = String(formData.get("dealerCountryOfOrigin") ?? "").trim();
   const acquisitionStory = String(formData.get("dealerAcquisitionStory") ?? "").trim();
+  const documentsJsonRaw = String(formData.get("dealerProvenanceDocumentsJson") ?? "").trim();
+  const documents = parseDealerProvenanceDocumentsFromFormJson(documentsJsonRaw);
+  const timelineJsonRaw = String(formData.get("dealerTimelineJson") ?? "").trim();
+  let timeline: DealerTimelineEntry[] = [];
+  if (timelineJsonRaw) {
+    try {
+      const parsed = JSON.parse(timelineJsonRaw) as unknown;
+      if (Array.isArray(parsed)) {
+        timeline = parsed
+          .map((item) => {
+            if (!item || typeof item !== "object") return null;
+            const maybe = item as { date?: unknown; event?: unknown };
+            const date = typeof maybe.date === "string" ? maybe.date.trim().slice(0, 120) : "";
+            const event = typeof maybe.event === "string" ? maybe.event.trim().slice(0, 300) : "";
+            if (!date || !event) return null;
+            return { date, event };
+          })
+          .filter((item): item is DealerTimelineEntry => Boolean(item))
+          .slice(0, 12);
+      }
+    } catch {
+      timeline = [];
+    }
+  }
 
   return {
     dimensionsW: parseOptionalPositiveFloat(String(formData.get("dealerWidthCm") ?? "")),
@@ -308,6 +339,12 @@ function parseDealerListingFields(
     dealerDesigner: designer ? designer.slice(0, 120) : null,
     geographicOrigin: countryOfOrigin ? countryOfOrigin.slice(0, 120) : null,
     dealerAcquisitionStory: acquisitionStory ? acquisitionStory.slice(0, 2000) : null,
+    dealerProvenanceTimeline: timeline.length
+      ? (timeline as unknown as Prisma.InputJsonValue)
+      : Prisma.DbNull,
+    dealerProvenanceDocuments: documents.length
+      ? (documents as unknown as Prisma.InputJsonValue)
+      : Prisma.DbNull,
   };
 }
 

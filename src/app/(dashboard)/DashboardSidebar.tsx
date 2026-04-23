@@ -23,12 +23,17 @@ function itemClass(active: boolean, accent: Item["accent"] = "default"): string 
 
 export function DashboardSidebar({
   isYardAccount,
+  isDealerAccount,
+  dealerDealsAsSellerCount = 0,
   carbonAdmin,
   unreadCount,
   myBidsOutbidUnread = 0,
   onNavigate,
 }: {
   isYardAccount: boolean;
+  isDealerAccount: boolean;
+  /** Threads where this user is the seller (dealer) — shown on Enquiries. */
+  dealerDealsAsSellerCount?: number;
   carbonAdmin: boolean;
   unreadCount: number;
   /** Unread “you’ve been outbid” notifications — surfaced on My bids. */
@@ -44,6 +49,18 @@ export function DashboardSidebar({
     { href: "/dashboard/sell", label: "Sell" },
     { href: "/dashboard/listings", label: "My listings" },
     { href: "/dashboard/offers", label: "Offers" },
+    ...(isDealerAccount
+      ? [
+          {
+            href: "/dashboard/deals" as const,
+            label: "Enquiries" as const,
+            badge:
+              dealerDealsAsSellerCount > 0
+                ? String(Math.min(99, dealerDealsAsSellerCount))
+                : null,
+          },
+        ]
+      : []),
     {
       href: "/dashboard/my-bids",
       label: "My bids",

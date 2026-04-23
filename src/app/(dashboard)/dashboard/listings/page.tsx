@@ -190,7 +190,7 @@ export default async function DashboardListingsPage({
                       rel="noopener noreferrer"
                       className="rounded-lg border border-amber-200 px-3 py-1.5 text-sm font-semibold text-amber-900 hover:bg-amber-50"
                     >
-                      Piece Passport
+                      Piece Passport™
                     </Link>
                   ) : null}
                   {canRelistNoBidAuction ? (

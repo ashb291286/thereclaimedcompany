@@ -419,6 +419,10 @@ model Listing {
   geographicOrigin       String?
   /// Dealer-only provenance story for certificate/readout.
   dealerAcquisitionStory String?   @db.Text
+  /// Dealer-only structured provenance timeline entries [{ date, event }].
+  dealerProvenanceTimeline Json?
+  /// Dealer-only passport attachments: images / PDFs (receipts, repairs, certificates) as JSON array.
+  dealerProvenanceDocuments Json?
   genreTags              String[]  @default([])
   settingInteriorTags    String[]  @default([])
   settingExteriorTags    String[]  @default([])

@@ -34,6 +34,7 @@ export default async function DashboardPage({
     pendingBuyerOffersAsSeller,
     pendingSellerCountersAsBuyer,
     auctionBidCounts,
+    dealerDealsAsSellerCount,
   ] = await Promise.all([
     prisma.sellerProfile.findUnique({ where: { userId: session.user.id } }),
     prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }),
@@ -89,6 +90,7 @@ export default async function DashboardPage({
       },
       _count: { _all: true },
     }),
+    prisma.dealerDeal.count({ where: { sellerId: session.user.id } }),
   ]);
 
   const totalViewsByListing = new Map(viewsTotal.map((v) => [v.listingId, v._count._all]));
@@ -219,6 +221,34 @@ export default async function DashboardPage({
             )}
           </p>
           <span className="mt-3 inline-block text-sm font-medium text-brand">View nearby stock →</span>
+        </Link>
+      ) : null}
+      {isDealerAccount ? (
+        <Link
+          href="/dashboard/deals"
+          className={`mt-6 block rounded-xl border p-5 shadow-sm transition ${
+            dealerDealsAsSellerCount > 0
+              ? "border-violet-300 bg-gradient-to-r from-violet-50/90 to-slate-50/80 hover:border-violet-400"
+              : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/80"
+          }`}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-violet-900/80">Dealer</p>
+          <p className="mt-1 text-lg font-semibold text-zinc-900">Private enquiries</p>
+          <p className="mt-2 text-sm text-zinc-600">
+            {dealerDealsAsSellerCount > 0 ? (
+              <>
+                You have{" "}
+                <strong>
+                  {dealerDealsAsSellerCount} active thread{dealerDealsAsSellerCount === 1 ? "" : "s"}
+                </strong>{" "}
+                with buyers on your listings. Open to reply, negotiate, and present an agreed deal.
+              </>
+            ) : (
+              "When a buyer enquires on a premium (private-enquiry) listing, the conversation appears here. You can
+              also reach this from the sidebar: Enquiries."
+            )}
+          </p>
+          <span className="mt-3 inline-block text-sm font-medium text-brand">View enquiries →</span>
         </Link>
       ) : null}
       <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -467,9 +497,9 @@ export default async function DashboardPage({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="rounded-lg border border-amber-200 px-2 py-1.5 text-center text-xs font-semibold text-amber-900 hover:bg-amber-50"
-                        title="Open Piece Passport page to print or save as PDF"
+                        title="Open Piece Passport™ page to print or save as PDF"
                       >
-                        Piece Passport
+                        Piece Passport™
                       </Link>
                     ) : null}
                   </div>

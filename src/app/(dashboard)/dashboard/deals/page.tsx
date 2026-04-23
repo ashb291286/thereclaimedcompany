@@ -23,9 +23,10 @@ export default async function DealerDealsIndexPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-zinc-900">Private deals</h1>
+      <h1 className="text-2xl font-semibold text-zinc-900">Private enquiries</h1>
       <p className="mt-1 text-sm text-zinc-600">
-        One private thread per buyer and dealer listing. Negotiate, present an agreed deal, then complete checkout.
+        One thread per buyer and dealer listing. When a buyer enquires on your item, respond here, present an agreed
+        total, then they can check out.
       </p>
       {deals.length === 0 ? (
         <p className="mt-6 text-sm text-zinc-600">No deal discussions yet.</p>

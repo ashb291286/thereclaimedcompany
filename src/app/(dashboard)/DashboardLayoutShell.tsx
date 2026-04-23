@@ -10,12 +10,17 @@ export function DashboardLayoutShell({
   unreadCount,
   unreadOutbidCount,
   isYardAccount,
+  isDealerAccount,
+  dealerDealsAsSellerCount,
   carbonAdmin,
 }: {
   children: React.ReactNode;
   unreadCount: number;
   unreadOutbidCount: number;
   isYardAccount: boolean;
+  isDealerAccount: boolean;
+  /** Threads where this user is the dealer (private buyer enquiries). */
+  dealerDealsAsSellerCount: number;
   carbonAdmin: boolean;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -125,6 +130,8 @@ export function DashboardLayoutShell({
           <div className="hidden md:block">
             <DashboardSidebar
               isYardAccount={isYardAccount}
+              isDealerAccount={isDealerAccount}
+              dealerDealsAsSellerCount={dealerDealsAsSellerCount}
               carbonAdmin={carbonAdmin}
               unreadCount={unreadCount}
               myBidsOutbidUnread={unreadOutbidCount}
@@ -202,6 +209,8 @@ export function DashboardLayoutShell({
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-2">
               <DashboardSidebar
                 isYardAccount={isYardAccount}
+                isDealerAccount={isDealerAccount}
+                dealerDealsAsSellerCount={dealerDealsAsSellerCount}
                 carbonAdmin={carbonAdmin}
                 unreadCount={unreadCount}
                 myBidsOutbidUnread={unreadOutbidCount}

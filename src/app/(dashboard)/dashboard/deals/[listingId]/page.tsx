@@ -4,9 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { BuyButton } from "@/app/(marketing)/listings/[id]/BuyButton";
 import {
+  notifyDealerOfNewPrivateDealEnquiry,
   postDealerDealMessageAction,
   presentDealerDealAction,
 } from "@/lib/actions/dealer-deals";
+import { revalidatePath } from "next/cache";
 import { sellerChargesVat, vatLabelSuffix } from "@/lib/vat-pricing";
 import { buyerGrossPenceFromSellerNetPence } from "@/lib/vat-pricing";
 
@@ -87,6 +89,15 @@ export default async function DealerDealThreadPage({
         },
       },
     });
+    await notifyDealerOfNewPrivateDealEnquiry({
+      sellerId: listing.sellerId,
+      listingId,
+      listingTitle: listing.title,
+      buyerId: session.user.id,
+      buyerLabel: session.user.name ?? session.user.email ?? "A buyer",
+    });
+    revalidatePath(`/dashboard/deals/${listingId}`);
+    revalidatePath("/dashboard/deals");
   }
   if (!deal) {
     deal = await prisma.dealerDeal.findUnique({

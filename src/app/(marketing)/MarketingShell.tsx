@@ -16,6 +16,7 @@ export function MarketingShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const isListingPassportRoute = /^\/listings\/[^/]+\/passport$/.test(pathname ?? "");
   const hideMobileHeader = pathname?.startsWith("/search") ?? false;
   const hideFooter = pathname?.startsWith("/search") ?? false;
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -32,10 +33,9 @@ export function MarketingShell({
   return (
     <CurrencyProvider>
       <div className="min-h-screen bg-stone-50 text-zinc-900">
+        {!isListingPassportRoute ? (
         <header
-          className={`border-b border-zinc-200 bg-white/95 backdrop-blur ${
-            hideMobileHeader ? "hidden md:block" : ""
-          }`}
+          className={`border-b border-zinc-200 bg-white/95 backdrop-blur ${hideMobileHeader ? "hidden md:block" : ""}`}
         >
           <div className="mx-auto flex min-h-16 w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6 sm:py-0">
             <Link href="/" className="flex items-center gap-2" aria-label="The Reclaimed Company — home">
@@ -191,8 +191,9 @@ export function MarketingShell({
             </aside>
           </div>
         </header>
+        ) : null}
         <main>{children}</main>
-        {!hideFooter ? (
+        {!hideFooter && !isListingPassportRoute ? (
           <footer className="bg-[#06496b] text-white">
             <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
               <div className="flex justify-center">

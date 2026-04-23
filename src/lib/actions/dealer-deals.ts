@@ -6,6 +6,23 @@ import { createNotification } from "@/lib/notifications";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+/** In-app + deep-link for the dealer thread (must include `buyer` so sellers land on the right thread). */
+export async function notifyDealerOfNewPrivateDealEnquiry(input: {
+  sellerId: string;
+  listingId: string;
+  listingTitle: string;
+  buyerId: string;
+  buyerLabel: string;
+}) {
+  await createNotification({
+    userId: input.sellerId,
+    type: "dealer_deal_enquiry",
+    title: "New private enquiry",
+    body: `${input.buyerLabel} opened a private deal discussion for “${input.listingTitle}”.`,
+    linkUrl: `/dashboard/deals/${input.listingId}?buyer=${input.buyerId}`,
+  });
+}
+
 export async function ensureDealerDealForListingAction(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
@@ -23,7 +40,11 @@ export async function ensureDealerDealForListingAction(formData: FormData) {
     redirect(`/dashboard/deals/${listingId}`);
   }
 
-  const deal = await prisma.dealerDeal.upsert({
+  const existing = await prisma.dealerDeal.findUnique({
+    where: { listingId_buyerId: { listingId, buyerId: session.user.id } },
+  });
+
+  await prisma.dealerDeal.upsert({
     where: {
       listingId_buyerId: {
         listingId,
@@ -44,13 +65,15 @@ export async function ensureDealerDealForListingAction(formData: FormData) {
     },
   });
 
-  await createNotification({
-    userId: listing.sellerId,
-    type: "dealer_deal_enquiry",
-    title: "New private enquiry",
-    body: `${session.user.name ?? session.user.email ?? "A buyer"} opened a private deal discussion for “${listing.title}”.`,
-    linkUrl: `/dashboard/deals/${listingId}?buyer=${session.user.id}`,
-  });
+  if (!existing) {
+    await notifyDealerOfNewPrivateDealEnquiry({
+      sellerId: listing.sellerId,
+      listingId,
+      listingTitle: listing.title,
+      buyerId: session.user.id,
+      buyerLabel: session.user.name ?? session.user.email ?? "A buyer",
+    });
+  }
 
   revalidatePath(`/dashboard/deals/${listingId}`);
   revalidatePath("/dashboard/deals");
@@ -93,7 +116,7 @@ export async function postDealerDealMessageAction(formData: FormData) {
     type: "dealer_deal_message",
     title: "New deal message",
     body: `There is a new message on the deal thread for “${deal.listing.title}”.`,
-    linkUrl: `/dashboard/deals/${listingId}`,
+    linkUrl: `/dashboard/deals/${listingId}?buyer=${deal.buyerId}`,
   });
 
   revalidatePath(`/dashboard/deals/${listingId}`);

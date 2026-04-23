@@ -25,9 +25,23 @@ import {
   type CarrierFormRow,
 } from "@/lib/delivery-carriers";
 import { MATERIAL_FORM_OPTIONS_FALLBACK } from "@/lib/carbon/material-defaults";
+import {
+  MAX_DEALER_PROVENANCE_DOCUMENTS,
+  type DealerProvenanceDocument,
+  coalesceDealerProvenanceDocuments,
+} from "@/lib/dealer-provenance";
 
 type Category = Prisma.CategoryGetPayload<object>;
 type ListingWithCategory = Prisma.ListingGetPayload<{ include: { category: true } }>;
+type DealerTimelineEntry = { date: string; event: string };
+
+const DEALER_PROV_MAX_FILE_BYTES = 12 * 1024 * 1024;
+
+function fileKindFromFile(f: File): DealerProvenanceDocument["kind"] {
+  if (f.type.startsWith("image/")) return "image";
+  if (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")) return "pdf";
+  return "other";
+}
 
 const CONDITION_LABELS: Record<Condition, string> = {
   like_new: "Like new",
@@ -217,6 +231,31 @@ export function ListingForm({
     (listing as (ListingWithCategory & { dealerAcquisitionStory?: string }) | undefined)
       ?.dealerAcquisitionStory ?? ""
   );
+  const [dealerTimeline, setDealerTimeline] = useState<DealerTimelineEntry[]>(() => {
+    const raw = (listing as (ListingWithCategory & { dealerProvenanceTimeline?: unknown }) | undefined)
+      ?.dealerProvenanceTimeline;
+    if (!Array.isArray(raw)) return [{ date: "", event: "" }];
+    const parsed = raw
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const maybe = item as { date?: unknown; event?: unknown };
+        const date = typeof maybe.date === "string" ? maybe.date : "";
+        const event = typeof maybe.event === "string" ? maybe.event : "";
+        if (!date && !event) return null;
+        return { date, event };
+      })
+      .filter((item): item is DealerTimelineEntry => Boolean(item));
+    return parsed.length ? parsed : [{ date: "", event: "" }];
+  });
+  const [dealerProvenanceDocuments, setDealerProvenanceDocuments] = useState<DealerProvenanceDocument[]>(
+    () => {
+      const raw = (listing as (ListingWithCategory & { dealerProvenanceDocuments?: unknown }) | undefined)
+        ?.dealerProvenanceDocuments;
+      return coalesceDealerProvenanceDocuments(raw);
+    }
+  );
+  const [dealerProvenanceUploading, setDealerProvenanceUploading] = useState(false);
+  const dealerProvFileRef = useRef<HTMLInputElement | null>(null);
   const [pricingModeUi, setPricingModeUi] = useState<ListingPricingMode>(
     () => listing?.pricingMode ?? ListingPricingMode.LOT
   );
@@ -240,6 +279,17 @@ export function ListingForm({
     return categories.find((c) => c.name.toLowerCase() === q) ?? null;
   }, [categories, categoryQuery]);
   const useNewCategory = categoryQuery.trim().length > 0 && !exactCategoryMatch;
+  const dealerTimelineJson = useMemo(() => {
+    const cleaned = dealerTimeline
+      .map((entry) => ({ date: entry.date.trim(), event: entry.event.trim() }))
+      .filter((entry) => entry.date && entry.event)
+      .slice(0, 12);
+    return JSON.stringify(cleaned);
+  }, [dealerTimeline]);
+  const dealerProvenanceDocumentsJson = useMemo(
+    () => JSON.stringify(dealerProvenanceDocuments),
+    [dealerProvenanceDocuments]
+  );
 
   useEffect(() => {
     if (freeToCollector) setFulfillmentMode("collection_only");
@@ -350,6 +400,58 @@ export function ListingForm({
 
   function removeImage(url: string) {
     setImageUrls((prev) => prev.filter((u) => u !== url));
+  }
+
+  async function handleDealerProvenanceFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (dealerProvenanceDocuments.length >= MAX_DEALER_PROVENANCE_DOCUMENTS) {
+      const msg = `You can add up to ${MAX_DEALER_PROVENANCE_DOCUMENTS} documents.`;
+      setToastError(msg);
+      return;
+    }
+    if (file.size > DEALER_PROV_MAX_FILE_BYTES) {
+      setToastError("Each file must be 12MB or smaller.");
+      return;
+    }
+    const okType =
+      file.type.startsWith("image/") ||
+      file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf");
+    if (!okType) {
+      setToastError("Please choose an image or PDF file.");
+      return;
+    }
+    setDealerProvenanceUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+      formData.set("folder", "dealer-provenance");
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Upload failed");
+      }
+      const data = (await res.json()) as { url?: string };
+      if (!data.url) throw new Error("Upload failed");
+      const kind = fileKindFromFile(file);
+      const fileName = file.name.slice(0, 200);
+      const baseLabel = fileName.replace(/\.[^.]+$/, "").trim().slice(0, 120) || "Document";
+      setDealerProvenanceDocuments((prev) => {
+        if (prev.length >= MAX_DEALER_PROVENANCE_DOCUMENTS) return prev;
+        return [...prev, { url: data.url!, label: baseLabel, fileName, kind }];
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setDealerProvenanceUploading(false);
+    }
+  }
+
+  function removeDealerProvenanceDocument(url: string) {
+    setDealerProvenanceDocuments((prev) => prev.filter((d) => d.url !== url));
   }
 
   const priceRequired = listingKind === "auction" || (listingKind === "sell" && !freeToCollector);
@@ -508,6 +610,8 @@ export function ListingForm({
         />
       ) : null}
       <input type="hidden" name="images" value={imageUrls.join(",")} />
+      <input type="hidden" name="dealerTimelineJson" value={dealerTimelineJson} />
+      <input type="hidden" name="dealerProvenanceDocumentsJson" value={dealerProvenanceDocumentsJson} />
       <input type="hidden" name="fulfillmentMode" value={fulfillmentMode} />
       <input type="hidden" name="deliveryOptionsJson" value={deliveryOptionsJson} />
       {isEdit && <input type="hidden" name="listingId" value={listing.id} />}
@@ -1207,6 +1311,156 @@ export function ListingForm({
                   placeholder="e.g. Acquired from a private Copenhagen estate sale in 2024..."
                   className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
+              </div>
+              <div className="sm:col-span-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-800">Provenance timeline</p>
+                    <p className="text-xs text-zinc-500">
+                      Add key moments (manufactured, acquired, restored, listed) for the Piece Passport™.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDealerTimeline((prev) => [...prev, { date: "", event: "" }].slice(0, 12))
+                    }
+                    className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100"
+                  >
+                    Add timeline point
+                  </button>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {dealerTimeline.map((entry, idx) => (
+                    <div key={`dealer-timeline-${idx}`} className="grid gap-2 sm:grid-cols-[180px_1fr_auto]">
+                      <input
+                        type="text"
+                        value={entry.date}
+                        onChange={(e) =>
+                          setDealerTimeline((prev) =>
+                            prev.map((row, rowIdx) =>
+                              rowIdx === idx ? { ...row, date: e.target.value } : row
+                            )
+                          )
+                        }
+                        placeholder="e.g. c.1930s or Apr 2024"
+                        className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                      />
+                      <input
+                        type="text"
+                        value={entry.event}
+                        onChange={(e) =>
+                          setDealerTimeline((prev) =>
+                            prev.map((row, rowIdx) =>
+                              rowIdx === idx ? { ...row, event: e.target.value } : row
+                            )
+                          )
+                        }
+                        placeholder="Event detail"
+                        className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDealerTimeline((prev) => {
+                            if (prev.length <= 1) return [{ date: "", event: "" }];
+                            return prev.filter((_, rowIdx) => rowIdx !== idx);
+                          })
+                        }
+                        className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="sm:col-span-3 rounded-xl border border-amber-200/80 bg-amber-50/50 p-3">
+                <p className="text-sm font-medium text-zinc-800">Provenance documents</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Add images or PDFs — receipts, repair records, certificates, export paperwork. Files are shown on the
+                  Piece Passport™ and stay with the listing.
+                </p>
+                <input
+                  ref={dealerProvFileRef}
+                  type="file"
+                  accept="image/*,application/pdf,.pdf"
+                  className="hidden"
+                  onChange={handleDealerProvenanceFileChange}
+                />
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => dealerProvFileRef.current?.click()}
+                    disabled={
+                      dealerProvenanceUploading ||
+                      dealerProvenanceDocuments.length >= MAX_DEALER_PROVENANCE_DOCUMENTS
+                    }
+                    className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {dealerProvenanceUploading
+                      ? "Uploading…"
+                      : dealerProvenanceDocuments.length >= MAX_DEALER_PROVENANCE_DOCUMENTS
+                        ? "Document limit reached"
+                        : "Upload image or PDF"}
+                  </button>
+                  <p className="mt-1 text-[11px] text-zinc-500">
+                    Up to {MAX_DEALER_PROVENANCE_DOCUMENTS} files · 12MB each · JPG, PNG, WebP, or PDF
+                  </p>
+                </div>
+                {dealerProvenanceDocuments.length > 0 ? (
+                  <ul className="mt-3 space-y-2">
+                    {dealerProvenanceDocuments.map((doc) => (
+                      <li
+                        key={doc.url}
+                        className="flex flex-col gap-2 rounded-lg border border-amber-200/90 bg-white p-2 sm:flex-row sm:items-center"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          {doc.kind === "image" ? (
+                            <img
+                              src={doc.url}
+                              alt=""
+                              className="h-12 w-12 shrink-0 rounded-md border border-zinc-200 object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-zinc-100 text-xs font-semibold text-zinc-700">
+                              {doc.kind === "pdf" ? "PDF" : "FILE"}
+                            </div>
+                          )}
+                          <input
+                            type="text"
+                            value={doc.label}
+                            onChange={(e) => {
+                              const v = e.target.value.slice(0, 120);
+                              setDealerProvenanceDocuments((prev) =>
+                                prev.map((d) => (d.url === doc.url ? { ...d, label: v } : d))
+                              );
+                            }}
+                            className="min-w-0 flex-1 rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                            placeholder="Label (e.g. Original purchase receipt)"
+                          />
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-brand hover:underline"
+                          >
+                            Open
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => removeDealerProvenanceDocument(doc.url)}
+                            className="rounded-md border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             </div>
           </div>
