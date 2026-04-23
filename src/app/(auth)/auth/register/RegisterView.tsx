@@ -84,22 +84,20 @@ export function RegisterView({
 
   return (
     <div className="w-full">
-      <div className="mb-5">
-        <Link href="/" className="inline-flex items-center gap-2" aria-label="The Reclaimed Company home">
-          <Image
-            src="/images/the-reclaimed-company-logo.png"
-            alt="The Reclaimed Company"
-            width={56}
-            height={56}
-            className="h-12 w-12 object-contain"
-            priority
-          />
-        </Link>
-      </div>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10 lg:items-stretch">
       <aside className="order-2 flex flex-col justify-center rounded-2xl border border-zinc-200/90 bg-gradient-to-br from-brand-soft/50 via-white to-zinc-50 p-8 shadow-sm lg:order-1 lg:p-10">
         <div key={accountIntent}>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand">{copy.eyebrow}</p>
+          <Link href="/" className="inline-flex items-center gap-2" aria-label="The Reclaimed Company home">
+            <Image
+              src="/images/the-reclaimed-company-logo.png"
+              alt="The Reclaimed Company"
+              width={56}
+              height={56}
+              className="h-12 w-12 object-contain"
+              priority
+            />
+          </Link>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-brand">{copy.eyebrow}</p>
           <h2 className="mt-3 text-2xl font-semibold leading-tight text-zinc-900 lg:text-[1.65rem]">
             {copy.title}
           </h2>

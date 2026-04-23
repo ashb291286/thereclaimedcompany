@@ -78,16 +78,7 @@ export function RegisterForm({
             </button>
           </div>
         </section>
-      ) : (
-        <section className="rounded-xl border border-brand/30 bg-brand-soft/40 p-4">
-          <p className="text-sm font-semibold text-zinc-900">
-            {sellerFlow === "yard" ? "Yard onboarding flow" : "Dealer onboarding flow"}
-          </p>
-          <p className="mt-1 text-xs text-zinc-600">
-            This account will continue into a tailored seller setup after sign up.
-          </p>
-        </section>
-      )}
+      ) : null}
       {sellerFlow ? (
         <section className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-4">
           <div>

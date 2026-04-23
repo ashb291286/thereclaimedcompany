@@ -18,6 +18,7 @@ export default async function DashboardListingsPage({
   const { boosted, boostError, q: rawQ } = await searchParams;
   const now = new Date();
   const q = rawQ?.trim() ?? "";
+  const isDealerAccount = session.user.role === "dealer";
 
   const listings = await prisma.listing.findMany({
     where: {
@@ -182,6 +183,16 @@ export default async function DashboardListingsPage({
                   >
                     Edit
                   </Link>
+                  {isDealerAccount ? (
+                    <Link
+                      href={`/listings/${l.id}/passport`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg border border-amber-200 px-3 py-1.5 text-sm font-semibold text-amber-900 hover:bg-amber-50"
+                    >
+                      Piece Passport
+                    </Link>
+                  ) : null}
                   {canRelistNoBidAuction ? (
                     <Link
                       href={`/dashboard/listings/${l.id}/edit`}

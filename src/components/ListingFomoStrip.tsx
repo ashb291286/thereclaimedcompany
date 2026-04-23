@@ -92,7 +92,7 @@ export function ListingFomoStrip({
   } else {
     primary = (
       <>
-        <strong className="font-semibold text-zinc-900">{v} reclaimers</strong> checked this out recently.
+        <strong className="font-semibold text-zinc-900">{v} buyers</strong> viewed this recently.
         Worth a closer look.
       </>
     );
@@ -103,7 +103,7 @@ export function ListingFomoStrip({
       <p>{primary}</p>
       {favoriteCount > 0 ? (
         <p className="mt-1.5 text-xs text-amber-900/85">
-          <strong className="font-semibold">{favoriteCount}</strong> reclaimer{favoriteCount === 1 ? "" : "s"}{" "}
+          <strong className="font-semibold">{favoriteCount}</strong> buyer{favoriteCount === 1 ? "" : "s"}{" "}
           saved this to favourites.
         </p>
       ) : null}

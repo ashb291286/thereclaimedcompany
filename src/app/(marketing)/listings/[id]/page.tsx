@@ -495,6 +495,11 @@ export default async function ListingPage({
                   Charity Support
                 </span>
               ) : null}
+              {listing.seller?.role === "dealer" ? (
+                <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
+                  Comes with Piece Passport
+                </span>
+              ) : null}
               {listing.listingKind === "sell" && listing.freeToCollector && (
                 <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
                   Free to collector
@@ -565,6 +570,16 @@ export default async function ListingPage({
             <p className="mt-3 text-sm text-zinc-500">
               {listing.category.name} · {CONDITION_LABELS[listing.condition]}
             </p>
+            {listing.seller?.role === "dealer" ? (
+              <p className="mt-2 text-sm text-zinc-700">
+                This piece includes a Reclaimed Company <strong>Piece Passport</strong> to support provenance,
+                heritage context, and long-term investment value.{" "}
+                <Link href={`/listings/${listing.id}/passport`} className="font-medium text-brand underline">
+                  View passport
+                </Link>
+                .
+              </p>
+            ) : null}
             {(() => {
               const locLine = formatUkLocationLine({
                 postcodeLocality: listing.postcodeLocality,

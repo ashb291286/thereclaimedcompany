@@ -25,40 +25,42 @@ export function buildSellerBadges(input: {
   const badges: SellerBadgeVM[] = [];
 
   const { paidSalesCount, activeListingsCount, role, verificationStatus, memberSince, isRegisteredCharity } = input;
+  const isDealer = role === "dealer";
+  const roleLabel = isDealer ? "dealer" : "reclaimer";
 
   let tier: SellerBadgeVM;
   if (paidSalesCount >= 25) {
     tier = {
       key: "tier",
-      label: "Master reclaimer",
+      label: isDealer ? "Master dealer" : "Master reclaimer",
       href: BROWSE_RECLAIMED,
       title: "Browse reclaimed listings on the marketplace",
     };
   } else if (paidSalesCount >= 10) {
     tier = {
       key: "tier",
-      label: "Trusted reclaimer",
+      label: isDealer ? "Trusted dealer" : "Trusted reclaimer",
       href: BROWSE_RECLAIMED,
       title: "Browse reclaimed materials and salvage",
     };
   } else if (paidSalesCount >= 3) {
     tier = {
       key: "tier",
-      label: "Rising reclaimer",
+      label: isDealer ? "Rising dealer" : "Rising reclaimer",
       href: BROWSE_RECLAIMED,
       title: "See what else is being reclaimed nearby",
     };
   } else if (paidSalesCount >= 1) {
     tier = {
       key: "tier",
-      label: "Rookie reclaimer",
+      label: isDealer ? "Rookie dealer" : "Rookie reclaimer",
       href: BROWSE_RECLAIMED,
       title: "Explore more reclaimed listings",
     };
   } else {
     tier = {
       key: "tier",
-      label: "New reclaimer",
+      label: isDealer ? "New dealer" : "New reclaimer",
       href: BROWSE_RECLAIMED,
       title: "Discover reclaimed stock on the marketplace",
     };
@@ -85,7 +87,7 @@ export function buildSellerBadges(input: {
   if (verificationStatus === "verified") {
     badges.push({
       key: "verified",
-      label: "Verified reclaimer",
+      label: `Verified ${roleLabel}`,
       href: BROWSE_RECLAIMED,
       title: "Browse verified sellers and reclaimed listings",
     });
@@ -104,7 +106,7 @@ export function buildSellerBadges(input: {
   if (daysMember >= 365) {
     badges.push({
       key: "established",
-      label: "Established reclaimer",
+      label: `Established ${roleLabel}`,
       href: BROWSE_RECLAIMED,
       title: "Explore the reclaimed marketplace",
     });

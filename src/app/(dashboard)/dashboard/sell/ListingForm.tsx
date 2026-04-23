@@ -129,6 +129,8 @@ export function ListingForm({
   const [imageUrls, setImageUrls] = useState<string[]>(listing?.images ?? []);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toastError, setToastError] = useState<string | null>(null);
+  const [dragOverPhotos, setDragOverPhotos] = useState(false);
   const [listingKind, setListingKind] = useState<ListingKind>(listing?.listingKind ?? "sell");
   const [freeToCollector, setFreeToCollector] = useState(listing?.freeToCollector ?? false);
   const [notifyLocalYards, setNotifyLocalYards] = useState(listing?.notifyLocalYards ?? false);
@@ -148,6 +150,10 @@ export function ListingForm({
   const [categoryId, setCategoryId] = useState(
     () => listing?.categoryId ?? categories[0]?.id ?? ""
   );
+  const [categoryQuery, setCategoryQuery] = useState(() => {
+    const existingId = listing?.categoryId ?? categories[0]?.id ?? "";
+    return categories.find((c) => c.id === existingId)?.name ?? "";
+  });
   const [condition, setCondition] = useState<Condition>(listing?.condition ?? "like_new");
   const [priceStr, setPriceStr] = useState(() => {
     if (!listing) return "";
@@ -221,6 +227,19 @@ export function ListingForm({
 
   const materialSelectOptions =
     materialOptions.length > 0 ? materialOptions : MATERIAL_FORM_OPTIONS_FALLBACK;
+  const filteredCategories = useMemo(() => {
+    const q = categoryQuery.trim().toLowerCase();
+    if (!q) return categories.slice(0, 12);
+    return categories
+      .filter((c) => c.name.toLowerCase().includes(q))
+      .slice(0, 12);
+  }, [categories, categoryQuery]);
+  const exactCategoryMatch = useMemo(() => {
+    const q = categoryQuery.trim().toLowerCase();
+    if (!q) return null;
+    return categories.find((c) => c.name.toLowerCase() === q) ?? null;
+  }, [categories, categoryQuery]);
+  const useNewCategory = categoryQuery.trim().length > 0 && !exactCategoryMatch;
 
   useEffect(() => {
     if (freeToCollector) setFulfillmentMode("collection_only");
@@ -269,6 +288,12 @@ export function ListingForm({
     };
   }, []);
 
+  useEffect(() => {
+    if (!toastError) return;
+    const id = window.setTimeout(() => setToastError(null), 2800);
+    return () => window.clearTimeout(id);
+  }, [toastError]);
+
   function openCropForFile(file: File) {
     if (cropBlobUrlRef.current) {
       URL.revokeObjectURL(cropBlobUrlRef.current);
@@ -311,6 +336,10 @@ export function ListingForm({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    handleIncomingFile(file);
+  }
+
+  function handleIncomingFile(file: File) {
     if (!file.type.startsWith("image/")) {
       setError("Please choose an image file.");
       return;
@@ -436,12 +465,28 @@ export function ListingForm({
 
   return (
     <>
+      {toastError ? (
+        <div className="fixed right-4 top-4 z-[2200] max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 shadow-lg">
+          {toastError}
+        </div>
+      ) : null}
       <div className="mt-8 flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-8 xl:gap-10">
         <div className="min-w-0 w-full max-w-2xl pb-24 lg:max-w-xl lg:shrink-0 lg:pb-0 xl:-translate-x-1">
           <form
             action={createListing}
             className="space-y-8"
             onSubmit={(e) => {
+              const nativeEvt = e.nativeEvent as SubmitEvent;
+              const submitter = nativeEvt.submitter as HTMLButtonElement | null;
+              const isPublishSubmit =
+                submitter?.name === "publish" && submitter?.value === "true";
+              if (isPublishSubmit && imageUrls.length === 0) {
+                e.preventDefault();
+                const msg = "Add at least one photo before publishing.";
+                setError(msg);
+                setToastError(msg);
+                return;
+              }
               const form = e.currentTarget;
               if (listingKind === "sell" && freeToCollector) {
                 const p = form.querySelector('[name="price"]') as HTMLInputElement;
@@ -633,6 +678,29 @@ export function ListingForm({
         title="Photos"
         description="Clear shots sell faster. Choose 1:1, 4:3, or 2:1 when you crop each image."
       >
+        <div
+          className={`rounded-xl border-2 border-dashed p-3 transition ${
+            dragOverPhotos
+              ? "border-brand bg-brand-soft/30"
+              : "border-zinc-200 bg-zinc-50/40"
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!uploading && !cropState) setDragOverPhotos(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setDragOverPhotos(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOverPhotos(false);
+            if (uploading || cropState) return;
+            const file = e.dataTransfer.files?.[0];
+            if (!file) return;
+            handleIncomingFile(file);
+          }}
+        >
         <div className="flex flex-wrap gap-3">
           {imageUrls.map((url) => (
             <div key={url} className="relative">
@@ -660,6 +728,10 @@ export function ListingForm({
             />
             {uploading ? "…" : "+"}
           </label>
+        </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          Drag and drop an image here, or click + to choose a file.
+        </p>
         </div>
         <p className="text-xs text-zinc-500">At least one photo is required to publish.</p>
       </FormSection>
@@ -741,63 +813,78 @@ export function ListingForm({
             className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="categoryId" className="mb-1 block text-sm font-medium text-zinc-700">
-              Category
-            </label>
-            <select
-              id="categoryId"
-              name="categoryId"
-              required
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <div className="mt-3">
-              <label
-                htmlFor="newCategoryName"
-                className="mb-1 block text-sm font-medium text-zinc-700"
-              >
-                Suggest a new category (optional)
-              </label>
-              <input
-                id="newCategoryName"
-                name="newCategoryName"
-                type="text"
-                placeholder="e.g. Cast iron radiators"
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              />
-              <p className="mt-1 text-xs text-zinc-500">
-                If you enter a name here, we&apos;ll add it and use it for this listing instead of the dropdown.
-              </p>
+        <div>
+          <label htmlFor="categorySearch" className="mb-1 block text-sm font-medium text-zinc-700">
+            Category
+          </label>
+          <input
+            id="categorySearch"
+            type="text"
+            required
+            value={categoryQuery}
+            onChange={(e) => {
+              const next = e.target.value;
+              setCategoryQuery(next);
+              const matched = categories.find((c) => c.name.toLowerCase() === next.trim().toLowerCase());
+              if (matched) setCategoryId(matched.id);
+            }}
+            placeholder="Type to search categories..."
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+          <input type="hidden" name="categoryId" value={useNewCategory ? "" : categoryId} />
+          <input type="hidden" name="newCategoryName" value={useNewCategory ? categoryQuery.trim() : ""} />
+          {filteredCategories.length > 0 ? (
+            <div className="mt-2 rounded-lg border border-zinc-200 bg-white p-2">
+              <p className="mb-1 px-1 text-xs font-medium text-zinc-500">Recommended matches</p>
+              <div className="flex flex-wrap gap-2">
+                {filteredCategories.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setCategoryId(c.id);
+                      setCategoryQuery(c.name);
+                    }}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                      categoryId === c.id && !useNewCategory
+                        ? "border-brand bg-brand-soft text-brand"
+                        : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-300"
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div>
-            <label htmlFor="condition" className="mb-1 block text-sm font-medium text-zinc-700">
-              Condition
-            </label>
-            <select
-              id="condition"
-              name="condition"
-              required
-              value={condition}
-              onChange={(e) => setCondition(e.target.value as Condition)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-            >
-              {(Object.entries(CONDITION_LABELS) as [Condition, string][]).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
+          ) : null}
+          {useNewCategory ? (
+            <p className="mt-2 text-xs text-zinc-600">
+              No suitable match found — this will be added as a new category.
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-zinc-500">
+              Start typing to find a suitable category, then choose from recommendations.
+            </p>
+          )}
+        </div>
+        <div className="pt-3">
+          <label htmlFor="condition" className="mb-1 block text-sm font-medium text-zinc-700">
+            Condition
+          </label>
+          <select
+            id="condition"
+            name="condition"
+            required
+            value={condition}
+            onChange={(e) => setCondition(e.target.value as Condition)}
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          >
+            {(Object.entries(CONDITION_LABELS) as [Condition, string][]).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label htmlFor="price" className="mb-1 block text-sm font-medium text-zinc-700">

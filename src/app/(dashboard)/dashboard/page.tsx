@@ -414,7 +414,7 @@ export default async function DashboardPage({
                     <strong>{views7dByListing.get(l.id) ?? 0}</strong> in last 7 days
                   </p>
 
-                  <div className="mt-3 grid grid-cols-4 gap-2">
+                  <div className={`mt-3 grid gap-2 ${isDealerAccount ? "grid-cols-5" : "grid-cols-4"}`}>
                     <Link
                       href={`/dashboard/listings/${l.id}/edit`}
                       className="rounded-lg border border-zinc-300 px-2 py-1.5 text-center text-xs font-medium text-zinc-700 hover:bg-zinc-50"
@@ -461,6 +461,17 @@ export default async function DashboardPage({
                         </span>
                       ) : null}
                     </Link>
+                    {isDealerAccount ? (
+                      <Link
+                        href={`/listings/${l.id}/passport`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg border border-amber-200 px-2 py-1.5 text-center text-xs font-semibold text-amber-900 hover:bg-amber-50"
+                        title="Open Piece Passport page to print or save as PDF"
+                      >
+                        Piece Passport
+                      </Link>
+                    ) : null}
                   </div>
                   {l.propRentalOffer ? (
                     <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
