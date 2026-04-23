@@ -244,8 +244,7 @@ export default async function DashboardPage({
                 with buyers on your listings. Open to reply, negotiate, and present an agreed deal.
               </>
             ) : (
-              "When a buyer enquires on a premium (private-enquiry) listing, the conversation appears here. You can
-              also reach this from the sidebar: Enquiries."
+              "When a buyer enquires on a premium (private-enquiry) listing, the conversation appears here. You can also reach this from the sidebar: Enquiries."
             )}
           </p>
           <span className="mt-3 inline-block text-sm font-medium text-brand">View enquiries →</span>
