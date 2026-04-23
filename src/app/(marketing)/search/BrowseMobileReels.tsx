@@ -2,32 +2,21 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { CONDITION_LABELS } from "@/lib/constants";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDisplayCurrency } from "@/components/currency/CurrencyProvider";
 import { useRouter } from "next/navigation";
 import { BrowseListingGrid } from "./BrowseListingGrid";
 import type { SearchListingRow } from "@/lib/listing-search";
+import {
+  searchListingRowToReel,
+  type ReelListing,
+  type SearchListingRowReelInput,
+} from "@/lib/browse-reel-listing";
 
 const MOBILE_BROWSE_LAYOUT_KEY = "reclaimed:browseMobileLayout";
 type MobileBrowseLayout = "swipe" | "cards";
 
-export type ReelListing = {
-  id: string;
-  title: string;
-  imageUrl: string | null;
-  auctionEndsAtIso: string | null;
-  buyerPenceGbp: number;
-  vatSuffix: string;
-  freeToCollectPrice: boolean;
-  categoryName: string;
-  conditionLabel: string;
-  listingKind: "sell" | "auction";
-  freeToCollector: boolean;
-  offersDelivery: boolean;
-  distanceLabel: string | null;
-  carbonSavedKg: number | null;
-};
+export type { ReelListing };
 
 type FeedQuery = {
   q?: string;
@@ -45,50 +34,6 @@ type FeedQuery = {
   source?: string;
 };
 
-type ApiListingRow = {
-  id: string;
-  title: string;
-  images: string[];
-  auctionEndsAt?: string | null;
-  price: number;
-  category: { name: string };
-  condition: keyof typeof CONDITION_LABELS;
-  listingKind: "sell" | "auction";
-  freeToCollector: boolean;
-  offersDelivery: boolean;
-  distanceMiles: number | null;
-  carbonImpactJson?: unknown;
-  carbonSavedKg?: number | null;
-};
-
-function milesLabel(m: number): string {
-  if (!Number.isFinite(m)) return "";
-  if (m < 1) return "<1 mi";
-  if (m < 10) return `${m.toFixed(1)} mi`;
-  return `${Math.round(m)} mi`;
-}
-
-function toReelListing(l: ApiListingRow): ReelListing {
-  const carbon = parseCarbonSavedKg(l.carbonImpactJson, l.carbonSavedKg ?? null);
-  const freeToCollectPrice = l.listingKind === "sell" && l.freeToCollector;
-  return {
-    id: l.id,
-    title: l.title,
-    imageUrl: l.images[0] ?? null,
-    auctionEndsAtIso: l.auctionEndsAt ?? null,
-    buyerPenceGbp: l.price,
-    vatSuffix: "",
-    freeToCollectPrice,
-    categoryName: l.category.name,
-    conditionLabel: CONDITION_LABELS[l.condition] ?? "Used",
-    listingKind: l.listingKind,
-    freeToCollector: l.freeToCollector,
-    offersDelivery: l.offersDelivery,
-    distanceLabel: l.distanceMiles != null ? milesLabel(l.distanceMiles) : null,
-    carbonSavedKg: carbon,
-  };
-}
-
 function auctionCountdownLabelFromIso(iso: string | null): string | null {
   if (!iso) return null;
   const endsAt = new Date(iso);
@@ -102,15 +47,6 @@ function auctionCountdownLabelFromIso(iso: string | null): string | null {
   if (days >= 1) return `${days}d ${hours}h left`;
   if (hours >= 1) return `${hours}h ${minutes}m left`;
   return `${Math.max(1, minutes)}m left`;
-}
-
-/** Client-safe parser to avoid importing server-only carbon modules. */
-function parseCarbonSavedKg(carbonImpactJson: unknown, carbonSavedKg: number | null): number | null {
-  if (carbonImpactJson && typeof carbonImpactJson === "object") {
-    const json = carbonImpactJson as Record<string, unknown>;
-    if (typeof json.carbon_saved_kg === "number") return json.carbon_saved_kg;
-  }
-  return typeof carbonSavedKg === "number" ? carbonSavedKg : null;
 }
 
 export function BrowseMobileReels({
@@ -247,8 +183,8 @@ export function BrowseMobileReels({
       qs.set("pageSize", "15");
       const res = await fetch(`/api/listings?${qs.toString()}`, { method: "GET" });
       if (!res.ok) throw new Error("Failed to load listings");
-      const data = (await res.json()) as { listings: ApiListingRow[]; page: number };
-      const mapped = data.listings.map(toReelListing);
+      const data = (await res.json()) as { listings: SearchListingRowReelInput[]; page: number };
+      const mapped = data.listings.map((row) => searchListingRowToReel(row));
       setItems((prev) => {
         const seen = new Set(prev.map((p) => p.id));
         const unique = mapped.filter((m) => !seen.has(m.id));
@@ -459,6 +395,39 @@ export function BrowseMobileReels({
                 <p className="mt-0.5 text-xs text-white/75">
                   {l.categoryName} · {l.conditionLabel}
                 </p>
+
+                <Link
+                  href={l.sellerProfileHref}
+                  className="mt-3 flex min-h-11 max-w-full items-center gap-2.5 rounded-xl border border-white/25 bg-black/35 px-2.5 py-2 text-left backdrop-blur-sm transition hover:bg-black/50"
+                >
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/30 bg-zinc-700">
+                    <Image
+                      src={l.sellerAvatarUrl}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="40px"
+                      unoptimized
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-white drop-shadow-sm">{l.sellerDisplayName}</p>
+                    {l.sellerReviewAvg != null && l.sellerReviewCount > 0 ? (
+                      <p className="mt-0.5 text-xs text-white/80">
+                        <span className="text-amber-400" aria-hidden>
+                          ★
+                        </span>{" "}
+                        <span className="font-medium text-white">{l.sellerReviewAvg.toFixed(1)}</span>
+                        <span className="text-white/45"> · </span>
+                        <span>
+                          {l.sellerReviewCount} review{l.sellerReviewCount === 1 ? "" : "s"}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-xs text-white/60">No reviews yet</p>
+                    )}
+                  </div>
+                </Link>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Link

@@ -24,6 +24,7 @@ function itemClass(active: boolean, accent: Item["accent"] = "default"): string 
 export function DashboardSidebar({
   isYardAccount,
   isDealerAccount,
+  isIndividualSeller,
   dealerDealsAsSellerCount = 0,
   carbonAdmin,
   unreadCount,
@@ -32,6 +33,7 @@ export function DashboardSidebar({
 }: {
   isYardAccount: boolean;
   isDealerAccount: boolean;
+  isIndividualSeller: boolean;
   /** Threads where this user is the seller (dealer) — shown on Enquiries. */
   dealerDealsAsSellerCount?: number;
   carbonAdmin: boolean;
@@ -78,6 +80,9 @@ export function DashboardSidebar({
     items.push({ href: "/dashboard/nearby-stock", label: "Nearby stock" });
     items.push({ href: "/dashboard/seller-profile", label: "Shop & SEO" });
     items.push({ href: "/dashboard/prop-yard", label: "Prop Yard", accent: "prop" });
+  }
+  if (isIndividualSeller) {
+    items.push({ href: "/dashboard/individual-profile", label: "Profile & photos" });
   }
   if (carbonAdmin) {
     items.push({ href: "/dashboard/admin", label: "Admin overview", accent: "admin" });

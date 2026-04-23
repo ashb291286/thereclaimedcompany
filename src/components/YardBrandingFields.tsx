@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 
+type BrandingVariant = "yard" | "individual";
+
 export function YardBrandingFields({
   initialLogoUrl,
   initialHeaderUrl,
+  variant = "yard",
 }: {
   initialLogoUrl: string | null;
   initialHeaderUrl: string | null;
+  /** Individual sellers: profile photo + banner labels and upload paths. */
+  variant?: BrandingVariant;
 }) {
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl ?? "");
   const [headerUrl, setHeaderUrl] = useState(initialHeaderUrl ?? "");
@@ -20,7 +25,15 @@ export function YardBrandingFields({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("folder", kind === "logo" ? "yard-logo" : "yard-header");
+      const folder =
+        variant === "individual"
+          ? kind === "logo"
+            ? "individual-profile"
+            : "individual-header"
+          : kind === "logo"
+            ? "yard-logo"
+            : "yard-header";
+      fd.append("folder", folder);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok) {
@@ -42,8 +55,14 @@ export function YardBrandingFields({
       <input type="hidden" name="yardHeaderImageUrl" value={headerUrl} />
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-zinc-700">Yard logo</label>
-        <p className="mb-2 text-xs text-zinc-500">Square image works best (shown on your public page and in search snippets).</p>
+        <label className="mb-2 block text-sm font-medium text-zinc-700">
+          {variant === "individual" ? "Profile photo" : "Yard logo"}
+        </label>
+        <p className="mb-2 text-xs text-zinc-500">
+          {variant === "individual"
+            ? "Square image works best — shown on your public seller profile and next to your listings."
+            : "Square image works best (shown on your public page and in search snippets)."}
+        </p>
         <div className="flex flex-wrap items-center gap-3">
           {logoUrl ? (
             <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
@@ -83,7 +102,11 @@ export function YardBrandingFields({
 
       <div>
         <label className="mb-2 block text-sm font-medium text-zinc-700">Header image</label>
-        <p className="mb-2 text-xs text-zinc-500">Wide banner for the top of your yard page (helps Google and social previews).</p>
+        <p className="mb-2 text-xs text-zinc-500">
+          {variant === "individual"
+            ? "Wide banner for the top of your public profile (helps it look its best when people share the link)."
+            : "Wide banner for the top of your yard page (helps Google and social previews)."}
+        </p>
         <div className="space-y-2">
           {headerUrl ? (
             <div className="relative aspect-[3/1] w-full max-w-xl overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">

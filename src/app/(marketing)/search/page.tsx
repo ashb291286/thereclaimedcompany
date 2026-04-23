@@ -8,22 +8,20 @@ import { auth } from "@/auth";
 import { SearchForm } from "./SearchForm";
 import { BrowseSortSelect } from "./BrowseSortSelect";
 import { BuyerWelcomeModal } from "./BuyerWelcomeModal";
-import { CONDITION_LABELS } from "@/lib/constants";
 import { parseBrowseRadiusParam } from "@/lib/browse-radius";
 import { browseListingTypeQueryParam, browseSortQueryParam, searchListings } from "@/lib/listing-search";
 import { formatUkLocationLine, lookupUkPostcode } from "@/lib/postcode-uk";
 import { formatMiles, haversineMiles } from "@/lib/geo";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat, vatLabelSuffix } from "@/lib/vat-pricing";
-import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
 import { resolveCategoryBrowseRow } from "@/lib/category-browse";
 import { BrowseListingGrid } from "./BrowseListingGrid";
-import { BrowseMobileReels, type ReelListing } from "./BrowseMobileReels";
+import { BrowseMobileReels } from "./BrowseMobileReels";
 import { MobileFiltersDrawer } from "./MobileFiltersDrawer";
 import type { SearchListingRow } from "@/lib/listing-search";
-import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { publicSellerPath } from "@/lib/yard-public-path";
+import { searchListingRowToReel } from "@/lib/browse-reel-listing";
 
 const DEFAULT_DEALER_FALLBACK_IMAGE_PATH = "/images/dealer-fallback.png";
 const DEFAULT_YARD_FALLBACK_IMAGE_PATH = "/images/yard-header-default.png";
@@ -341,33 +339,7 @@ export default async function SearchPage({
     return sp.toString();
   }
 
-  function toReelListing(l: SearchListingRow): ReelListing {
-    const carbon = parseStoredCarbonImpact(l);
-    const v = sellerChargesVat({
-      sellerRole: l.seller.role,
-      vatRegistered: l.seller.sellerProfile?.vatRegistered,
-    });
-    const buyerPence = buyerGrossPenceFromSellerNetPence(l.price, v);
-    const vatBit = vatLabelSuffix(v);
-    return {
-      id: l.id,
-      title: l.title,
-      imageUrl: l.images[0] ? proxiedListingImageSrc(l.images[0]) : null,
-      auctionEndsAtIso: l.auctionEndsAt ? l.auctionEndsAt.toISOString() : null,
-      buyerPenceGbp: buyerPence,
-      vatSuffix: vatBit,
-      freeToCollectPrice: l.listingKind === "sell" && l.freeToCollector,
-      categoryName: l.category.name,
-      conditionLabel: CONDITION_LABELS[l.condition],
-      listingKind: l.listingKind,
-      freeToCollector: l.freeToCollector,
-      offersDelivery: l.offersDelivery,
-      distanceLabel: l.distanceMiles != null ? formatMiles(l.distanceMiles) : null,
-      carbonSavedKg: carbon?.carbon_saved_kg ?? null,
-    };
-  }
-
-  const reelListings = listingsOrdered.map(toReelListing);
+  const reelListings = listingsOrdered.map(searchListingRowToReel);
 
   let locationNote: string | null = null;
   if (params.postcode?.trim()) {

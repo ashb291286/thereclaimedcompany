@@ -29,8 +29,10 @@ export default async function DashboardLayout({
   if (dbUserMeta?.suspendedAt) {
     await signOut({ redirectTo: "/auth/signout?suspended=1" });
   }
-  const isYardAccount = (session?.user?.role ?? dbUserMeta?.role ?? null) === "reclamation_yard";
-  const isDealerAccount = (session?.user?.role ?? dbUserMeta?.role ?? null) === "dealer";
+  const role = session?.user?.role ?? dbUserMeta?.role ?? null;
+  const isYardAccount = role === "reclamation_yard";
+  const isDealerAccount = role === "dealer";
+  const isIndividualSeller = role === "individual";
   const carbonAdmin = session ? isCarbonAdmin(session) : false;
 
   return (
@@ -39,6 +41,7 @@ export default async function DashboardLayout({
       unreadOutbidCount={unreadOutbidCount}
       isYardAccount={isYardAccount}
       isDealerAccount={isDealerAccount}
+      isIndividualSeller={isIndividualSeller}
       dealerDealsAsSellerCount={isDealerAccount ? dealerDealsAsSellerCount : 0}
       carbonAdmin={carbonAdmin}
     >

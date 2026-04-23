@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { revalidateYardPublicPaths } from "@/lib/revalidate-yard";
+import { trySendListingLiveEmail } from "@/lib/email/send-listing-live-email";
 import { notifyYardStockSubscribersForListing } from "@/lib/yard-stock-alerts-notify";
 
 export async function revalidateYardForSellerId(sellerId: string): Promise<void> {
@@ -28,5 +29,6 @@ export async function afterMarketplaceListingPersisted(
   const isLive = listing?.status === "active" && Boolean(listing.visibleOnMarketplace);
   if (isLive && !options.wasLive) {
     await notifyYardStockSubscribersForListing(listingId);
+    await trySendListingLiveEmail(listingId, sellerId);
   }
 }

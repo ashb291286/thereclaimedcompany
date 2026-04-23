@@ -166,14 +166,28 @@ export default async function AccountPage({
             >
               Add seller or yard profile
             </Link>
-          ) : (
+          ) : user.role === "reclamation_yard" ? (
             <Link
               href="/dashboard/seller-profile"
               className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
             >
               Edit yard profile
             </Link>
-          )}
+          ) : user.role === "individual" ? (
+            <Link
+              href="/dashboard/individual-profile"
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
+            >
+              Edit public profile
+            </Link>
+          ) : user.role === "dealer" ? (
+            <Link
+              href={`/sellers/${session.user.id}`}
+              className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              View public profile
+            </Link>
+          ) : null}
           {sellerProfile?.yardSlug ? (
             <Link
               href={`/yards/${sellerProfile.yardSlug}`}

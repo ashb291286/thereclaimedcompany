@@ -3,33 +3,17 @@ import { prisma } from "@/lib/db";
 import Image from "next/image";
 import { HeroSearch } from "./HeroSearch";
 import { TestimonialMarqueeFeed } from "./TestimonialMarqueeFeed";
-import { parseStoredCarbonImpact } from "@/lib/carbon/listing";
-import { CarbonBadge } from "@/components/CarbonBadge";
-import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
-import { MarketplaceListingCardBrandMark } from "@/components/branding/MarketplaceListingCardBrandMark";
-import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { formatUkLocationLine } from "@/lib/postcode-uk";
-
-function auctionCountdownLabel(endsAt: Date | null): string | null {
-  if (!endsAt) return null;
-  const ms = endsAt.getTime() - Date.now();
-  if (ms <= 0) return "Ended";
-  const totalMinutes = Math.floor(ms / 60000);
-  const days = Math.floor(totalMinutes / (60 * 24));
-  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
-  const minutes = totalMinutes % 60;
-  if (days >= 1) return `${days}d ${hours}h left`;
-  if (hours >= 1) return `${hours}h ${minutes}m left`;
-  return `${Math.max(1, minutes)}m left`;
-}
+import { searchListingInclude, withSellerReviewsForListings } from "@/lib/listing-search";
+import { BrowseListingGrid } from "./search/BrowseListingGrid";
 
 export default async function HomePage() {
-  const [listings, demolitionAlerts, blogPosts, latestYards] = await Promise.all([
+  const [rawListings, demolitionAlerts, blogPosts, latestYards] = await Promise.all([
     prisma.listing.findMany({
       where: { status: "active", visibleOnMarketplace: true },
       orderBy: [{ boostedUntil: "desc" }, { createdAt: "desc" }],
       take: 12,
-      include: { category: true },
+      include: searchListingInclude,
     }),
     prisma.demolitionProject.findMany({
       where: { status: "active" },
@@ -74,6 +58,10 @@ export default async function HomePage() {
       },
     }),
   ]);
+
+  const listings = await withSellerReviewsForListings(
+    rawListings.map((l) => ({ ...l, distanceMiles: null as number | null }))
+  );
 
   return (
     <div>
@@ -158,75 +146,7 @@ export default async function HomePage() {
             No listings yet. Check back soon.
           </p>
         ) : (
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {listings.map((l) => {
-              const impact = parseStoredCarbonImpact(l);
-              const auctionCountdown = l.listingKind === "auction" ? auctionCountdownLabel(l.auctionEndsAt) : null;
-              return (
-              <li key={l.id}>
-                <Link
-                  href={`/listings/${l.id}`}
-                  className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
-                >
-                  <div className="relative aspect-square bg-zinc-200">
-                    {auctionCountdown ? (
-                      <span className="absolute right-2 top-2 z-10 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
-                        {auctionCountdown}
-                      </span>
-                    ) : null}
-                    {l.images[0] ? (
-                      <Image
-                        src={proxiedListingImageSrc(l.images[0])}
-                        alt={l.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-zinc-400">
-                        No image
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative p-3">
-                    <MarketplaceListingCardBrandMark />
-                    <div className="mb-1 flex min-h-[18px] flex-wrap content-start items-start gap-1 pr-10">
-                      {l.listingKind === "auction" && (
-                        <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
-                          Auction
-                        </span>
-                      )}
-                      {l.listingKind === "sell" && l.freeToCollector && (
-                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
-                          Free
-                        </span>
-                      )}
-                      {l.offersDelivery && (
-                        <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-sky-900">
-                          Delivers
-                        </span>
-                      )}
-                    </div>
-                    <p className="truncate pr-10 font-medium text-zinc-900">{l.title}</p>
-                    <BrowseListingPriceLine
-                      listingKind={l.listingKind}
-                      freeToCollector={l.freeToCollector}
-                      buyerPenceGbp={l.price}
-                      vatSuffix=""
-                      categoryName={l.category.name}
-                    />
-                    {impact ? (
-                      <div className="mt-2">
-                        <CarbonBadge impact={impact} variant="compact" />
-                      </div>
-                    ) : null}
-                  </div>
-                </Link>
-              </li>
-            );
-            })}
-          </ul>
+          <BrowseListingGrid listings={listings} visibility="always" className="mt-0" />
         )}
       </div>
 

@@ -21,6 +21,37 @@ function normalizeWebsiteUrl(raw: string | null | undefined): string | null {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Profile photo and header banner for individual (non–reclamation yard, non–dealer) sellers.
+ * Stored on SellerProfile as yardLogoUrl / yardHeaderImageUrl (shared columns with yard/dealer branding).
+ */
+export async function updateIndividualProfileBrandingAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/auth/signin");
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  if (dbUser?.role !== "individual") redirect("/dashboard");
+
+  const yardLogoUrl = (formData.get("yardLogoUrl") as string)?.trim() || null;
+  const yardHeaderImageUrl = (formData.get("yardHeaderImageUrl") as string)?.trim() || null;
+
+  await prisma.sellerProfile.update({
+    where: { userId: session.user.id },
+    data: {
+      yardLogoUrl: yardLogoUrl || null,
+      yardHeaderImageUrl: yardHeaderImageUrl || null,
+    },
+  });
+
+  revalidatePath("/dashboard/individual-profile");
+  revalidatePath("/dashboard");
+  revalidatePath(`/sellers/${session.user.id}`);
+  revalidatePath("/search");
+  redirect("/dashboard/individual-profile?saved=1");
+}
+
 export async function updateYardProfileAction(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");

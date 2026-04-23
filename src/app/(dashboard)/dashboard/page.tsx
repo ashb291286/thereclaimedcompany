@@ -112,7 +112,8 @@ export default async function DashboardPage({
     !!sellerProfile?.yardSlug ||
     !!sellerProfile?.businessName;
   const isDealerAccount = sellerRole === "dealer";
-  const canManagePublicShop = isYardAccount || isDealerAccount;
+  const isIndividualSeller = sellerRole === "individual";
+  const canManagePublicShop = isYardAccount || isDealerAccount || isIndividualSeller;
 
   if (!sellerProfile) {
     return (
@@ -167,16 +168,23 @@ export default async function DashboardPage({
               ) : null}
             </Link>
           ) : null}
-          <Link href="/dashboard/seller-profile" className="font-medium text-brand hover:underline">
-            Shop &amp; SEO
-          </Link>
+          {isYardAccount ? (
+            <Link href="/dashboard/seller-profile" className="font-medium text-brand hover:underline">
+              Shop &amp; SEO
+            </Link>
+          ) : null}
+          {isIndividualSeller ? (
+            <Link href="/dashboard/individual-profile" className="font-medium text-brand hover:underline">
+              Profile &amp; photos
+            </Link>
+          ) : null}
           <Link
             href={publicShopHref}
             className="font-medium text-emerald-800 hover:underline"
             target="_blank"
             rel="noopener noreferrer"
           >
-            View public shop
+            {isIndividualSeller || isDealerAccount ? "View public profile" : "View public shop"}
           </Link>
         </div>
       ) : null}

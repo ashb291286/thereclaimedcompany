@@ -11,6 +11,7 @@ export function DashboardLayoutShell({
   unreadOutbidCount,
   isYardAccount,
   isDealerAccount,
+  isIndividualSeller,
   dealerDealsAsSellerCount,
   carbonAdmin,
 }: {
@@ -19,6 +20,7 @@ export function DashboardLayoutShell({
   unreadOutbidCount: number;
   isYardAccount: boolean;
   isDealerAccount: boolean;
+  isIndividualSeller: boolean;
   /** Threads where this user is the dealer (private buyer enquiries). */
   dealerDealsAsSellerCount: number;
   carbonAdmin: boolean;
@@ -131,6 +133,7 @@ export function DashboardLayoutShell({
             <DashboardSidebar
               isYardAccount={isYardAccount}
               isDealerAccount={isDealerAccount}
+              isIndividualSeller={isIndividualSeller}
               dealerDealsAsSellerCount={dealerDealsAsSellerCount}
               carbonAdmin={carbonAdmin}
               unreadCount={unreadCount}
@@ -210,6 +213,7 @@ export function DashboardLayoutShell({
               <DashboardSidebar
                 isYardAccount={isYardAccount}
                 isDealerAccount={isDealerAccount}
+                isIndividualSeller={isIndividualSeller}
                 dealerDealsAsSellerCount={dealerDealsAsSellerCount}
                 carbonAdmin={carbonAdmin}
                 unreadCount={unreadCount}

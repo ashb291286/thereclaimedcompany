@@ -2,21 +2,56 @@ import { prisma } from "@/lib/db";
 import type { Condition, Prisma } from "@/generated/prisma/client";
 import { haversineMiles, latLngBoundingBoxMiles } from "@/lib/geo";
 import { lookupUkPostcode } from "@/lib/postcode-uk";
+import { getSellerReviewStatsBySellerIds } from "@/lib/seller-review-stats";
 import { buyerGrossPenceFromSellerNetPence, sellerChargesVat } from "@/lib/vat-pricing";
 
-const searchListingInclude = {
+export const searchListingInclude = {
   category: true,
   seller: {
     select: {
+      id: true,
       role: true,
-      sellerProfile: { select: { vatRegistered: true, salvoCodeMember: true, isRegisteredCharity: true } },
+      image: true,
+      sellerProfile: {
+        select: {
+          vatRegistered: true,
+          salvoCodeMember: true,
+          isRegisteredCharity: true,
+          displayName: true,
+          businessName: true,
+          yardLogoUrl: true,
+          yardHeaderImageUrl: true,
+          yardSlug: true,
+        },
+      },
     },
   },
 } as const;
 
-export type SearchListingRow = Prisma.ListingGetPayload<{ include: typeof searchListingInclude }> & {
+/** Listing row with distance, before review stats (used when composing browse results). */
+export type SearchListingBase = Prisma.ListingGetPayload<{ include: typeof searchListingInclude }> & {
   distanceMiles: number | null;
 };
+
+export type SearchListingRow = SearchListingBase & {
+  sellerReviewAvg: number | null;
+  sellerReviewCount: number;
+};
+
+/** Batch-loads buyer→seller review averages for listing cards. */
+export async function withSellerReviewsForListings(rows: SearchListingBase[]): Promise<SearchListingRow[]> {
+  if (rows.length === 0) return [];
+  const stats = await getSellerReviewStatsBySellerIds(rows.map((r) => r.sellerId));
+  return rows.map((l) => {
+    const s = stats.get(l.sellerId);
+    const has = s && s.count > 0;
+    return {
+      ...l,
+      sellerReviewAvg: has ? Math.round(s.avg * 10) / 10 : null,
+      sellerReviewCount: s?.count ?? 0,
+    };
+  });
+}
 
 export type ListingSearchParams = {
   q?: string;
@@ -67,7 +102,7 @@ export function browseSortQueryParam(raw: string | undefined, nearestAvailable: 
   return "";
 }
 
-function browseSortPricePenceGbp(l: SearchListingRow): number {
+function browseSortPricePenceGbp(l: SearchListingBase): number {
   const v = sellerChargesVat({
     sellerRole: l.seller.role,
     vatRegistered: l.seller.sellerProfile?.vatRegistered,
@@ -76,7 +111,7 @@ function browseSortPricePenceGbp(l: SearchListingRow): number {
 }
 
 /** In-memory sort for bbox / id-list results. */
-function sortSearchRows(rows: SearchListingRow[], mode: BrowseListingSort): void {
+function sortSearchRows(rows: SearchListingBase[], mode: BrowseListingSort): void {
   switch (mode) {
     case "recommended":
       rows.sort((a, b) => {
@@ -126,7 +161,7 @@ async function fetchListingsAllWithDistance(
   base: Prisma.ListingWhereInput,
   centerLat: number,
   centerLng: number
-): Promise<SearchListingRow[]> {
+): Promise<SearchListingBase[]> {
   const where: Prisma.ListingWhereInput = {
     ...base,
     lat: { not: null },
@@ -138,7 +173,7 @@ async function fetchListingsAllWithDistance(
   });
   return candidates.map((l) => {
     const distanceMiles = haversineMiles(centerLat, centerLng, l.lat!, l.lng!);
-    return { ...l, distanceMiles } as SearchListingRow;
+    return { ...l, distanceMiles } as SearchListingBase;
   });
 }
 
@@ -147,7 +182,7 @@ async function fetchListingsInRadiusBbox(
   centerLat: number,
   centerLng: number,
   radiusMiles: number
-): Promise<SearchListingRow[]> {
+): Promise<SearchListingBase[]> {
   const bb = latLngBoundingBoxMiles(centerLat, centerLng, radiusMiles);
   const where: Prisma.ListingWhereInput = {
     ...base,
@@ -165,7 +200,7 @@ async function fetchListingsInRadiusBbox(
   return candidates
     .map((l) => {
       const distanceMiles = haversineMiles(centerLat, centerLng, l.lat!, l.lng!);
-      return { ...l, distanceMiles } as SearchListingRow;
+      return { ...l, distanceMiles } as SearchListingBase;
     })
     .filter((l) => (l.distanceMiles ?? Infinity) <= radiusMiles);
 }
@@ -281,7 +316,7 @@ export async function searchListings(params: ListingSearchParams): Promise<{
     ]);
     const orderMap = new Map(idList.map((id, i) => [id, i]));
     all.sort((a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999));
-    const withDist: SearchListingRow[] = all.map((l) => ({
+    const withDist: SearchListingBase[] = all.map((l) => ({
       ...l,
       distanceMiles: milesFromRef(l),
     }));
@@ -290,7 +325,7 @@ export async function searchListings(params: ListingSearchParams): Promise<{
     }
     const pageSlice = withDist.slice(p.skip, p.skip + p.take);
     return {
-      listings: pageSlice,
+      listings: await withSellerReviewsForListings(pageSlice),
       total: count,
       sortByDistance: effectiveSort === "nearest",
       searchOriginPostcode: origin?.postcode ?? null,
@@ -310,7 +345,7 @@ export async function searchListings(params: ListingSearchParams): Promise<{
     }
     const sortByDistance = effectiveSort === "recommended" || effectiveSort === "nearest";
     const total = ranked.length;
-    const listings = ranked.slice(p.skip, p.skip + p.take);
+    const listings = await withSellerReviewsForListings(ranked.slice(p.skip, p.skip + p.take));
     return {
       listings,
       total,
@@ -327,7 +362,7 @@ export async function searchListings(params: ListingSearchParams): Promise<{
       : await fetchListingsInRadiusBbox(base, viewerRef.lat, viewerRef.lng, p.radiusMiles);
     sortSearchRows(ranked, "nearest");
     const total = ranked.length;
-    const listings = ranked.slice(p.skip, p.skip + p.take);
+    const listings = await withSellerReviewsForListings(ranked.slice(p.skip, p.skip + p.take));
     return {
       listings,
       total,
@@ -366,8 +401,12 @@ export async function searchListings(params: ListingSearchParams): Promise<{
     prisma.listing.count({ where }),
   ]);
 
+  const withDistance: SearchListingBase[] = listings.map((l) => ({
+    ...l,
+    distanceMiles: milesFromRef(l),
+  }));
   return {
-    listings: listings.map((l) => ({ ...l, distanceMiles: milesFromRef(l) })),
+    listings: await withSellerReviewsForListings(withDistance),
     total,
     sortByDistance: false,
     searchOriginPostcode: null,

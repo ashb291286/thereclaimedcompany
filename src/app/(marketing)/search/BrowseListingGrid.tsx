@@ -8,6 +8,7 @@ import { parseStoredCarbonImpact } from "@/lib/carbon/stored-impact";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
 import { MarketplaceListingCardBrandMark } from "@/components/branding/MarketplaceListingCardBrandMark";
+import { ListingCardSellerAttribution } from "@/components/listings/ListingCardSellerAttribution";
 import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import type { SearchListingRow } from "@/lib/listing-search";
 
@@ -51,88 +52,90 @@ export function BrowseListingGrid({
         const gridVatBit = vatLabelSuffix(gridVat);
         return (
           <li key={l.id}>
-            <Link
-              href={`/listings/${l.id}`}
-              className="block overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40"
-            >
-              <div className="relative aspect-square bg-zinc-200">
-                {auctionCountdown ? (
-                  <span className="absolute right-2 top-2 z-10 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
-                    {auctionCountdown}
-                  </span>
-                ) : null}
-                {l.images[0] ? (
-                  <Image
-                    src={proxiedListingImageSrc(l.images[0])}
-                    alt={l.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-zinc-400">No image</div>
-                )}
-              </div>
-              <div className="relative p-3">
-                <MarketplaceListingCardBrandMark />
-                <div className="mb-1 flex min-h-[18px] flex-wrap content-start items-start gap-1 pr-10">
-                  {l.listingKind === "auction" && (
-                    <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
-                      Auction
-                    </span>
-                  )}
-                  {l.listingKind === "sell" && l.freeToCollector && (
-                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
-                      Free
-                    </span>
-                  )}
-                  {l.offersDelivery && (
-                    <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-sky-900">
-                      Delivers
-                    </span>
-                  )}
-                  {l.distanceMiles != null && (
-                    <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
-                      {formatMiles(l.distanceMiles)}
-                    </span>
-                  )}
-                  {l.seller.sellerProfile?.salvoCodeMember ? (
-                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
-                      Salvo Code Member
+            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors hover:border-brand/40">
+              <Link href={`/listings/${l.id}`} className="block">
+                <div className="relative aspect-square bg-zinc-200">
+                  {auctionCountdown ? (
+                    <span className="absolute right-2 top-2 z-10 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
+                      {auctionCountdown}
                     </span>
                   ) : null}
-                  {l.seller.sellerProfile?.isRegisteredCharity ? (
-                    <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-violet-900">
-                      Charity Support
-                    </span>
-                  ) : null}
+                  {l.images[0] ? (
+                    <Image
+                      src={proxiedListingImageSrc(l.images[0])}
+                      alt={l.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-zinc-400">No image</div>
+                  )}
                 </div>
-                <p className="truncate pr-10 font-medium text-zinc-900">{l.title}</p>
-                <BrowseListingPriceLine
-                  listingKind={l.listingKind}
-                  freeToCollector={l.freeToCollector}
-                  buyerPenceGbp={gridBuyerPence}
-                  vatSuffix={gridVatBit}
-                  categoryName={l.category.name}
-                  conditionExtra={l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
-                />
-                {(() => {
-                  const locLine = formatUkLocationLine({
-                    postcodeLocality: l.postcodeLocality,
-                    adminDistrict: l.adminDistrict,
-                    region: l.region,
-                    postcode: l.postcode,
-                  });
-                  return locLine ? <p className="mt-1 truncate text-xs text-zinc-500">{locLine}</p> : null;
-                })()}
-                {impact ? (
-                  <div className="mt-2">
-                    <CarbonBadge impact={impact} variant="compact" />
+              </Link>
+              <div className="relative p-3">
+                <Link href={`/listings/${l.id}`} className="block">
+                  <MarketplaceListingCardBrandMark />
+                  <div className="mb-1 flex min-h-[18px] flex-wrap content-start items-start gap-1 pr-10">
+                    {l.listingKind === "auction" && (
+                      <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">
+                        Auction
+                      </span>
+                    )}
+                    {l.listingKind === "sell" && l.freeToCollector && (
+                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
+                        Free
+                      </span>
+                    )}
+                    {l.offersDelivery && (
+                      <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-sky-900">
+                        Delivers
+                      </span>
+                    )}
+                    {l.distanceMiles != null && (
+                      <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
+                        {formatMiles(l.distanceMiles)}
+                      </span>
+                    )}
+                    {l.seller.sellerProfile?.salvoCodeMember ? (
+                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900">
+                        Salvo Code Member
+                      </span>
+                    ) : null}
+                    {l.seller.sellerProfile?.isRegisteredCharity ? (
+                      <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-violet-900">
+                        Charity Support
+                      </span>
+                    ) : null}
                   </div>
-                ) : null}
+                  <p className="truncate pr-10 font-medium text-zinc-900">{l.title}</p>
+                  <BrowseListingPriceLine
+                    listingKind={l.listingKind}
+                    freeToCollector={l.freeToCollector}
+                    buyerPenceGbp={gridBuyerPence}
+                    vatSuffix={gridVatBit}
+                    categoryName={l.category.name}
+                    conditionExtra={l.condition ? ` · ${CONDITION_LABELS[l.condition]}` : ""}
+                  />
+                  {(() => {
+                    const locLine = formatUkLocationLine({
+                      postcodeLocality: l.postcodeLocality,
+                      adminDistrict: l.adminDistrict,
+                      region: l.region,
+                      postcode: l.postcode,
+                    });
+                    return locLine ? <p className="mt-1 truncate text-xs text-zinc-500">{locLine}</p> : null;
+                  })()}
+                  {impact ? (
+                    <div className="mt-2">
+                      <CarbonBadge impact={impact} variant="compact" />
+                    </div>
+                  ) : null}
+                </Link>
+                <ListingCardSellerAttribution listing={l} />
               </div>
-            </Link>
+            </div>
           </li>
         );
       })}

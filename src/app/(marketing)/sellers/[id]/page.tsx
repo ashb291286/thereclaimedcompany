@@ -35,6 +35,8 @@ export default async function SellerPage({
 
   const profile = seller.sellerProfile;
   const isYard = seller.role === "reclamation_yard";
+  const isDealer = seller.role === "dealer";
+  const isIndividual = seller.role === "individual";
 
   if (isYard && profile.yardSlug) {
     permanentRedirect(`/yards/${profile.yardSlug}`);
@@ -47,8 +49,15 @@ export default async function SellerPage({
   });
   const social = parseYardSocialJson(profile.yardSocialJson);
   const displayTitle = profile.businessName?.trim() || profile.displayName;
-  const dealerHeaderImage = profile.yardHeaderImageUrl || profile.yardLogoUrl || DEFAULT_DEALER_FALLBACK_IMAGE_PATH;
-  const dealerProfileImage = profile.yardLogoUrl || profile.yardHeaderImageUrl || DEFAULT_DEALER_FALLBACK_IMAGE_PATH;
+  const fallback = DEFAULT_DEALER_FALLBACK_IMAGE_PATH;
+  const profilePhoto =
+    profile.yardLogoUrl ||
+    (isIndividual && seller.image ? seller.image : null) ||
+    profile.yardHeaderImageUrl ||
+    fallback;
+  const headerImage =
+    profile.yardHeaderImageUrl || profile.yardLogoUrl || (isIndividual ? seller.image : null) || fallback;
+  const meetLabel = isIndividual ? "Meet the seller" : "Meet the dealer";
   const activeListings = seller.listings;
   const forSaleListings = activeListings.filter((l) => l.listingKind === "sell");
   const auctionListings = activeListings.filter((l) => l.listingKind === "auction");
@@ -107,13 +116,23 @@ export default async function SellerPage({
     tiktok: "TikTok",
   };
 
+  const isOwner = viewerId === seller.id;
+
   return (
     <article className="pb-12">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+        {isOwner && isIndividual ? (
+          <div className="mb-4 rounded-xl border border-brand/25 bg-brand-soft/80 px-4 py-3 text-sm text-zinc-800">
+            <span className="font-medium text-zinc-900">This is your public profile.</span>{" "}
+            <Link href="/dashboard/individual-profile" className="font-medium text-brand hover:underline">
+              Edit profile photo &amp; header
+            </Link>
+          </div>
+        ) : null}
         <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
         <div className="relative h-44 w-full bg-zinc-100 sm:h-56">
           <Image
-            src={dealerHeaderImage}
+            src={headerImage}
             alt={`${displayTitle} header`}
             fill
             className="object-cover"
@@ -126,7 +145,7 @@ export default async function SellerPage({
           <div className="flex items-start gap-4">
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">
               <Image
-                src={dealerProfileImage}
+                src={profilePhoto}
                 alt={`${displayTitle} profile`}
                 fill
                 className="object-cover"
@@ -135,7 +154,7 @@ export default async function SellerPage({
               />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Meet the dealer</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">{meetLabel}</p>
               <h1 className="mt-1 text-3xl font-semibold text-zinc-900">{displayTitle}</h1>
               <p className="mt-2 text-zinc-600">{placeLine}</p>
               <p className="mt-1 text-sm text-zinc-500">
@@ -157,15 +176,18 @@ export default async function SellerPage({
 
         <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="rounded-xl border border-zinc-200 bg-white p-5">
-          <h2 className="text-lg font-semibold text-zinc-900">About this dealer</h2>
+          <h2 className="text-lg font-semibold text-zinc-900">
+            {isIndividual ? "About this seller" : "About this dealer"}
+          </h2>
           {profile.yardAbout?.trim() ? (
             <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
               {profile.yardAbout.trim()}
             </div>
           ) : (
             <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-              Browse curated dealer pieces on Reclaimed Marketplace, including distinctive reclaimed stock and
-              regular collection updates.
+              {isIndividual
+                ? "This seller lists reclaimed, vintage, and antique pieces on The Reclaimed Company Marketplace. Follow their profile to see new items as they go live."
+                : "Browse curated dealer pieces on Reclaimed Marketplace, including distinctive reclaimed stock and regular collection updates."}
             </p>
           )}
           <div className="mt-4">
@@ -174,8 +196,8 @@ export default async function SellerPage({
               sellerPath={`/sellers/${seller.id}`}
               viewerId={viewerId}
               hasAlert={hasStockAlert}
-              label="Favourite dealer & get alerts"
-              stopLabel="Unfavourite dealer"
+              label={isIndividual ? "Favourite seller & get alerts" : "Favourite dealer & get alerts"}
+              stopLabel={isIndividual ? "Unfavourite seller" : "Unfavourite dealer"}
             />
           </div>
         </div>
@@ -247,6 +269,7 @@ export default async function SellerPage({
         </aside>
         </section>
 
+        {isDealer ? (
         <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-5">
           <h2 className="text-lg font-semibold text-zinc-900">Why source from this dealer</h2>
           <p className="mt-3 text-sm leading-relaxed text-zinc-600">
@@ -255,6 +278,16 @@ export default async function SellerPage({
             fit premium projects.
           </p>
         </section>
+        ) : isIndividual ? (
+        <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-5">
+          <h2 className="text-lg font-semibold text-zinc-900">Why buy from an independent seller</h2>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+            Independent sellers often list one-off pieces from clear-outs, renovation projects, or long-held collections
+            — with honest descriptions and direct communication. Favouriting this profile helps you catch new listings
+            early.
+          </p>
+        </section>
+        ) : null}
 
         <section className="mt-8">
         <h2 className="text-lg font-semibold text-zinc-900">Available pieces</h2>
