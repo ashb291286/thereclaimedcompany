@@ -31,9 +31,16 @@ const DEFAULT_YARD_FALLBACK_IMAGE_PATH = "/images/yard-header-default.png";
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ sellerType?: string }>;
+  searchParams: Promise<{ sellerType?: string; source?: string }>;
 }): Promise<Metadata> {
   const p = await searchParams;
+  if (p.source === "emporiums") {
+    return {
+      title: "From The Emporiums | Dealer listings",
+      description:
+        "Browse dealer listings from specialist emporiums, galleries, and antique dealers across the UK.",
+    };
+  }
   if (p.sellerType === "reclamation_yard") {
     return {
       title: "Reclamation yards near me | Browse UK salvage yards",
@@ -86,6 +93,7 @@ export default async function SearchPage({
     welcome?: string;
     sort?: string;
     listingType?: string;
+    source?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -112,6 +120,10 @@ export default async function SearchPage({
       : params.sellerType === "dealer"
         ? "dealer"
         : null;
+  const browseSource =
+    sellerFocusedBrowse === null ? (params.source === "emporiums" ? "emporiums" : "yards") : null;
+  const excludeDealerFromBrowse = browseSource === "yards";
+  const forceDealerOnlyBrowse = browseSource === "emporiums";
 
   const idList =
     params.ids
@@ -154,7 +166,9 @@ export default async function SearchPage({
       : searchListings({
           q: params.q,
           categoryId: activeCategoryRow?.id ?? params.categoryId,
-          sellerType: params.sellerType,
+          sellerType:
+            forceDealerOnlyBrowse && !params.sellerType ? "dealer" : params.sellerType,
+          excludeDealer: excludeDealerFromBrowse && !params.sellerType,
           hireOnly: params.hireOnly === "1",
           availableNow: params.availableNow === "1",
           listingType: params.listingType,
@@ -302,7 +316,21 @@ export default async function SearchPage({
     fromImage: params.fromImage,
     sort: sortQuery || undefined,
     listingType: listingTypeQuery || undefined,
+    source: browseSource ?? undefined,
   };
+
+  function browseSourceHref(nextSource: "yards" | "emporiums"): string {
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(paramRecord)) {
+      if (k === "sellerType") continue;
+      if (k === "source") continue;
+      if (v != null && String(v) !== "") sp.set(k, String(v));
+    }
+    sp.set("source", nextSource);
+    sp.delete("page");
+    sp.delete("sellerPage");
+    return `/search?${sp.toString()}`;
+  }
 
   function paginationQuery(pageNum: number) {
     const sp = new URLSearchParams();
@@ -373,6 +401,32 @@ export default async function SearchPage({
             ? "Dealers near me"
             : "Browse listings"}
       </h1>
+      {browseSource ? (
+        <div className="mt-3 px-4 md:px-0">
+          <div className="inline-flex rounded-xl border border-zinc-200 bg-white p-1">
+            <Link
+              href={browseSourceHref("yards")}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                browseSource === "yards"
+                  ? "bg-zinc-900 text-white"
+                  : "text-zinc-700 hover:bg-zinc-100"
+              }`}
+            >
+              From The Yards
+            </Link>
+            <Link
+              href={browseSourceHref("emporiums")}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                browseSource === "emporiums"
+                  ? "bg-zinc-900 text-white"
+                  : "text-zinc-700 hover:bg-zinc-100"
+              }`}
+            >
+              From The Emporiums
+            </Link>
+          </div>
+        </div>
+      ) : null}
       <div className="mt-1 grid grid-cols-1 gap-6 md:mt-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
         <aside className="hidden lg:sticky lg:top-24 lg:block">
           {fromImage ? (
@@ -540,6 +594,7 @@ export default async function SearchPage({
                           : String(radiusMiles)
                         : undefined),
                     sellerType: params.sellerType,
+                    source: browseSource ?? undefined,
                     hireOnly: params.hireOnly,
                     availableNow: params.availableNow,
                     ids: params.ids,

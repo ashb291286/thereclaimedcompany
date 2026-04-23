@@ -42,6 +42,7 @@ type FeedQuery = {
   fromImage?: string;
   sort?: string;
   listingType?: string;
+  source?: string;
 };
 
 type ApiListingRow = {
@@ -210,6 +211,7 @@ export function BrowseMobileReels({
     if (query.fromImage) sp.set("fromImage", query.fromImage);
     if (query.sort) sp.set("sort", query.sort);
     if (query.listingType) sp.set("listingType", query.listingType);
+    if (query.source) sp.set("source", query.source);
     return sp.toString();
   }, [query]);
   const scrollKey = useMemo(

@@ -24,6 +24,8 @@ export type ListingSearchParams = {
   condition?: string;
   conditionGrade?: string;
   sellerType?: string;
+  /** When true, hide dealer listings (keep individuals + reclamation yards). */
+  excludeDealer?: boolean;
   postcode?: string;
   eraCsv?: string;
   genreCsv?: string;
@@ -176,6 +178,7 @@ function buildBaseWhere(
     | "condition"
     | "conditionGrade"
     | "sellerType"
+    | "excludeDealer"
     | "eraCsv"
     | "genreCsv"
     | "settingCsv"
@@ -197,6 +200,8 @@ function buildBaseWhere(
   if (params.conditionGrade) where.conditionGrade = params.conditionGrade as never;
   if (params.sellerType) {
     where.seller = { role: params.sellerType as "individual" | "reclamation_yard" | "dealer" };
+  } else if (params.excludeDealer) {
+    where.seller = { role: { not: "dealer" } };
   }
   const eras = (params.eraCsv ?? "").split(",").map((x) => x.trim()).filter(Boolean);
   const genres = (params.genreCsv ?? "").split(",").map((x) => x.trim()).filter(Boolean);

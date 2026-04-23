@@ -17,8 +17,13 @@ export async function GET(req: NextRequest) {
     searchParams.get("radius") ?? undefined
   );
   const sellerType = searchParams.get("sellerType") ?? "";
+  const source = searchParams.get("source") ?? "";
+  const browseSource = source === "emporiums" ? "emporiums" : "yards";
+  const effectiveSellerType =
+    sellerType || (browseSource === "emporiums" ? "dealer" : "");
+  const excludeDealer = browseSource === "yards" && !sellerType;
   const conditionGrade = searchParams.get("conditionGrade") ?? "";
-  const isYardSellerFilter = sellerType === "reclamation_yard";
+  const isYardSellerFilter = effectiveSellerType === "reclamation_yard";
   const era = isYardSellerFilter ? "" : (searchParams.get("era") ?? "");
   const genre = isYardSellerFilter ? "" : (searchParams.get("genre") ?? "");
   const setting = searchParams.get("setting") ?? "";
@@ -57,7 +62,8 @@ export async function GET(req: NextRequest) {
     materialCsv: material || undefined,
     hireOnly,
     availableNow,
-    sellerType: sellerType || undefined,
+    sellerType: effectiveSellerType || undefined,
+    excludeDealer,
     postcode: postcode || undefined,
     radiusMiles,
     radiusNationwide,
