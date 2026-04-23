@@ -10,6 +10,10 @@ import { revalidateYardPublicPaths } from "@/lib/revalidate-yard";
 import type { UserRole } from "@/generated/prisma/client";
 import { formatUkLocationLine, lookupUkPostcode } from "@/lib/postcode-uk";
 import { sendReclamationYardWelcomeEmail } from "@/lib/email/send-reclamation-yard-welcome-email";
+import {
+  getSellerWelcomeFirstName,
+  sendGeneralSellerWelcomeEmail,
+} from "@/lib/email/send-general-seller-welcome-email";
 import { defaultYardOpeningHours, parseOpeningHoursSchedule } from "@/lib/opening-hours";
 import type { Prisma } from "@/generated/prisma/client";
 import { allocateYardSlug } from "@/lib/yard-slug";
@@ -163,6 +167,15 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
         yardName,
         locationLine: locationLine || "United Kingdom",
       });
+    }
+  } else if (sellerType === "individual" || sellerType === "dealer") {
+    const u = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { email: true, name: true },
+    });
+    if (u?.email) {
+      const firstName = getSellerWelcomeFirstName(u.name, displayName);
+      await sendGeneralSellerWelcomeEmail({ toEmail: u.email, firstName });
     }
   }
 
