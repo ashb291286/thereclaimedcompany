@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { createHash } from "node:crypto";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { CertificatePrintButton } from "@/components/CertificatePrintButton";
+import { coalesceDealerProvenanceDocuments } from "@/lib/dealer-provenance";
 
 type TimelinePoint = { label: string; value: string };
 
