@@ -244,8 +244,12 @@ export function MarketingShell({
                     <Link href="/search" className="block hover:text-white">
                       Marketplace
                     </Link>
-                    <p>Free To Collect</p>
-                    <p>Wanted</p>
+                    <Link href="/search?listingType=free_collect" className="block hover:text-white">
+                      Free To Collect
+                    </Link>
+                    <Link href="/wanted" className="block hover:text-white">
+                      Wanted
+                    </Link>
                   </div>
 
                   <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
@@ -256,8 +260,12 @@ export function MarketingShell({
                     <Link href="/auth/register?sellerFlow=yard" className="block hover:text-white">
                       Add Your Yard FREE
                     </Link>
-                    <p>Free To Collect</p>
-                    <p>Wanted</p>
+                    <Link href="/search?listingType=free_collect" className="block hover:text-white">
+                      Free To Collect
+                    </Link>
+                    <Link href="/wanted" className="block hover:text-white">
+                      Wanted
+                    </Link>
                   </div>
 
                   <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
