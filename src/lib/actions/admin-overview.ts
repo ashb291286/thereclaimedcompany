@@ -37,6 +37,62 @@ export async function adminToggleUserSuspensionAction(formData: FormData): Promi
   revalidatePath("/dashboard/admin");
 }
 
+/**
+ * Irreversibly remove a user account. Blocked when they are buyer or seller on any order (audit).
+ * Does not run if the target is the current admin session user.
+ */
+export async function adminDeleteUserAccountAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  await requireAdmin();
+  const userId = String(formData.get("userId") ?? "").trim();
+  const confirmDelete = String(formData.get("confirmDelete") ?? "").trim();
+  if (!userId) return;
+
+  if (session?.user?.id === userId) {
+    redirect("/dashboard/admin?error=delete_self");
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+  if (!target) {
+    redirect("/dashboard/admin?error=delete_user_missing");
+  }
+
+  const email = target.email?.trim() ?? null;
+  if (email) {
+    if (confirmDelete.toLowerCase() !== email.toLowerCase()) {
+      redirect("/dashboard/admin?error=delete_confirm_mismatch");
+    }
+  } else {
+    if (confirmDelete !== "DELETE") {
+      redirect("/dashboard/admin?error=delete_confirm_mismatch");
+    }
+  }
+
+  const orderCount = await prisma.order.count({
+    where: { OR: [{ buyerId: userId }, { sellerId: userId }] },
+  });
+  if (orderCount > 0) {
+    redirect("/dashboard/admin?error=user_has_orders");
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.drivenGarageEntry.deleteMany({ where: { userId } });
+      await tx.drivenVehicle.deleteMany({ where: { ownerId: userId } });
+      await tx.user.delete({ where: { id: userId } });
+    });
+  } catch (e) {
+    console.error("adminDeleteUserAccountAction", e);
+    redirect("/dashboard/admin?error=delete_user_failed");
+  }
+
+  revalidatePath("/dashboard/admin");
+  redirect("/dashboard/admin?userDeleted=1");
+}
+
 export async function adminSetUserRoleAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const userId = String(formData.get("userId") ?? "").trim();

@@ -15,6 +15,7 @@ import {
   adminSetUserRoleAction,
   adminUpdateMarketplaceFeesAction,
   adminToggleUserSuspensionAction,
+  adminDeleteUserAccountAction,
 } from "@/lib/actions/admin-overview";
 import { calculateMarketplaceFees } from "@/lib/marketplace-fees";
 import { SellerProfileImportForm } from "./SellerProfileImportForm";
@@ -25,6 +26,7 @@ export default async function AdminOverviewPage({
 }: {
   searchParams: Promise<{
     error?: string;
+    userDeleted?: string;
     userQ?: string;
     yardQ?: string;
     listingQ?: string;
@@ -42,8 +44,14 @@ export default async function AdminOverviewPage({
     );
   }
 
-  const { error, userQ: rawUserQ, yardQ: rawYardQ, listingQ: rawListingQ, notifQ: rawNotifQ } =
-    await searchParams;
+  const {
+    error,
+    userDeleted,
+    userQ: rawUserQ,
+    yardQ: rawYardQ,
+    listingQ: rawListingQ,
+    notifQ: rawNotifQ,
+  } = await searchParams;
   const userQ = rawUserQ?.trim() ?? "";
   const yardQ = rawYardQ?.trim() ?? "";
   const listingQ = rawListingQ?.trim() ?? "";
@@ -282,6 +290,37 @@ export default async function AdminOverviewPage({
         </div>
       </div>
 
+      {userDeleted === "1" ? (
+        <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          User account was permanently removed.
+        </p>
+      ) : null}
+      {error === "delete_self" ? (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          You cannot delete your own account from this screen.
+        </p>
+      ) : null}
+      {error === "delete_confirm_mismatch" ? (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          Confirmation did not match. Type the user&apos;s email (or the word DELETE if they have no email) exactly.
+        </p>
+      ) : null}
+      {error === "user_has_orders" ? (
+        <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          This user cannot be deleted because they have marketplace orders (as buyer or seller). Keep the account for
+          the audit trail, or use suspend instead.
+        </p>
+      ) : null}
+      {error === "delete_user_missing" ? (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          User not found. They may have already been removed.
+        </p>
+      ) : null}
+      {error === "delete_user_failed" ? (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          Account delete failed. Another record may still reference this user; try again or suspend instead.
+        </p>
+      ) : null}
       {error === "delete_blocked" ? (
         <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
           Listing delete was blocked by related records (e.g. orders). Set status/visibility instead.
@@ -892,6 +931,30 @@ export default async function AdminOverviewPage({
                           }`}
                         >
                           {u.suspendedAt ? "Unsuspend user" : "Suspend user"}
+                        </button>
+                      </form>
+                      <form action={adminDeleteUserAccountAction} className="flex flex-col gap-1.5 border-t border-zinc-200 pt-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Delete account</p>
+                        <p className="text-[10px] text-zinc-500">
+                          Irreversible. Blocked if they have any marketplace orders. Confirm by typing{" "}
+                          {u.email ? "their email address exactly." : (
+                            <>
+                              the word <span className="font-mono text-zinc-700">DELETE</span>.
+                            </>
+                          )}
+                        </p>
+                        <input type="hidden" name="userId" value={u.id} />
+                        <input
+                          name="confirmDelete"
+                          autoComplete="off"
+                          placeholder={u.email ? u.email : "DELETE"}
+                          className="w-52 rounded border border-rose-200 px-2 py-1 text-xs"
+                        />
+                        <button
+                          type="submit"
+                          className="w-fit rounded border border-rose-400 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-900 hover:bg-rose-100"
+                        >
+                          Delete account permanently
                         </button>
                       </form>
                       {u.role === "reclamation_yard" && u.sellerProfile?.id ? (
