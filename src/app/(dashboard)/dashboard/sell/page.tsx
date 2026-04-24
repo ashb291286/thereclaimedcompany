@@ -8,12 +8,12 @@ import { ListingForm } from "./ListingForm";
 export default async function SellPage({
   searchParams,
 }: {
-  searchParams: Promise<{ firstListing?: string; error?: string }>;
+  searchParams: Promise<{ firstListing?: string; error?: string; published?: string; listingId?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
 
-  const { firstListing, error } = await searchParams;
+  const { firstListing, error, published, listingId } = await searchParams;
 
   const sellerProfile = await prisma.sellerProfile.findUnique({
     where: { userId: session.user.id },
@@ -73,6 +73,7 @@ export default async function SellPage({
         yardPricesExcludeVat={
           dbUser?.role === "reclamation_yard" && Boolean(sellerProfile.vatRegistered)
         }
+        initialPublishedListingId={published === "1" ? (listingId ?? null) : null}
       />
     </div>
   );

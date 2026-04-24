@@ -130,6 +130,7 @@ export function ListingForm({
   isDealer = false,
   isReclamationYard = false,
   yardPricesExcludeVat = false,
+  initialPublishedListingId = null,
 }: {
   categories: Category[];
   defaultPostcode: string;
@@ -139,6 +140,7 @@ export function ListingForm({
   isDealer?: boolean;
   isReclamationYard?: boolean;
   yardPricesExcludeVat?: boolean;
+  initialPublishedListingId?: string | null;
 }) {
   const [imageUrls, setImageUrls] = useState<string[]>(listing?.images ?? []);
   const [uploading, setUploading] = useState(false);
@@ -263,6 +265,11 @@ export function ListingForm({
     listing?.unitsAvailable != null ? String(listing.unitsAvailable) : ""
   );
   const [categoryHint, setCategoryHint] = useState<CategorySuggestionResult | null>(null);
+  const [publishOverlayOpen, setPublishOverlayOpen] = useState(false);
+  const [publishStepIndex, setPublishStepIndex] = useState(0);
+  const [publishedModalOpen, setPublishedModalOpen] = useState(Boolean(initialPublishedListingId));
+  const publishBypassRef = useRef(false);
+  const submitterRef = useRef<HTMLButtonElement | null>(null);
 
   const materialSelectOptions =
     materialOptions.length > 0 ? materialOptions : MATERIAL_FORM_OPTIONS_FALLBACK;
@@ -343,6 +350,9 @@ export function ListingForm({
     const id = window.setTimeout(() => setToastError(null), 2800);
     return () => window.clearTimeout(id);
   }, [toastError]);
+  useEffect(() => {
+    setPublishedModalOpen(Boolean(initialPublishedListingId));
+  }, [initialPublishedListingId]);
 
   function openCropForFile(file: File) {
     if (cropBlobUrlRef.current) {
@@ -582,6 +592,10 @@ export function ListingForm({
               const submitter = nativeEvt.submitter as HTMLButtonElement | null;
               const isPublishSubmit =
                 submitter?.name === "publish" && submitter?.value === "true";
+              if (isPublishSubmit && useNewCategory && categoryHint?.bestMatch && categoryHint.score >= 0.65) {
+                setCategoryId(categoryHint.bestMatch.id);
+                setCategoryQuery(categoryHint.bestMatch.name);
+              }
               if (isPublishSubmit && imageUrls.length === 0) {
                 e.preventDefault();
                 const msg = "Add at least one photo before publishing.";
@@ -589,6 +603,22 @@ export function ListingForm({
                 setToastError(msg);
                 return;
               }
+              if (isPublishSubmit && !publishBypassRef.current) {
+                e.preventDefault();
+                submitterRef.current = submitter;
+                setPublishOverlayOpen(true);
+                setPublishStepIndex(0);
+                const steps = [1, 2, 3, 4, 5];
+                steps.forEach((next, idx) => {
+                  window.setTimeout(() => setPublishStepIndex(next), (idx + 1) * 750);
+                });
+                window.setTimeout(() => {
+                  publishBypassRef.current = true;
+                  submitterRef.current?.click();
+                }, 750 * 6);
+                return;
+              }
+              publishBypassRef.current = false;
               const form = e.currentTarget;
               if (listingKind === "sell" && freeToCollector) {
                 const p = form.querySelector('[name="price"]') as HTMLInputElement;
@@ -888,7 +918,10 @@ export function ListingForm({
                 </span>
                 <button
                   type="button"
-                  onClick={() => setCategoryId(categoryHint.bestMatch!.id)}
+                  onClick={() => {
+                    setCategoryId(categoryHint.bestMatch!.id);
+                    setCategoryQuery(categoryHint.bestMatch!.name);
+                  }}
                   className="rounded-lg bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand-hover"
                 >
                   Use suggestion
@@ -1613,12 +1646,12 @@ export function ListingForm({
         )}
       </FormSection>
 
-      <div className="flex flex-wrap gap-3 border-t border-zinc-200 pt-6">
+      <div className="flex flex-col gap-3 border-t border-zinc-200 pt-6 sm:flex-row sm:flex-wrap">
         <button
           type="submit"
           name="publish"
           value="false"
-          className="rounded-lg border border-zinc-300 px-4 py-2.5 font-medium text-zinc-700 hover:bg-zinc-50"
+          className="w-full rounded-lg border border-zinc-300 px-4 py-2.5 font-medium text-zinc-700 hover:bg-zinc-50 sm:w-auto"
         >
           Save as draft
         </button>
@@ -1626,7 +1659,7 @@ export function ListingForm({
           type="submit"
           name="publish"
           value="true"
-          className="rounded-lg bg-brand px-4 py-2.5 font-medium text-white hover:bg-brand-hover"
+          className="w-full rounded-lg bg-brand px-4 py-2.5 font-medium text-white hover:bg-brand-hover sm:w-auto"
         >
           {isEdit ? "Update & publish" : "Publish listing"}
         </button>
@@ -1658,7 +1691,7 @@ export function ListingForm({
 
       {previewOpen ? (
         <div
-          className="fixed inset-0 z-[2100] flex justify-end lg:hidden"
+          className="fixed inset-0 z-[2100] lg:hidden"
           role="dialog"
           aria-modal="true"
           aria-labelledby="listing-preview-drawer-title"
@@ -1669,7 +1702,7 @@ export function ListingForm({
             aria-label="Close preview"
             onClick={() => setPreviewOpen(false)}
           />
-          <div className="relative z-10 flex h-full w-[min(100%,380px)] max-w-full flex-col border-l border-zinc-200 bg-white shadow-2xl pt-[max(env(safe-area-inset-top),0px)]">
+          <div className="relative z-10 flex h-full w-full max-w-full flex-col bg-white shadow-2xl pt-[max(env(safe-area-inset-top),0px)]">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-200 px-3 py-3 sm:px-4">
               <h2 id="listing-preview-drawer-title" className="text-sm font-semibold text-zinc-900">
                 Buyer preview
@@ -1706,6 +1739,50 @@ export function ListingForm({
           onCancel={closeCrop}
           onComplete={uploadCroppedFile}
         />
+      ) : null}
+      {publishOverlayOpen ? (
+        <div className="fixed inset-0 z-[2300] flex items-center justify-center bg-zinc-950/85 px-5 text-white">
+          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-zinc-900/80 p-5 shadow-2xl backdrop-blur">
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/25 border-t-white" />
+            <p className="text-center text-lg font-semibold">
+              {publishStepIndex <= 0
+                ? "Building Listing..."
+                : publishStepIndex === 1
+                  ? "Optimising Images..."
+                  : publishStepIndex === 2
+                    ? "Checking best category..."
+                    : publishStepIndex === 3
+                      ? "Notifying buyers..."
+                      : publishStepIndex === 4
+                        ? "Ready to reclaim"
+                        : "Going live..."}
+            </p>
+          </div>
+        </div>
+      ) : null}
+      {publishedModalOpen && initialPublishedListingId ? (
+        <div className="fixed inset-0 z-[2400] flex items-center justify-center bg-zinc-950/70 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl">
+            <h3 className="text-lg font-semibold text-zinc-900">Item is live and ready to reclaim</h3>
+            <p className="mt-2 text-sm text-zinc-600">
+              Your listing is now published and visible to buyers.
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Link
+                href="/dashboard/sell"
+                className="w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-center text-sm font-semibold text-zinc-800 hover:bg-zinc-50"
+              >
+                List another
+              </Link>
+              <Link
+                href={`/listings/${initialPublishedListingId}`}
+                className="w-full rounded-lg bg-brand px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-hover"
+              >
+                View listing
+              </Link>
+            </div>
+          </div>
+        </div>
       ) : null}
     </>
   );

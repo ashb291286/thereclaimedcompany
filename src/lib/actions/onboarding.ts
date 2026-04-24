@@ -33,6 +33,7 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   const salvoCodeMemberRaw = String(formData.get("salvoCodeMember") ?? "").trim();
   const isRegisteredCharityRaw = String(formData.get("isRegisteredCharity") ?? "").trim();
   const charityNumberRaw = String(formData.get("charityNumber") ?? "").trim();
+  const profileImageUrlRaw = String(formData.get("profileImageUrl") ?? "").trim();
 
   if (!sellerType || !displayName?.trim() || !postcodeRaw?.trim()) {
     redirect("/dashboard/onboarding?error=Display+name+and+postcode+required");
@@ -104,7 +105,12 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
   await prisma.$transaction([
     prisma.user.update({
       where: { id: session.user.id },
-      data: { role: sellerType },
+      data: {
+        role: sellerType,
+        ...(sellerType === "individual"
+          ? { image: profileImageUrlRaw.length > 0 ? profileImageUrlRaw : null }
+          : {}),
+      },
     }),
     prisma.sellerProfile.create({
       data: {
@@ -133,6 +139,7 @@ export async function completeSellerOnboarding(formData: FormData): Promise<void
         salvoCodeMember,
         isRegisteredCharity,
         charityNumber: isRegisteredCharity ? charityNumber : null,
+        yardLogoUrl: sellerType === "individual" ? (profileImageUrlRaw || null) : null,
       },
     }),
   ]);

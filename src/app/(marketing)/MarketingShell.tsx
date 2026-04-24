@@ -35,7 +35,7 @@ export function MarketingShell({
       <div className="min-h-screen bg-stone-50 text-zinc-900">
         {!isListingPassportRoute ? (
         <header
-          className={`border-b border-zinc-200 bg-white/95 backdrop-blur ${hideMobileHeader ? "hidden md:block" : ""}`}
+          className={`relative z-[7000] border-b border-zinc-200 bg-white/95 backdrop-blur ${hideMobileHeader ? "hidden md:block" : ""}`}
         >
           <div className="mx-auto flex min-h-16 w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6 sm:py-0">
             <Link href="/" className="flex items-center gap-2" aria-label="The Reclaimed Company — home">
@@ -121,14 +121,14 @@ export function MarketingShell({
               )}
             </nav>
             <div
-              className={`fixed inset-0 z-[5000] bg-black/45 transition-opacity duration-200 md:hidden ${
+              className={`fixed inset-0 z-[9000] bg-black/45 transition-opacity duration-200 md:hidden ${
                 mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
               }`}
               onClick={() => setMobileOpen(false)}
               aria-hidden
             />
             <aside
-              className={`fixed right-0 top-0 z-[5100] flex h-[100dvh] w-[86vw] max-w-sm flex-col overflow-y-auto bg-white p-4 shadow-2xl transition-transform duration-300 md:hidden ${
+              className={`fixed right-0 top-0 z-[9100] flex h-[100dvh] w-[86vw] max-w-sm flex-col overflow-y-auto bg-white p-4 shadow-2xl transition-transform duration-300 md:hidden ${
                 mobileOpen ? "translate-x-0" : "translate-x-full"
               }`}
               aria-label="Mobile menu"

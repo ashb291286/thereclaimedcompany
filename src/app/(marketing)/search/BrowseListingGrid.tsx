@@ -8,7 +8,6 @@ import { parseStoredCarbonImpact } from "@/lib/carbon/stored-impact";
 import { CarbonBadge } from "@/components/CarbonBadge";
 import { BrowseListingPriceLine } from "@/components/currency/BrowseListingPriceLine";
 import { MarketplaceListingCardBrandMark } from "@/components/branding/MarketplaceListingCardBrandMark";
-import { ListingCardSellerAttribution } from "@/components/listings/ListingCardSellerAttribution";
 import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import type { SearchListingRow } from "@/lib/listing-search";
 
@@ -133,7 +132,6 @@ export function BrowseListingGrid({
                     </div>
                   ) : null}
                 </Link>
-                <ListingCardSellerAttribution listing={l} />
               </div>
             </div>
           </li>

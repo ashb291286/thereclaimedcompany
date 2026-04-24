@@ -10,12 +10,12 @@ export default async function EditListingPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; published?: string; listingId?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, published, listingId } = await searchParams;
   const isAdmin = isCarbonAdmin(session);
 
   const listing = await prisma.listing.findUnique({
@@ -60,6 +60,7 @@ export default async function EditListingPage({
         yardPricesExcludeVat={
           dbUser?.role === "reclamation_yard" && Boolean(sellerProfile?.vatRegistered)
         }
+        initialPublishedListingId={published === "1" ? (listingId ?? null) : null}
       />
     </div>
   );

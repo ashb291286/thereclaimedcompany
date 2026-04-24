@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { auth } from "@/auth";
 import { ListingCheckoutActions } from "./ListingCheckoutActions";
 import { HaggleForm } from "./HaggleForm";
@@ -161,6 +162,13 @@ export default async function ListingPage({
         yardSlug: sellerProfile?.yardSlug ?? null,
       })
     : `/sellers/${listing.sellerId}`;
+  const sellerAvatar =
+    sellerProfile?.yardLogoUrl?.trim() ||
+    (listing.seller?.role === "individual" && listing.seller?.image?.trim()
+      ? listing.seller.image.trim()
+      : null) ||
+    sellerProfile?.yardHeaderImageUrl?.trim() ||
+    "/images/dealer-fallback.png";
 
   const buyerBidPay =
     session?.user?.id && !isOwner
@@ -182,6 +190,7 @@ export default async function ListingPage({
     views7d,
     favoriteCount,
     userFavorite,
+    sellerReviewAggregate,
   ] = await Promise.all([
     prisma.bid.findMany({
       where: { listingId: id },
@@ -230,7 +239,17 @@ export default async function ListingPage({
           select: { id: true },
         })
       : Promise.resolve(null),
+    prisma.order.aggregate({
+      where: { sellerId: listing.sellerId, buyerReviewRating: { not: null } },
+      _avg: { buyerReviewRating: true },
+      _count: { buyerReviewRating: true },
+    }),
   ]);
+  const sellerReviewCount = sellerReviewAggregate._count.buyerReviewRating ?? 0;
+  const sellerReviewAvg =
+    sellerReviewCount > 0 && sellerReviewAggregate._avg.buyerReviewRating != null
+      ? Math.round(sellerReviewAggregate._avg.buyerReviewRating * 10) / 10
+      : null;
 
   const now = new Date();
   const isAuction = listing.listingKind === "auction";
@@ -964,6 +983,28 @@ export default async function ListingPage({
         {sellerProfile && (
           <section className={sectionClass}>
             <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Seller</h2>
+            <div className="mt-3 flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50/80 p-2.5">
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-white">
+                <Image src={sellerAvatar} alt="" fill className="object-cover" sizes="48px" unoptimized />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-zinc-900">
+                  {sellerProfile.businessName?.trim() || sellerProfile.displayName || "Seller"}
+                </p>
+                {sellerReviewAvg != null && sellerReviewCount > 0 ? (
+                  <p className="mt-0.5 text-xs text-zinc-600">
+                    <span className="text-amber-500" aria-hidden>
+                      ★
+                    </span>{" "}
+                    <span className="font-medium text-zinc-800">{sellerReviewAvg.toFixed(1)}</span>
+                    <span className="text-zinc-400"> · </span>
+                    {sellerReviewCount} review{sellerReviewCount === 1 ? "" : "s"}
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-xs text-zinc-500">No reviews yet</p>
+                )}
+              </div>
+            </div>
             {sellerBadges.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 {sellerBadges.map((b) => (

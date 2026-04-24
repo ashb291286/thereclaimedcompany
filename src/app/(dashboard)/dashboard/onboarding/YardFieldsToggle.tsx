@@ -22,8 +22,30 @@ export function YardFieldsToggle({
   const [charityNumber, setCharityNumber] = useState("");
   const [businessName, setBusinessName] = useState(initialBusinessName);
   const [yearEstablished, setYearEstablished] = useState(initialYearEstablished);
+  const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
+  const [profileImageError, setProfileImageError] = useState<string | null>(null);
   const showBusiness = sellerType === "reclamation_yard" || sellerType === "dealer";
   const showSalvo = sellerType === "reclamation_yard";
+
+  async function uploadProfilePhoto(file: File) {
+    setProfileImageError(null);
+    setUploadingProfileImage(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "individual-profile");
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !data.url) {
+        setProfileImageError(data.error ?? "Upload failed");
+        return;
+      }
+      setProfileImageUrl(data.url);
+    } finally {
+      setUploadingProfileImage(false);
+    }
+  }
 
   return (
     <>
@@ -76,6 +98,57 @@ export function YardFieldsToggle({
           </button>
         </div>
       </div>
+      {sellerType === "individual" ? (
+        <div className="space-y-2 rounded-xl border border-zinc-200 bg-zinc-50/70 p-4">
+          <input type="hidden" name="profileImageUrl" value={profileImageUrl} />
+          <label className="block text-sm font-medium text-zinc-700">Profile photo</label>
+          <p className="text-xs text-zinc-600">
+            Upload a clear photo so buyers can recognise you on your listings and profile.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            {profileImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profileImageUrl}
+                alt=""
+                className="h-16 w-16 rounded-full border border-zinc-200 object-cover"
+              />
+            ) : (
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-zinc-300 bg-white text-[11px] text-zinc-400">
+                No photo
+              </div>
+            )}
+            <label className="cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50">
+              {uploadingProfileImage
+                ? "Uploading..."
+                : profileImageUrl
+                  ? "Replace photo"
+                  : "Upload photo"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="sr-only"
+                disabled={uploadingProfileImage}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void uploadProfilePhoto(f);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {profileImageUrl ? (
+              <button
+                type="button"
+                className="text-sm text-rose-600 hover:underline"
+                onClick={() => setProfileImageUrl("")}
+              >
+                Remove
+              </button>
+            ) : null}
+          </div>
+          {profileImageError ? <p className="text-xs text-rose-600">{profileImageError}</p> : null}
+        </div>
+      ) : null}
       {showBusiness && (
         <div className="space-y-4">
           <div>

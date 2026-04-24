@@ -396,39 +396,6 @@ export function BrowseMobileReels({
                   {l.categoryName} · {l.conditionLabel}
                 </p>
 
-                <Link
-                  href={l.sellerProfileHref}
-                  className="mt-3 flex min-h-11 max-w-full items-center gap-2.5 rounded-xl border border-white/25 bg-black/35 px-2.5 py-2 text-left backdrop-blur-sm transition hover:bg-black/50"
-                >
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/30 bg-zinc-700">
-                    <Image
-                      src={l.sellerAvatarUrl}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="40px"
-                      unoptimized
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-white drop-shadow-sm">{l.sellerDisplayName}</p>
-                    {l.sellerReviewAvg != null && l.sellerReviewCount > 0 ? (
-                      <p className="mt-0.5 text-xs text-white/80">
-                        <span className="text-amber-400" aria-hidden>
-                          ★
-                        </span>{" "}
-                        <span className="font-medium text-white">{l.sellerReviewAvg.toFixed(1)}</span>
-                        <span className="text-white/45"> · </span>
-                        <span>
-                          {l.sellerReviewCount} review{l.sellerReviewCount === 1 ? "" : "s"}
-                        </span>
-                      </p>
-                    ) : (
-                      <p className="mt-0.5 text-xs text-white/60">No reviews yet</p>
-                    )}
-                  </div>
-                </Link>
-
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Link
                     href={`/listings/${l.id}`}

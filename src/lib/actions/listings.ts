@@ -506,6 +506,11 @@ export async function createListing(formData: FormData) {
 
   await afterMarketplaceListingPersisted(session.user.id, created.id, { wasLive: false });
 
+  if (publish) {
+    redirect(
+      `/dashboard/sell?published=1&listingId=${encodeURIComponent(created.id)}`
+    );
+  }
   redirect(`/dashboard?justAdded=${encodeURIComponent(created.id)}`);
 }
 
@@ -665,5 +670,10 @@ export async function updateListing(id: string, formData: FormData) {
 
   await afterMarketplaceListingPersisted(session.user.id, id, { wasLive });
 
+  if (publish) {
+    redirect(
+      `/dashboard/listings/${encodeURIComponent(id)}/edit?published=1&listingId=${encodeURIComponent(id)}`
+    );
+  }
   redirect("/dashboard");
 }
