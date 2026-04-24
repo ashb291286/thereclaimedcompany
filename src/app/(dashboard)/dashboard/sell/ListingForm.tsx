@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createListing } from "@/lib/actions/listings";
 import type { Prisma } from "@/generated/prisma/client";
 import {
@@ -1741,10 +1742,20 @@ export function ListingForm({
         />
       ) : null}
       {publishOverlayOpen ? (
-        <div className="fixed inset-0 z-[2300] flex items-center justify-center bg-zinc-950/85 px-5 text-white">
-          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-zinc-900/80 p-5 shadow-2xl backdrop-blur">
-            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/25 border-t-white" />
-            <p className="text-center text-lg font-semibold">
+        <div className="fixed inset-0 z-[2300] flex items-center justify-center bg-[#0b4567]/90 px-5 text-white">
+          <div className="w-full max-w-md rounded-2xl border border-white/30 bg-gradient-to-br from-[#0f5d86] via-[#0b4567] to-[#082f47] p-6 shadow-2xl backdrop-blur">
+            <div className="mb-4 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/the-reclaimed-company-logo.png"
+                alt="The Reclaimed Company"
+                width={72}
+                height={72}
+                className="h-14 w-14 rounded-xl border border-white/30 bg-white/95 p-1.5 shadow-lg"
+              />
+            </div>
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/30 border-t-[#28a3df]" />
+            <p className="text-center text-lg font-semibold tracking-tight">
               {publishStepIndex <= 0
                 ? "Building Listing..."
                 : publishStepIndex === 1
@@ -1756,6 +1767,9 @@ export function ListingForm({
                       : publishStepIndex === 4
                         ? "Ready to reclaim"
                         : "Going live..."}
+            </p>
+            <p className="mt-2 text-center text-xs font-medium uppercase tracking-wider text-white/75">
+              The Reclaimed Company
             </p>
           </div>
         </div>

@@ -23,6 +23,7 @@ import { createNotification } from "@/lib/notifications";
 import { afterMarketplaceListingPersisted } from "@/lib/yard-listing-hooks";
 import { isCarbonAdmin } from "@/lib/admin";
 import { parsePropSetProductionType } from "@/lib/prop-yard-set-production";
+import { syncListingToWooCommerce } from "@/lib/listing-woocommerce-sync";
 
 const BLOCKING: PropRentalBookingStatus[] = ["REQUESTED", "CONFIRMED", "OUT_ON_HIRE"];
 const FULFILLMENTS: PropRentalFulfillment[] = [
@@ -77,12 +78,14 @@ async function syncListingMarketplaceVisibilityForOffer(offerId: string) {
         where: { id: listing.id },
         data: { visibleOnMarketplace: false, marketplaceVisibleBeforePropHirePause: true },
       });
+      await syncListingToWooCommerce(listing.id);
     }
   } else if (listing.marketplaceVisibleBeforePropHirePause === true) {
     await prisma.listing.update({
       where: { id: listing.id },
       data: { visibleOnMarketplace: true, marketplaceVisibleBeforePropHirePause: null },
     });
+    await syncListingToWooCommerce(listing.id);
   }
 
   revalidatePath(`/listings/${listing.id}`);

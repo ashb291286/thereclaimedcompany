@@ -131,3 +131,38 @@ export async function syncListingToWooCommerce(listingId: string): Promise<void>
     });
   }
 }
+
+/**
+ * Force-removes a listing's mirrored WooCommerce product (if one exists),
+ * then clears local sync fields. Safe to call before hard-deleting listings.
+ */
+export async function removeListingFromWooCommerce(listingId: string): Promise<void> {
+  if (!isWooCommerceConfigured()) return;
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    select: { wooCommerceProductId: true },
+  });
+  if (!listing?.wooCommerceProductId) return;
+
+  const clearData = {
+    wooCommerceProductId: null,
+    wooCommerceSyncedAt: null,
+    wooCommerceLastError: null as string | null,
+  };
+
+  try {
+    await wooCommerceDeleteProduct(listing.wooCommerceProductId);
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: clearData,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: {
+        wooCommerceLastError: msg.slice(0, 2000),
+      },
+    });
+  }
+}

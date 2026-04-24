@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { removeListingFromWooCommerce } from "@/lib/listing-woocommerce-sync";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -93,6 +94,7 @@ export async function sellerDeleteOwnListingAction(formData: FormData): Promise<
   if (!current?.user?.id) redirect("/auth/signin");
   const id = String(formData.get("listingId") ?? "");
   if (!id) return;
+  await removeListingFromWooCommerce(id);
   await prisma.listing.deleteMany({
     where: { id, sellerId: current.user.id },
   });

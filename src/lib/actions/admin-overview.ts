@@ -12,6 +12,10 @@ import { allocateYardSlug } from "@/lib/yard-slug";
 import { resolveYardSlugForUpdate } from "@/lib/yard-slug";
 import { slugifyAdminDistrict } from "@/lib/yard-area-seo";
 import { revalidateYardPublicPaths } from "@/lib/revalidate-yard";
+import {
+  removeListingFromWooCommerce,
+  syncListingToWooCommerce,
+} from "@/lib/listing-woocommerce-sync";
 
 async function requireAdmin(): Promise<void> {
   const session = await auth();
@@ -114,6 +118,7 @@ export async function adminDeleteListingAction(formData: FormData): Promise<void
   const listingId = String(formData.get("listingId") ?? "").trim();
   if (!listingId) return;
   try {
+    await removeListingFromWooCommerce(listingId);
     await prisma.listing.delete({ where: { id: listingId } });
   } catch {
     redirect("/dashboard/admin?error=delete_blocked");
@@ -130,6 +135,7 @@ export async function adminSetListingVisibilityAction(formData: FormData): Promi
     where: { id: listingId },
     data: { visibleOnMarketplace: visible },
   });
+  await syncListingToWooCommerce(listingId);
   revalidatePath("/dashboard/admin");
 }
 
@@ -144,6 +150,7 @@ export async function adminSetListingStatusAction(formData: FormData): Promise<v
     where: { id: listingId },
     data: { status: statusRaw as ListingStatus },
   });
+  await syncListingToWooCommerce(listingId);
   revalidatePath("/dashboard/admin");
 }
 
