@@ -414,9 +414,12 @@ export async function createListing(formData: FormData) {
   }
   const { listingKind, freeToCollector, price, auctionEndsAt, auctionReservePence } = parsed.data;
 
+  const hasVisibilityField = formData.has("visibleOnMarketplace");
   const visibleOnMarketplace =
     dbUser?.role === "reclamation_yard" && listingKind === "sell" && !freeToCollector
-      ? formData.get("visibleOnMarketplace") === "on"
+      ? hasVisibilityField
+        ? formData.get("visibleOnMarketplace") === "on"
+        : true
       : true;
 
   const pricingParsed = parseListingPricing(formData, { listingKind, freeToCollector, publish });
@@ -564,9 +567,12 @@ export async function updateListing(id: string, formData: FormData) {
   }
   const { listingKind, freeToCollector, price, auctionEndsAt, auctionReservePence } = parsed.data;
 
+  const hasVisibilityField = formData.has("visibleOnMarketplace");
   const visibleOnMarketplace =
     dbUser?.role === "reclamation_yard" && listingKind === "sell" && !freeToCollector
-      ? formData.get("visibleOnMarketplace") === "on"
+      ? hasVisibilityField
+        ? formData.get("visibleOnMarketplace") === "on"
+        : true
       : true;
 
   const categoryResolved = await resolveListingCategoryId(formData);
