@@ -366,19 +366,24 @@ async function materialCarbonFromForm(formData: FormData) {
 export async function createListing(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
+  const canAdminCreateForOthers = isCarbonAdmin(session);
 
   const listingId = formData.get("listingId") as string | null;
   if (listingId) {
     return updateListing(listingId, formData);
   }
 
+  const adminSellerIdRaw = String(formData.get("adminSellerId") ?? "").trim();
+  const effectiveSellerId =
+    canAdminCreateForOthers && adminSellerIdRaw.length > 0 ? adminSellerIdRaw : session.user.id;
+
   const sellerProfile = await prisma.sellerProfile.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: effectiveSellerId },
   });
   if (!sellerProfile) redirect("/dashboard/onboarding");
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: effectiveSellerId },
     select: { role: true },
   });
 
@@ -459,7 +464,7 @@ export async function createListing(formData: FormData) {
 
   const created = await prisma.listing.create({
     data: {
-      sellerId: session.user.id,
+      sellerId: effectiveSellerId,
       title: title.trim(),
       sellerReference,
       description: description.trim(),
@@ -504,7 +509,7 @@ export async function createListing(formData: FormData) {
   await syncListingLocalYardAlerts(created.id);
   await syncListingToWooCommerce(created.id);
 
-  await afterMarketplaceListingPersisted(session.user.id, created.id, { wasLive: false });
+  await afterMarketplaceListingPersisted(effectiveSellerId, created.id, { wasLive: false });
 
   if (publish) {
     redirect(

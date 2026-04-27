@@ -46,8 +46,8 @@ function fileKindFromFile(f: File): DealerProvenanceDocument["kind"] {
 
 const CONDITION_LABELS: Record<Condition, string> = {
   like_new: "Like new",
-  used: "Used",
-  worn: "Worn",
+  used: "Reclaimed",
+  worn: "Salvaged",
   parts_not_working: "Parts / not working",
   refurbished: "Refurbished",
   upcycled: "Upcycled",
@@ -121,6 +121,7 @@ function FormSection({
 }
 
 export type MaterialOption = { materialType: string; label: string };
+type AdminAssignableSeller = { userId: string; label: string; sublabel?: string };
 
 export function ListingForm({
   categories,
@@ -132,6 +133,7 @@ export function ListingForm({
   isReclamationYard = false,
   yardPricesExcludeVat = false,
   initialPublishedListingId = null,
+  adminAssignableSellers,
 }: {
   categories: Category[];
   defaultPostcode: string;
@@ -142,6 +144,7 @@ export function ListingForm({
   isReclamationYard?: boolean;
   yardPricesExcludeVat?: boolean;
   initialPublishedListingId?: string | null;
+  adminAssignableSellers?: AdminAssignableSeller[];
 }) {
   const [imageUrls, setImageUrls] = useState<string[]>(listing?.images ?? []);
   const [uploading, setUploading] = useState(false);
@@ -171,7 +174,8 @@ export function ListingForm({
     const existingId = listing?.categoryId ?? categories[0]?.id ?? "";
     return categories.find((c) => c.id === existingId)?.name ?? "";
   });
-  const [condition, setCondition] = useState<Condition>(listing?.condition ?? "like_new");
+  const [condition, setCondition] = useState<Condition>(listing?.condition ?? "used");
+  const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
   const [priceStr, setPriceStr] = useState(() => {
     if (!listing) return "";
     if (listing.freeToCollector) return "0";
@@ -266,6 +270,10 @@ export function ListingForm({
     listing?.unitsAvailable != null ? String(listing.unitsAvailable) : ""
   );
   const [categoryHint, setCategoryHint] = useState<CategorySuggestionResult | null>(null);
+  const [adminSellerQuery, setAdminSellerQuery] = useState("");
+  const [adminSellerId, setAdminSellerId] = useState(
+    () => adminAssignableSellers?.[0]?.userId ?? ""
+  );
   const [publishOverlayOpen, setPublishOverlayOpen] = useState(false);
   const [publishStepIndex, setPublishStepIndex] = useState(0);
   const [publishedModalOpen, setPublishedModalOpen] = useState(Boolean(initialPublishedListingId));
@@ -274,6 +282,20 @@ export function ListingForm({
 
   const materialSelectOptions =
     materialOptions.length > 0 ? materialOptions : MATERIAL_FORM_OPTIONS_FALLBACK;
+  const isAdminAssignMode = Boolean(adminAssignableSellers && adminAssignableSellers.length > 0 && !isEdit);
+  const filteredAdminSellers = useMemo(() => {
+    if (!adminAssignableSellers) return [];
+    const q = adminSellerQuery.trim().toLowerCase();
+    if (!q) return adminAssignableSellers.slice(0, 80);
+    return adminAssignableSellers
+      .filter(
+        (s) =>
+          s.label.toLowerCase().includes(q) ||
+          s.userId.toLowerCase().includes(q) ||
+          (s.sublabel?.toLowerCase().includes(q) ?? false)
+      )
+      .slice(0, 80);
+  }, [adminAssignableSellers, adminSellerQuery]);
   const filteredCategories = useMemo(() => {
     const q = categoryQuery.trim().toLowerCase();
     if (!q) return categories.slice(0, 12);
@@ -411,6 +433,44 @@ export function ListingForm({
 
   function removeImage(url: string) {
     setImageUrls((prev) => prev.filter((u) => u !== url));
+  }
+
+  function wrapSelectionWith(token: string) {
+    const el = descriptionRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? start;
+    const selected = description.slice(start, end) || "text";
+    const next = `${description.slice(0, start)}${token}${selected}${token}${description.slice(end)}`;
+    setDescription(next);
+    window.requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + token.length + selected.length + token.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
+  function bulletSelection() {
+    const el = descriptionRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? start;
+    const selected = description.slice(start, end) || "Item detail";
+    const bulleted = selected
+      .split("\n")
+      .map((line) => {
+        const t = line.trim();
+        if (!t) return "";
+        return t.startsWith("- ") ? t : `- ${t}`;
+      })
+      .join("\n");
+    const next = `${description.slice(0, start)}${bulleted}${description.slice(end)}`;
+    setDescription(next);
+    window.requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + bulleted.length;
+      el.setSelectionRange(pos, pos);
+    });
   }
 
   async function handleDealerProvenanceFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -593,13 +653,16 @@ export function ListingForm({
               const submitter = nativeEvt.submitter as HTMLButtonElement | null;
               const isPublishSubmit =
                 submitter?.name === "publish" && submitter?.value === "true";
-              if (isPublishSubmit && useNewCategory && categoryHint?.bestMatch && categoryHint.score >= 0.65) {
-                setCategoryId(categoryHint.bestMatch.id);
-                setCategoryQuery(categoryHint.bestMatch.name);
-              }
               if (isPublishSubmit && imageUrls.length === 0) {
                 e.preventDefault();
                 const msg = "Add at least one photo before publishing.";
+                setError(msg);
+                setToastError(msg);
+                return;
+              }
+              if (isAdminAssignMode && !adminSellerId) {
+                e.preventDefault();
+                const msg = "Select the seller account before publishing.";
                 setError(msg);
                 setToastError(msg);
                 return;
@@ -632,6 +695,7 @@ export function ListingForm({
             }}
           >
       <input type="hidden" name="listingKind" value={listingKind} />
+      {isAdminAssignMode ? <input type="hidden" name="adminSellerId" value={adminSellerId} /> : null}
       <input type="hidden" name="pricingMode" value={pricingModeUi} />
       {listingKind === "auction" ? (
         <input
@@ -660,6 +724,55 @@ export function ListingForm({
           </Link>{" "}
           Add many fixed-price listings from a CSV (saved as drafts).
         </p>
+      ) : null}
+
+      {isAdminAssignMode ? (
+        <FormSection
+          step={0}
+          title="Choose seller"
+          description="As admin, select which seller account this listing should belong to before publishing."
+        >
+          <div>
+            <label htmlFor="adminSellerSearch" className="mb-1 block text-sm font-medium text-zinc-700">
+              Search seller
+            </label>
+            <input
+              id="adminSellerSearch"
+              type="search"
+              value={adminSellerQuery}
+              onChange={(e) => setAdminSellerQuery(e.target.value)}
+              placeholder="Name, email, role, postcode..."
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            />
+          </div>
+          <div className="max-h-56 overflow-y-auto rounded-lg border border-zinc-200 bg-white p-2">
+            <div className="space-y-1">
+              {filteredAdminSellers.map((s) => (
+                <label
+                  key={s.userId}
+                  className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-sm hover:bg-zinc-50"
+                >
+                  <input
+                    type="radio"
+                    name="adminSellerPicker"
+                    className="mt-0.5"
+                    checked={adminSellerId === s.userId}
+                    onChange={() => setAdminSellerId(s.userId)}
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-zinc-900">{s.label}</span>
+                    {s.sublabel ? (
+                      <span className="block truncate text-xs text-zinc-500">{s.sublabel}</span>
+                    ) : null}
+                  </span>
+                </label>
+              ))}
+              {filteredAdminSellers.length === 0 ? (
+                <p className="px-2 py-3 text-sm text-zinc-500">No sellers match your search.</p>
+              ) : null}
+            </div>
+          </div>
+        </FormSection>
       ) : null}
 
       <FormSection
@@ -940,7 +1053,24 @@ export function ListingForm({
           <label htmlFor="description" className="mb-1 block text-sm font-medium text-zinc-700">
             Description
           </label>
+          <div className="mb-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => wrapSelectionWith("**")}
+              className="rounded border border-zinc-300 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              Bold
+            </button>
+            <button
+              type="button"
+              onClick={bulletSelection}
+              className="rounded border border-zinc-300 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              Bullet list
+            </button>
+          </div>
           <textarea
+            ref={descriptionRef}
             id="description"
             name="description"
             rows={5}
@@ -996,9 +1126,10 @@ export function ListingForm({
             </div>
           ) : null}
           {useNewCategory ? (
-            <p className="mt-2 text-xs text-zinc-600">
-              No suitable match found — this will be added as a new category.
-            </p>
+            <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-900">
+              Creating new category:{" "}
+              <span className="font-semibold">{categoryQuery.trim() || "(enter a name)"}</span>
+            </div>
           ) : (
             <p className="mt-2 text-xs text-zinc-500">
               Start typing to find a suitable category, then choose from recommendations.

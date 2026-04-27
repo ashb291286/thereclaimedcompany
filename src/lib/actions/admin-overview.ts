@@ -214,9 +214,12 @@ export async function adminUpdateYardDetailsAction(formData: FormData): Promise<
   const postcodeRaw = String(formData.get("postcode") ?? "").trim();
   const yardSlugRaw = String(formData.get("yardSlug") ?? "").trim();
   const yardTagline = String(formData.get("yardTagline") ?? "").trim();
+  const yardAbout = String(formData.get("yardAbout") ?? "").trim();
   const yardContactEmail = String(formData.get("yardContactEmail") ?? "").trim();
   const yardContactPhone = String(formData.get("yardContactPhone") ?? "").trim();
   const yardWebsiteUrlRaw = String(formData.get("yardWebsiteUrl") ?? "").trim();
+  const yardLogoUrl = String(formData.get("yardLogoUrl") ?? "").trim() || null;
+  const yardHeaderImageUrl = String(formData.get("yardHeaderImageUrl") ?? "").trim() || null;
   const vatRegistered = String(formData.get("vatRegistered") ?? "").trim() === "yes";
   const salvoCodeMember = String(formData.get("salvoCodeMember") ?? "").trim() === "yes";
   const isRegisteredCharity = String(formData.get("isRegisteredCharity") ?? "").trim() === "yes";
@@ -253,6 +256,9 @@ export async function adminUpdateYardDetailsAction(formData: FormData): Promise<
       postcodeLocality: resolvedPostcode.postcodeLocality,
       yardSlug: slugResult.slug,
       yardTagline: yardTagline || null,
+      yardAbout: yardAbout || null,
+      yardLogoUrl,
+      yardHeaderImageUrl,
       yardContactEmail: yardContactEmail || null,
       yardContactPhone: yardContactPhone || null,
       yardWebsiteUrl: normalizeWebsiteUrl(yardWebsiteUrlRaw),

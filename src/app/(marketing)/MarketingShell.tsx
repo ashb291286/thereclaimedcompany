@@ -251,6 +251,9 @@ export function MarketingShell({
                     <Link href="/wanted" className="block hover:text-white">
                       Wanted
                     </Link>
+                    <Link href="/blog" className="block hover:text-white">
+                      Guides
+                    </Link>
                   </div>
 
                   <div className="space-y-2 text-[15px] leading-relaxed text-white/95">
@@ -279,6 +282,9 @@ export function MarketingShell({
                     </Link>
                     <Link href="/reclamation-yards" className="block hover:text-white">
                       Reclamation Yards
+                    </Link>
+                    <Link href="/blog" className="block hover:text-white">
+                      On The Salvage Scene
                     </Link>
                     <p>Press &amp; Media</p>
                   </div>

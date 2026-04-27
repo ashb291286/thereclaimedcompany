@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { isCarbonAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { adminUpdateYardDetailsAction } from "@/lib/actions/admin-overview";
+import { YardBrandingFields } from "@/components/YardBrandingFields";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -35,6 +36,9 @@ export default async function AdminYardEditPage({ params, searchParams }: Props)
       postcode: true,
       yardSlug: true,
       yardTagline: true,
+      yardAbout: true,
+      yardLogoUrl: true,
+      yardHeaderImageUrl: true,
       yardContactEmail: true,
       yardContactPhone: true,
       yardWebsiteUrl: true,
@@ -170,6 +174,23 @@ export default async function AdminYardEditPage({ params, searchParams }: Props)
             className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
           />
         </label>
+        <label className="text-sm">
+          <span className="mb-1 block text-xs font-medium text-zinc-700">About text (SEO/public page)</span>
+          <textarea
+            name="yardAbout"
+            rows={5}
+            defaultValue={yard.yardAbout ?? ""}
+            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+        </label>
+
+        <div className="rounded-lg border border-zinc-200 p-3">
+          <p className="mb-2 text-xs font-medium text-zinc-700">Branding images</p>
+          <YardBrandingFields
+            initialLogoUrl={yard.yardLogoUrl}
+            initialHeaderUrl={yard.yardHeaderImageUrl}
+          />
+        </div>
 
         <div className="grid gap-3 md:grid-cols-3">
           <label className="text-sm">

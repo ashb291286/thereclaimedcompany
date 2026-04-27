@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { isCarbonAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getMaterialOptionsForForm } from "@/lib/carbon/factors";
 import { redirect } from "next/navigation";
@@ -12,31 +13,48 @@ export default async function SellPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
+  const isAdmin = isCarbonAdmin(session);
 
   const { firstListing, error, published, listingId } = await searchParams;
 
-  const sellerProfile = await prisma.sellerProfile.findUnique({
-    where: { userId: session.user.id },
-    select: {
-      postcode: true,
-      displayName: true,
-      vatRegistered: true,
-    },
-  });
-  if (!sellerProfile) redirect("/dashboard/onboarding");
-
-  const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true },
-  });
-
-  const [categories, materialOpts] = await Promise.all([
+  const [sellerProfile, dbUser, categories, materialOpts, adminAssignableSellers] = await Promise.all([
+    prisma.sellerProfile.findUnique({
+      where: { userId: session.user.id },
+      select: {
+        postcode: true,
+        displayName: true,
+        vatRegistered: true,
+      },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    }),
     prisma.category.findMany({
       where: { parentId: null },
       orderBy: { name: "asc" },
     }),
     getMaterialOptionsForForm(),
+    isAdmin
+      ? prisma.sellerProfile.findMany({
+          where: {
+            user: {
+              role: { in: ["individual", "reclamation_yard", "dealer"] },
+            },
+          },
+          select: {
+            userId: true,
+            displayName: true,
+            businessName: true,
+            postcode: true,
+            user: { select: { email: true, role: true } },
+          },
+          orderBy: [{ businessName: "asc" }, { displayName: "asc" }],
+          take: 500,
+        })
+      : Promise.resolve([]),
   ]);
+  if (!isAdmin && !sellerProfile) redirect("/dashboard/onboarding");
   const materialOptions = materialOpts.map(({ materialType, label }) => ({ materialType, label }));
 
   return (
@@ -65,15 +83,28 @@ export default async function SellPage({
       </p>
       <ListingForm
         categories={categories}
-        defaultPostcode={sellerProfile.postcode}
-        sellerDisplayName={sellerProfile.displayName}
+        defaultPostcode={sellerProfile?.postcode ?? ""}
+        sellerDisplayName={sellerProfile?.displayName}
         materialOptions={materialOptions}
         isDealer={dbUser?.role === "dealer"}
         isReclamationYard={dbUser?.role === "reclamation_yard"}
         yardPricesExcludeVat={
-          dbUser?.role === "reclamation_yard" && Boolean(sellerProfile.vatRegistered)
+          dbUser?.role === "reclamation_yard" && Boolean(sellerProfile?.vatRegistered)
         }
         initialPublishedListingId={published === "1" ? (listingId ?? null) : null}
+        adminAssignableSellers={
+          isAdmin
+            ? adminAssignableSellers.map((s) => ({
+                userId: s.userId,
+                label:
+                  s.businessName?.trim() ||
+                  s.displayName?.trim() ||
+                  s.user.email?.trim() ||
+                  s.userId,
+                sublabel: [s.user.role, s.postcode].filter(Boolean).join(" · "),
+              }))
+            : undefined
+        }
       />
     </div>
   );

@@ -35,9 +35,78 @@ import { formatUkLocationLine } from "@/lib/postcode-uk";
 import { ListingImageGallery } from "./ListingImageGallery";
 import { ListingQaSection } from "@/components/listings/ListingQaSection";
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { proxiedListingImageSrc } from "@/lib/listing-image-url";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { coalesceDealerProvenanceDocuments } from "@/lib/dealer-provenance";
+
+function renderInlineDescription(input: string): ReactNode {
+  const bits = input.split(/\*\*/g);
+  return bits.map((part, i) =>
+    i % 2 === 1 ? (
+      <strong key={`b-${i}`} className="font-semibold text-zinc-800">
+        {part}
+      </strong>
+    ) : (
+      <span key={`t-${i}`}>{part}</span>
+    )
+  );
+}
+
+function renderDescriptionBlocks(text: string): ReactNode {
+  const lines = text.split(/\r?\n/);
+  const nodes: ReactNode[] = [];
+  let paragraph: string[] = [];
+  let bullets: string[] = [];
+
+  const flushParagraph = (idx: number) => {
+    if (!paragraph.length) return;
+    const joined = paragraph.join(" ").trim();
+    if (!joined) return;
+    nodes.push(
+      <p key={`p-${idx}`} className="mt-4 text-[15px] leading-relaxed text-zinc-700">
+        {renderInlineDescription(joined)}
+      </p>
+    );
+    paragraph = [];
+  };
+
+  const flushBullets = (idx: number) => {
+    if (!bullets.length) return;
+    nodes.push(
+      <ul key={`ul-${idx}`} className="mt-3 list-disc space-y-1 pl-6 text-[15px] leading-relaxed text-zinc-700">
+        {bullets.map((b, i) => (
+          <li key={`li-${idx}-${i}`}>{renderInlineDescription(b)}</li>
+        ))}
+      </ul>
+    );
+    bullets = [];
+  };
+
+  lines.forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line) {
+      flushParagraph(i);
+      flushBullets(i);
+      return;
+    }
+    if (line.startsWith("- ")) {
+      flushParagraph(i);
+      bullets.push(line.slice(2).trim());
+      return;
+    }
+    flushBullets(i);
+    paragraph.push(line);
+  });
+
+  flushParagraph(lines.length + 1);
+  flushBullets(lines.length + 2);
+
+  if (!nodes.length) {
+    return <p className="mt-4 text-[15px] leading-relaxed text-zinc-700">{text}</p>;
+  }
+  return nodes;
+}
 
 export async function generateMetadata({
   params,
@@ -421,9 +490,7 @@ export default async function ListingPage({
             {carbonImpact ? (
               <p className="mt-4 text-sm leading-relaxed text-emerald-900/90">{carbonSeoSentence(carbonImpact)}</p>
             ) : null}
-            <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-zinc-700">
-              {listing.description}
-            </p>
+            {renderDescriptionBlocks(listing.description)}
           </section>
 
           {listing.seller?.role === "dealer" &&
